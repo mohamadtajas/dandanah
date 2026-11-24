@@ -1235,8 +1235,9 @@ function mockPrayerLog(date: string): PrayerLog {
 
 function mockStreak(): PrayerStreak {
   const logs = [...prayerLogStore.values()].sort((a, b) => a.date.localeCompare(b.date));
-  const quality = (log?: PrayerLog) =>
-    !!log && (log.excused || ["fajr", "dhuhr", "asr", "maghrib", "isha"].every((k) => log[k as keyof PrayerLog]));
+  const complete = (log?: PrayerLog) =>
+    !!log && ["fajr", "dhuhr", "asr", "maghrib", "isha"].every((k) => log[k as keyof PrayerLog] === true);
+  const quality = (log?: PrayerLog) => complete(log) || !!log?.excused;
   const today = new Date().toISOString().slice(0, 10);
   let current = 0;
   let cursor = new Date(today + "T00:00:00Z");
@@ -1263,7 +1264,7 @@ function mockStreak(): PrayerStreak {
   return {
     current,
     best,
-    todayComplete: quality(day),
+    todayComplete: complete(day),
     todayExcused: day.excused,
     todayCount: ["fajr", "dhuhr", "asr", "maghrib", "isha"].filter(
       (k) => day[k as keyof PrayerLog] === true,
@@ -1444,21 +1445,41 @@ export function mockApi() {
       ];
       const clock = (minutes: number) =>
         `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+      const iso = (date: string, minutes: number) =>
+        `${date}T${clock(minutes)}:00`;
       const times = rows.map(([key, name, minutes]) => ({
         key,
         name,
         time: clock(minutes),
-        iso: "",
+        iso: iso(day, minutes),
         minutes,
         passed: minutes <= minutesNow,
       }));
-      const upcoming = times.find((time) => time.minutes > minutesNow) ?? times[0];
-      const remainingS = Math.max(0, (upcoming.minutes - minutesNow) * 60);
+      const upcoming = times.find((time) => time.minutes > minutesNow);
+      const tomorrow = new Date(day + "T00:00:00");
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowKey = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(
+        2,
+        "0",
+      )}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+      const next = upcoming
+        ? { ...upcoming, passed: false }
+        : {
+            key: "fajr",
+            name: "الفجر",
+            time: "05:00",
+            iso: iso(tomorrowKey, 5 * 60),
+            minutes: 5 * 60,
+            passed: false,
+          };
+      const remainingS = upcoming
+        ? Math.max(0, (upcoming.minutes - minutesNow) * 60)
+        : Math.max(0, (24 * 60 - minutesNow + 5 * 60) * 60);
       return {
         date: day,
         timezone: MOCK_WORSHIP.timezone,
         times,
-        next: { ...upcoming, passed: false },
+        next,
         remainingS,
         qibla: 137.1,
         hijri: MOCK_HIJRI,

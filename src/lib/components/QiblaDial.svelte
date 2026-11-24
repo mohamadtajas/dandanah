@@ -49,11 +49,12 @@
         {/each}
       </g>
 
-      <!-- Qibla needle: absolute bearing from true north. -->
-      <g transform="rotate({bearing} 100 100)">
+      <!-- Qibla needle: rotated relative to the manually aligned rose so the
+           angle from N always reads as the true bearing. -->
+      <g transform="rotate({bearing - heading} 100 100)">
         <polygon points="100,26 94,100 106,100" style="fill: var(--color-gold)" />
         <polygon points="100,174 96,100 104,100" style="fill: var(--color-line)" />
-        <g transform="rotate({-bearing} 100 18)">
+        <g transform="rotate({-(bearing - heading)} 100 18)">
           <rect
             x="93"
             y="11"
@@ -81,7 +82,7 @@
         type="button"
         onclick={() => (heading = (heading + 345) % 360)}
         class="grid size-8 shrink-0 place-items-center rounded-lg border border-line text-muted transition-colors hover:border-gold/40 hover:text-gold"
-        aria-label="-15°"
+        aria-label={i18n.t("prayer.qiblaRotateLeft")}
       >
         <Icon name="chevron" size={14} class="rotate-180 rtl:rotate-0" />
       </button>
@@ -98,7 +99,7 @@
         type="button"
         onclick={() => (heading = (heading + 15) % 360)}
         class="grid size-8 shrink-0 place-items-center rounded-lg border border-line text-muted transition-colors hover:border-gold/40 hover:text-gold"
-        aria-label="+15°"
+        aria-label={i18n.t("prayer.qiblaRotateRight")}
       >
         <Icon name="chevron" size={14} />
       </button>

@@ -958,9 +958,8 @@ pub fn set_worship_settings(
     state: State<'_, AppState>,
     settings: WorshipSettings,
 ) -> Result<WorshipSettings, String> {
-    let mut settings = settings;
-    // Saving from the settings sheet means the user chose this location.
-    settings.configured = true;
+    let previous = worship::load_settings(&state.db);
+    let settings = worship::merge_settings(&previous, settings);
     worship::save_settings(&state.db, &settings).map_err(|e| e.to_string())
 }
 

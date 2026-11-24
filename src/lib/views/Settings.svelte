@@ -15,7 +15,7 @@
   import { library } from "$lib/stores/library.svelte.ts";
   import { worship } from "$lib/stores/worship.svelte.ts";
   import { ui } from "$lib/stores/ui.svelte.ts";
-  import { cities, nearestCity, timezones } from "$lib/data/cities";
+  import { cities, nearestCity, timezoneChoices } from "$lib/data/cities";
   import Icon from "$lib/components/Icon.svelte";
 
   let info = $state<AppInfo | null>(null);
@@ -56,6 +56,7 @@
   let prayer = $state<WorshipSettings>({ ...DEFAULT_PRAYER });
   let savingPrayer = $state(false);
   const matchedCity = $derived(nearestCity(prayer.latitude, prayer.longitude));
+  const zoneOptions = $derived(timezoneChoices(prayer.timezone));
 
   type UpdateState = "idle" | "checking" | "available" | "none" | "error";
   let updateState = $state<UpdateState>("idle");
@@ -111,6 +112,7 @@
       latitude: city.latitude,
       longitude: city.longitude,
       timezone: city.timezone,
+      configured: true,
     };
   }
 
@@ -339,10 +341,7 @@
           bind:value={prayer.timezone}
           class="mt-1 w-full rounded-xl border border-line bg-ink-850 px-3 py-2 text-sm text-cream focus:border-gold/50 focus:outline-none"
         >
-          {#if !timezones.includes(prayer.timezone)}
-            <option value={prayer.timezone}>{prayer.timezone}</option>
-          {/if}
-          {#each timezones as zone (zone)}
+          {#each zoneOptions as zone (zone)}
             <option value={zone}>{zone}</option>
           {/each}
         </select>
@@ -356,6 +355,7 @@
           min="-90"
           max="90"
           bind:value={prayer.latitude}
+          onchange={() => (prayer = { ...prayer, configured: true })}
           class="mt-1 w-full rounded-xl border border-line bg-ink-850 px-3 py-2 text-sm tabular-nums text-cream focus:border-gold/50 focus:outline-none"
         />
       </label>
@@ -368,6 +368,7 @@
           min="-180"
           max="180"
           bind:value={prayer.longitude}
+          onchange={() => (prayer = { ...prayer, configured: true })}
           class="mt-1 w-full rounded-xl border border-line bg-ink-850 px-3 py-2 text-sm tabular-nums text-cream focus:border-gold/50 focus:outline-none"
         />
       </label>
@@ -442,7 +443,7 @@
       <button
         type="button"
         onclick={savePrayer}
-        disabled={savingPrayer}
+        disabled={savingPrayer || worship.pending}
         class="flex items-center gap-2 rounded-xl bg-gold px-3.5 py-2 text-xs font-semibold text-ink-950 transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-50"
       >
         <Icon name="check" size={13} />

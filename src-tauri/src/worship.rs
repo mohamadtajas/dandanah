@@ -257,7 +257,22 @@ pub struct Streak {
 
 /// Qibla bearing in degrees clockwise from true north.
 pub fn qibla_bearing(latitude: f64, longitude: f64) -> f64 {
-    adhan::qibla(latitude, longitude)
+    const KAABA_LAT: f64 = 21.4225241;
+    const KAABA_LON: f64 = 39.8261818;
+    // The bearing is undefined at the Kaaba itself; within 50 m, say north.
+    if distance_km(latitude, longitude, KAABA_LAT, KAABA_LON) < 0.05 {
+        0.0
+    } else {
+        adhan::qibla(latitude, longitude)
+    }
+}
+
+fn distance_km(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
+    let d_lat = (lat2 - lat1).to_radians();
+    let d_lon = (lon2 - lon1).to_radians();
+    let a = (d_lat / 2.0).sin().powi(2)
+        + lat1.to_radians().cos() * lat2.to_radians().cos() * (d_lon / 2.0).sin().powi(2);
+    6371.0088 * 2.0 * a.sqrt().atan2((1.0 - a).sqrt())
 }
 
 /// Convert a Gregorian date to the Umm al-Qura Hijri calendar.
@@ -289,7 +304,7 @@ struct RawTime {
     at: DateTime<Tz>,
 }
 
-/// Turn `adhan`'s UTC clock reading into an instant on `date`.
+/// Turn a 0–24h UTC clock reading into an instant on a known UTC date.
 fn instant(date: NaiveDate, (hour, minute, second): (i64, u32, u32)) -> DateTime<Utc> {
     let midnight = date
         .and_hms_opt(0, 0, 0)
@@ -301,8 +316,30 @@ fn instant(date: NaiveDate, (hour, minute, second): (i64, u32, u32)) -> DateTime
         + Duration::seconds(second as i64)
 }
 
+/// Pick the UTC date that makes Dhuhr fall on the requested local date.
+///
+/// `adhan` reduces each reading to a 0–24h UTC clock, so the day is lost. Dhuhr
+/// is solar noon and therefore always near local noon; for UTC+13/14 its UTC
+/// date is the previous day, and for UTC−11/12 it is the next one. Testing the
+/// three candidates and preferring a local hour near 12 recovers the day.
+fn resolve_dhuhr_utc_date(date: NaiveDate, tz: Tz, reading: (i64, u32, u32)) -> NaiveDate {
+    let mut best = date;
+    let mut best_score = i64::MAX;
+    for shift in -1..=1 {
+        let candidate = date + Duration::days(shift);
+        let local = instant(candidate, reading).with_timezone(&tz);
+        let day_gap = (local.date_naive() - date).num_days().abs();
+        let score = day_gap * 1000 + (local.hour() as i64 - 12).abs();
+        if score < best_score {
+            best_score = score;
+            best = candidate;
+        }
+    }
+    best
+}
+
 fn raw_times(schedule: &PrayerTimes, date: NaiveDate, tz: Tz) -> Vec<RawTime> {
-    [
+    let readings: Vec<(&'static str, &'static str, (i64, u32, u32))> = [
         ("fajr", "الفجر", Prayer::Fajr),
         ("sunrise", "الشروق", Prayer::Sunrise),
         ("dhuhr", "الظهر", Prayer::Dhuhr),
@@ -311,23 +348,50 @@ fn raw_times(schedule: &PrayerTimes, date: NaiveDate, tz: Tz) -> Vec<RawTime> {
         ("isha", "العشاء", Prayer::Isha),
     ]
     .into_iter()
-    .filter_map(|(key, name, prayer)| {
-        schedule.time_for(prayer).map(|reading| RawTime {
-            key,
-            name,
-            at: instant(date, reading).with_timezone(&tz),
+    .filter_map(|(key, name, prayer)| schedule.time_for(prayer).map(|r| (key, name, r)))
+    .collect();
+
+    let dhuhr = readings
+        .iter()
+        .find(|(key, _, _)| *key == "dhuhr")
+        .map(|(_, _, reading)| *reading);
+    let dhuhr_date = dhuhr
+        .map(|reading| resolve_dhuhr_utc_date(date, tz, reading))
+        .unwrap_or(date);
+
+    readings
+        .into_iter()
+        .map(|(key, name, reading)| {
+            // Fajr and sunrise precede solar noon, so a clock reading later
+            // than Dhuhr belongs to the previous UTC day. Asr and later follow
+            // it, so a reading earlier than Dhuhr belongs to the next one.
+            let utc_date = match (dhuhr, key) {
+                (Some(anchor), "fajr" | "sunrise") if reading > anchor => {
+                    dhuhr_date - Duration::days(1)
+                }
+                (Some(anchor), "asr" | "maghrib" | "isha") if reading < anchor => {
+                    dhuhr_date + Duration::days(1)
+                }
+                _ => dhuhr_date,
+            };
+            RawTime {
+                key,
+                name,
+                at: instant(utc_date, reading).with_timezone(&tz),
+            }
         })
-    })
-    .collect()
+        .collect()
 }
 
-fn calculate(settings: &WorshipSettings, date: NaiveDate) -> PrayerTimes {
+fn calculate_with(
+    settings: &WorshipSettings,
+    date: NaiveDate,
+    resolution: PolarCircleResolution,
+) -> PrayerTimes {
     let mut parameters = Parameters::for_method(settings.method())
         .with_madhab(settings.madhab())
         .with_high_latitude_rule(settings.high_latitude_rule());
-    // Inside the polar circle, borrow the nearest day on which the sun rose and
-    // set instead of leaving a prayer without a time.
-    parameters.polar_circle_resolution = PolarCircleResolution::AqrabYaum;
+    parameters.polar_circle_resolution = resolution;
     prayer_times(
         date.year(),
         date.month(),
@@ -338,6 +402,24 @@ fn calculate(settings: &WorshipSettings, date: NaiveDate) -> PrayerTimes {
     )
 }
 
+/// Times for one local date, falling back to a nearby latitude when borrowing
+/// the nearest day produces a non-chronological polar schedule.
+fn day_times(settings: &WorshipSettings, date: NaiveDate, tz: Tz) -> Vec<RawTime> {
+    let mut times = raw_times(
+        &calculate_with(settings, date, PolarCircleResolution::AqrabYaum),
+        date,
+        tz,
+    );
+    if !times.windows(2).all(|pair| pair[0].at <= pair[1].at) {
+        times = raw_times(
+            &calculate_with(settings, date, PolarCircleResolution::AqrabBalad),
+            date,
+            tz,
+        );
+    }
+    times
+}
+
 /// Prayer times for one local date. `now` is passed in so tests are stable.
 pub fn prayer_day(
     settings: &WorshipSettings,
@@ -345,8 +427,7 @@ pub fn prayer_day(
     now: DateTime<Utc>,
 ) -> Result<PrayerDay, String> {
     let tz = settings.timezone();
-    let schedule = calculate(settings, date);
-    let raw = raw_times(&schedule, date, tz);
+    let raw = day_times(settings, date, tz);
 
     let times: Vec<PrayerTime> = raw
         .iter()
@@ -365,9 +446,8 @@ pub fn prayer_day(
 
     let mut next = raw
         .iter()
-        .find(|item| {
-            PRAYER_KEYS.contains(&item.key) && item.at.with_timezone(&Utc) > now
-        })
+        .filter(|item| PRAYER_KEYS.contains(&item.key) && item.at.with_timezone(&Utc) > now)
+        .min_by_key(|item| item.at)
         .map(|item| (item.key, item.name, item.at));
 
     // After Isha the next prayer belongs to tomorrow's Fajr. Only roll over
@@ -375,7 +455,7 @@ pub fn prayer_day(
     // their own day boundaries.
     if next.is_none() && date == now.with_timezone(&tz).date_naive() {
         let tomorrow_date = date + Duration::days(1);
-        let tomorrow = raw_times(&calculate(settings, tomorrow_date), tomorrow_date, tz);
+        let tomorrow = day_times(settings, tomorrow_date, tz);
         next = tomorrow
             .iter()
             .find(|item| item.key == "fajr")
@@ -488,6 +568,17 @@ pub fn save_settings(db: &Database, settings: &WorshipSettings) -> Result<Worshi
     Ok(settings)
 }
 
+/// Decide whether a save is an explicit location choice.
+///
+/// Editing a calculation method or the Hijri offset must not turn the default
+/// Makkah coordinates into "the user's location".
+pub fn merge_settings(previous: &WorshipSettings, mut incoming: WorshipSettings) -> WorshipSettings {
+    let moved = (incoming.latitude - previous.latitude).abs() > 1e-6
+        || (incoming.longitude - previous.longitude).abs() > 1e-6;
+    incoming.configured = incoming.configured || previous.configured || moved;
+    incoming.sanitized()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -500,7 +591,7 @@ mod tests {
             timezone: tz.to_string(),
             method: method.to_string(),
             madhab: "shafi".to_string(),
-            high_latitude: "seventhOfTheNight".to_string(),
+            high_latitude: "recommended".to_string(),
             hijri_adjustment: 0,
             configured: true,
         }
@@ -531,6 +622,26 @@ mod tests {
             "{key}: got {} minutes, want {want} ±{tolerance}",
             got
         );
+    }
+
+    #[test]
+    fn saving_a_method_does_not_claim_the_default_location() {
+        let previous = WorshipSettings::default();
+        assert!(!previous.configured);
+
+        let mut method_only = previous.clone();
+        method_only.method = "muslimWorldLeague".to_string();
+        let merged = merge_settings(&previous, method_only);
+        assert!(!merged.configured, "coordinates did not change");
+
+        let mut moved = previous.clone();
+        moved.latitude = 30.0444;
+        moved.longitude = 31.2357;
+        assert!(merge_settings(&previous, moved).configured);
+
+        let mut explicit = previous.clone();
+        explicit.configured = true;
+        assert!(merge_settings(&previous, explicit).configured);
     }
 
     #[test]
@@ -601,6 +712,149 @@ mod tests {
         assert_time(&day, "asr", "16:26", 2);
         assert_time(&day, "maghrib", "19:03", 2);
         assert_time(&day, "isha", "20:19", 2);
+    }
+
+    fn assert_local_date(day: &PrayerDay, expected: &str) {
+        for time in &day.times {
+            assert!(
+                time.iso.starts_with(expected),
+                "{} should be on {expected}, got {}",
+                time.key,
+                time.iso
+            );
+        }
+    }
+
+    #[test]
+    fn eastern_zones_keep_the_requested_local_date() {
+        // References: Aladhan API, MWL, 2026-06-21.
+        let jakarta = settings(-6.2088, 106.8456, "Asia/Jakarta", "muslimWorldLeague");
+        let day = prayer_day(
+            &jakarta,
+            NaiveDate::from_ymd_opt(2026, 6, 21).unwrap(),
+            local("Asia/Jakarta", 2026, 6, 21, 10, 0),
+        )
+        .unwrap();
+        assert_time(&day, "fajr", "04:46", 2);
+        assert_time(&day, "dhuhr", "11:54", 2);
+        assert_time(&day, "maghrib", "17:47", 2);
+        assert_time(&day, "isha", "18:58", 2);
+        assert_local_date(&day, "2026-06-21");
+        assert_eq!(day.next.as_ref().unwrap().key, "dhuhr");
+
+        let sydney = settings(-33.8688, 151.2093, "Australia/Sydney", "muslimWorldLeague");
+        let day = prayer_day(
+            &sydney,
+            NaiveDate::from_ymd_opt(2026, 11, 26).unwrap(),
+            local("Australia/Sydney", 2026, 11, 26, 10, 0),
+        )
+        .unwrap();
+        assert_time(&day, "fajr", "03:59", 2);
+        assert_time(&day, "dhuhr", "12:42", 2);
+        assert_time(&day, "maghrib", "19:46", 2);
+        assert_local_date(&day, "2026-11-26");
+        assert_eq!(day.next.as_ref().unwrap().key, "dhuhr");
+
+        // UTC+14 is the far edge; Dhuhr's UTC clock reading belongs to D-1.
+        let kiritimati = settings(1.8721, -157.4278, "Pacific/Kiritimati", "muslimWorldLeague");
+        let day = prayer_day(
+            &kiritimati,
+            NaiveDate::from_ymd_opt(2026, 6, 21).unwrap(),
+            local("Pacific/Kiritimati", 2026, 6, 21, 10, 0),
+        )
+        .unwrap();
+        assert_time(&day, "fajr", "05:09", 2);
+        assert_time(&day, "dhuhr", "12:32", 2);
+        assert_local_date(&day, "2026-06-21");
+        assert_eq!(day.next.as_ref().unwrap().key, "dhuhr");
+    }
+
+    #[test]
+    fn western_evening_prayers_stay_on_the_same_day() {
+        // Reference: Aladhan API, ISNA, 2026-06-21.
+        let nyc = settings(40.7128, -74.0059, "America/New_York", "northAmerica");
+        let day = prayer_day(
+            &nyc,
+            NaiveDate::from_ymd_opt(2026, 6, 21).unwrap(),
+            local("America/New_York", 2026, 6, 21, 18, 0),
+        )
+        .unwrap();
+        assert_time(&day, "maghrib", "20:31", 2);
+        assert_time(&day, "isha", "22:11", 2);
+        assert_local_date(&day, "2026-06-21");
+        assert_eq!(day.next.as_ref().unwrap().key, "maghrib");
+        assert!(
+            (2 * 3600..3 * 3600).contains(&day.remaining_s),
+            "maghrib is about 2.5h away, got {}",
+            day.remaining_s
+        );
+    }
+
+    #[test]
+    fn isha_after_midnight_is_still_the_next_prayer() {
+        // Reference: Aladhan API, MWL, middle of the night, 2026-06-21.
+        let mut paris = settings(48.8566, 2.3522, "Europe/Paris", "muslimWorldLeague");
+        paris.high_latitude = "middleOfTheNight".to_string();
+        let day = prayer_day(
+            &paris,
+            NaiveDate::from_ymd_opt(2026, 6, 21).unwrap(),
+            local("Europe/Paris", 2026, 6, 21, 23, 30),
+        )
+        .unwrap();
+        assert_time(&day, "fajr", "01:52", 2);
+        assert_time(&day, "isha", "01:07", 2);
+        let next = day.next.as_ref().unwrap();
+        assert_eq!(next.key, "isha");
+        assert!(next.iso.starts_with("2026-06-22"), "got {}", next.iso);
+        assert!(day.remaining_s > 0);
+    }
+
+    #[test]
+    fn after_isha_rolls_to_tomorrow_fajr() {
+        let jakarta = settings(-6.2088, 106.8456, "Asia/Jakarta", "muslimWorldLeague");
+        let day = prayer_day(
+            &jakarta,
+            NaiveDate::from_ymd_opt(2026, 6, 21).unwrap(),
+            local("Asia/Jakarta", 2026, 6, 21, 20, 0),
+        )
+        .unwrap();
+        let next = day.next.as_ref().unwrap();
+        assert_eq!(next.key, "fajr");
+        assert!(next.iso.starts_with("2026-06-22"), "got {}", next.iso);
+        assert!(day.remaining_s > 0);
+    }
+
+    #[test]
+    fn polar_times_stay_chronological() {
+        let tromso = settings(69.6492, 18.9553, "Europe/Oslo", "muslimWorldLeague");
+        let day = prayer_day(
+            &tromso,
+            NaiveDate::from_ymd_opt(2026, 12, 21).unwrap(),
+            local("Europe/Oslo", 2026, 12, 21, 12, 0),
+        )
+        .unwrap();
+        assert!(
+            day.times.iter().any(|time| time.key == "dhuhr"),
+            "Dhuhr always exists"
+        );
+        let mut previous = None;
+        for time in &day.times {
+            let instant = DateTime::parse_from_rfc3339(&time.iso).unwrap();
+            if let Some(previous) = previous {
+                assert!(
+                    instant >= previous,
+                    "{} at {} is before the previous prayer",
+                    time.key,
+                    time.iso
+                );
+            }
+            previous = Some(instant);
+        }
+    }
+
+    #[test]
+    fn qibla_at_the_kaaba_is_zero() {
+        assert!(qibla_bearing(21.4225, 39.8262) < 0.1);
     }
 
     #[test]
@@ -780,4 +1034,5 @@ mod tests {
         assert_eq!(streak.current, 3);
         assert_eq!(streak.best, 4);
     }
+
 }

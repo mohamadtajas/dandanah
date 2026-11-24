@@ -25,6 +25,22 @@
     settings ? nearestCity(settings.latitude, settings.longitude) : null,
   );
 
+  function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+    return 6371.0088 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  const atKaaba = $derived(
+    !!settings &&
+      distanceKm(settings.latitude, settings.longitude, 21.4225241, 39.8261818) < 0.05,
+  );
+
   const week = $derived.by(() => {
     if (!day) return [];
     const base = new Date(day.date + "T00:00:00");
@@ -46,6 +62,7 @@
         complete: logComplete(entry),
         excused: entry?.excused ?? false,
         partial: logCount(entry) > 0,
+        count: logCount(entry),
         today: key === day.date,
       });
     }
@@ -124,7 +141,12 @@
         <p class="mt-1 text-xs text-muted">{i18n.t("prayer.logHint")}</p>
 
         <div class="mt-3">
-          <PrayerTimeline {day} {log} ontoggle={(prayer) => worship.togglePrayer(prayer)} />
+          <PrayerTimeline
+            {day}
+            {log}
+            disabled={worship.pending}
+            ontoggle={(prayer) => worship.togglePrayer(prayer)}
+          />
         </div>
 
         <div class="mt-4 flex items-start justify-between gap-4 rounded-xl border border-line/70 bg-ink-850/50 px-3.5 py-3">
@@ -137,8 +159,9 @@
             role="switch"
             aria-checked={excused}
             aria-label={i18n.t("prayer.excused")}
+            disabled={worship.pending}
             onclick={() => worship.setExcused(!excused)}
-            class="relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors
+            class="relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors disabled:opacity-50
                    {excused ? 'border-teal/60 bg-teal/70' : 'border-line bg-ink-800'}"
           >
             <span
@@ -171,6 +194,12 @@
             <div class="mt-2 grid grid-cols-7 gap-1.5">
               {#each week as entry (entry.key)}
                 <div
+                  role="img"
+                  aria-label={`${entry.weekday} ${entry.day}: ${
+                    entry.excused
+                      ? i18n.t("prayer.excused")
+                      : i18n.t("prayer.todayCount", { count: fmtNumber(entry.count) })
+                  }`}
                   class="flex flex-col items-center gap-1 rounded-lg border px-1 py-1.5
                          {entry.excused
                     ? 'border-teal/40 bg-teal/[0.08]'
@@ -210,7 +239,13 @@
             </span>
           </div>
           <div class="mt-4">
-            <QiblaDial bearing={day.qibla} />
+            {#if atKaaba}
+              <p class="rounded-xl border border-gold/25 bg-gold/[0.06] px-3 py-4 text-center text-xs leading-relaxed text-gold">
+                {i18n.t("prayer.atKaaba")}
+              </p>
+            {:else}
+              <QiblaDial bearing={day.qibla} />
+            {/if}
           </div>
           <p class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] tabular-nums text-muted/70">
             <span>{i18n.t("settings.latitude")} {(settings?.latitude ?? 0).toFixed(3)}°</span>

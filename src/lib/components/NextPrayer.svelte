@@ -38,7 +38,7 @@
     </button>
   {/if}
 
-  {#if day && next}
+  {#if day && next && !unconfigured}
     <div class="relative flex flex-col gap-7 px-6 py-6 lg:flex-row lg:items-center lg:justify-between">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium text-gold/90">
@@ -102,6 +102,11 @@
             {i18n.t("prayer.todayCount", { count: fmtNumber(streak?.todayCount ?? 0) })}
           </span>
         {/if}
+        {#if worship.error}
+          <span class="rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-gold">
+            {i18n.t("prayer.stale")}
+          </span>
+        {/if}
       </div>
 
       {#if showLink}
@@ -114,6 +119,11 @@
           {i18n.t("prayer.viewAll")}
         </button>
       {/if}
+    </div>
+  {:else if unconfigured}
+    <div class="relative flex min-h-[8rem] flex-col items-center justify-center gap-2 px-6 py-6 text-center">
+      <Icon name="compass" size={24} class="text-muted" />
+      <p class="text-xs text-muted">{i18n.t("prayer.notConfigured")}</p>
     </div>
   {:else}
     <div class="flex h-[9.5rem] animate-pulse items-center justify-center px-6">

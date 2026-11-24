@@ -73,10 +73,20 @@ export const cities: City[] = [
   { id: "capetown", name: "كيب تاون", nameEn: "Cape Town", country: "جنوب أفريقيا", latitude: -33.9249, longitude: 18.4241, timezone: "Africa/Johannesburg" },
 ];
 
-/** Timezones worth offering beyond the city list, kept unique and sorted. */
-export const timezones: string[] = [
-  ...new Set([...cities.map((city) => city.timezone), "UTC"]),
-].sort();
+/**
+ * Every IANA zone the platform knows, plus the city presets and the saved zone.
+ * Chromium/WebView2 exposes the full list; the city list is the fallback.
+ */
+export function timezoneChoices(current?: string): string[] {
+  const zones = new Set<string>(cities.map((city) => city.timezone));
+  const supported = (
+    Intl as unknown as { supportedValuesOf?: (key: string) => string[] }
+  ).supportedValuesOf?.("timeZone");
+  for (const zone of supported ?? []) zones.add(zone);
+  zones.add("UTC");
+  if (current) zones.add(current);
+  return [...zones].sort();
+}
 
 /** Closest preset for a coordinate pair, or null when none is close enough. */
 export function nearestCity(latitude: number, longitude: number): City | null {
