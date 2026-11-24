@@ -39,6 +39,11 @@ pub fn run() {
                 }
             }
             let db = Database::open(&data_dir.join(migrate::NEW_DB))?;
+            if let Ok(interrupted) = db.interrupt_downloads() {
+                if interrupted > 0 {
+                    eprintln!("{interrupted} interrupted downloads marked for retry");
+                }
+            }
 
             let http = reqwest::Client::builder()
                 .user_agent(concat!(
@@ -53,7 +58,7 @@ pub fn run() {
             app.manage(AppState {
                 db: Arc::new(db),
                 http,
-                cancels: Arc::new(parking_lot::Mutex::new(std::collections::HashMap::new())),
+                queue: Arc::new(downloads::DownloadQueue::new()),
             });
 
             if !media::init(app.handle()) {
@@ -110,9 +115,12 @@ pub fn run() {
             commands::add_to_playlist,
             commands::remove_from_playlist,
             commands::start_download,
+            commands::start_downloads,
             commands::cancel_download,
             commands::get_downloads,
             commands::delete_download,
+            commands::delete_downloads,
+            commands::get_storage_totals,
             commands::import_folder,
             commands::get_local_tracks,
             commands::forget_local_track,

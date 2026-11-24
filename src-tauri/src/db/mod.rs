@@ -724,44 +724,8 @@ impl Database {
     // --- favourites --------------------------------------------------------
 
     pub fn upsert_track(&self, track: &Track) -> Result<()> {
-        let payload = serde_json::to_string(track)?;
         let conn = self.conn.lock();
-        conn.execute(
-            "INSERT INTO tracks(id, provider, provider_id, title, artist, album,
-                                duration_s, artwork_url, local_path, is_local,
-                                license, license_url, attribution, source_page,
-                                kind, added_at, payload)
-             VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
-             ON CONFLICT(id) DO UPDATE SET
-                title       = excluded.title,
-                artist      = excluded.artist,
-                album       = excluded.album,
-                duration_s  = excluded.duration_s,
-                artwork_url = excluded.artwork_url,
-                local_path  = excluded.local_path,
-                is_local    = excluded.is_local,
-                payload     = excluded.payload",
-            params![
-                track.id,
-                track.provider,
-                track.provider_id,
-                track.title,
-                track.artist,
-                track.album,
-                track.duration_s,
-                track.artwork_url,
-                track.local_path,
-                track.local_path.is_some() as i32,
-                track.license,
-                track.license_url,
-                track.attribution,
-                track.source_page,
-                track.kind.as_str(),
-                now(),
-                payload
-            ],
-        )?;
-        Ok(())
+        upsert_track_on(&conn, track)
     }
 
     pub fn add_favorite(&self, track: &Track) -> Result<()> {
@@ -921,20 +885,33 @@ impl Database {
     // --- downloads ---------------------------------------------------------
 
     pub fn queue_download(&self, track: &Track) -> Result<()> {
-        self.upsert_track(track)?;
+        self.queue_downloads(std::slice::from_ref(track))
+    }
+
+    /// Persists a whole batch in one transaction, then the downloader spawns
+    /// the tasks. Keeping the rows and the queue in step avoids rows stuck in
+    /// `queued` with no worker.
+    pub fn queue_downloads(&self, tracks: &[Track]) -> Result<()> {
         let conn = self.conn.lock();
-        conn.execute(
-            "INSERT INTO downloads(track_id, payload, status, created_at)
-             VALUES(?1, ?2, 'queued', ?3)
-             ON CONFLICT(track_id) DO UPDATE SET
-                status     = 'queued',
-                bytes_done = 0,
-                bytes_total = 0,
-                file_path  = NULL,
-                error      = NULL,
-                created_at = excluded.created_at",
-            params![track.id, serde_json::to_string(track)?, now()],
-        )?;
+        let tx = conn.unchecked_transaction()?;
+        let created = now();
+        for track in tracks {
+            upsert_track_on(&tx, track)?;
+            tx.execute(
+                "INSERT INTO downloads(track_id, payload, status, created_at)
+                 VALUES(?1, ?2, 'queued', ?3)
+                 ON CONFLICT(track_id) DO UPDATE SET
+                    payload    = excluded.payload,
+                    status     = 'queued',
+                    bytes_done = 0,
+                    bytes_total = 0,
+                    file_path  = NULL,
+                    error      = NULL,
+                    created_at = excluded.created_at",
+                params![track.id, serde_json::to_string(track)?, created],
+            )?;
+        }
+        tx.commit()?;
         Ok(())
     }
 
@@ -970,6 +947,28 @@ impl Database {
             params![track_id, error],
         )?;
         Ok(())
+    }
+
+    /// Marks a job cancelled immediately, even while it is still waiting for a
+    /// concurrency slot (before the worker has touched it).
+    pub fn mark_cancelled(&self, track_id: &str) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "UPDATE downloads SET status = 'cancelled', error = NULL WHERE track_id = ?1",
+            [track_id],
+        )?;
+        Ok(())
+    }
+
+    /// Runs at startup: a process that stopped mid-download leaves no worker,
+    /// so the row is marked interrupted. Retrying resumes from its `.part`.
+    pub fn interrupt_downloads(&self) -> Result<usize> {
+        let conn = self.conn.lock();
+        Ok(conn.execute(
+            "UPDATE downloads SET status = 'error', error = 'interrupted'
+             WHERE status IN ('queued', 'downloading')",
+            [],
+        )?)
     }
 
     pub fn downloads(&self) -> Result<Vec<DownloadRow>> {
@@ -1135,6 +1134,46 @@ pub fn now() -> i64 {
     chrono::Utc::now().timestamp()
 }
 
+fn upsert_track_on(conn: &rusqlite::Connection, track: &Track) -> Result<()> {
+    let payload = serde_json::to_string(track)?;
+    conn.execute(
+        "INSERT INTO tracks(id, provider, provider_id, title, artist, album,
+                            duration_s, artwork_url, local_path, is_local,
+                            license, license_url, attribution, source_page,
+                            kind, added_at, payload)
+         VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
+         ON CONFLICT(id) DO UPDATE SET
+            title       = excluded.title,
+            artist      = excluded.artist,
+            album       = excluded.album,
+            duration_s  = excluded.duration_s,
+            artwork_url = excluded.artwork_url,
+            local_path  = excluded.local_path,
+            is_local    = excluded.is_local,
+            payload     = excluded.payload",
+        params![
+            track.id,
+            track.provider,
+            track.provider_id,
+            track.title,
+            track.artist,
+            track.album,
+            track.duration_s,
+            track.artwork_url,
+            track.local_path,
+            track.local_path.is_some() as i32,
+            track.license,
+            track.license_url,
+            track.attribution,
+            track.source_page,
+            track.kind.as_str(),
+            now(),
+            payload
+        ],
+    )?;
+    Ok(())
+}
+
 fn validate_log_date(date: &str) -> Result<()> {
     chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
         .map(|_| ())
@@ -1277,6 +1316,48 @@ mod tests {
 
         db.remove_favorite(&track.id).unwrap();
         assert!(db.favorite_ids().unwrap().is_empty());
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn batch_queue_is_atomic_and_interrupted_rows_are_retryable() {
+        use crate::providers::TrackKind;
+        let (dir, db) = temp_db();
+        let mut a = Track::new("mp3quran", "1", "الفاتحة", TrackKind::Quran);
+        a.stream_url = Some("https://x/1.mp3".into());
+        let mut b = Track::new("mp3quran", "2", "البقرة", TrackKind::Quran);
+        b.stream_url = Some("https://x/2.mp3".into());
+        let mut c = Track::new("mp3quran", "3", "آل عمران", TrackKind::Quran);
+        c.stream_url = Some("https://x/3.mp3".into());
+
+        db.queue_downloads(&[a.clone(), b.clone(), c.clone()]).unwrap();
+        let queued = db.downloads().unwrap();
+        assert_eq!(queued.len(), 3);
+        assert!(queued.iter().all(|row| row.status == "queued"));
+
+        // One job starts, one is cancelled while queued.
+        db.set_download_progress(&a.id, 4, 8, "downloading").unwrap();
+        db.mark_cancelled(&b.id).unwrap();
+        let interrupted = db.interrupt_downloads().unwrap();
+        assert_eq!(interrupted, 2, "running and queued jobs lost their worker");
+        let rows = db.downloads().unwrap();
+        let status = |id: &str| {
+            rows.iter()
+                .find(|row| row.track.id == id)
+                .map(|row| row.status.as_str())
+                .unwrap()
+        };
+        assert_eq!(status(&a.id), "error");
+        assert_eq!(status(&b.id), "cancelled");
+        assert_eq!(status(&c.id), "error");
+        assert_eq!(
+            rows.iter()
+                .find(|row| row.track.id == c.id)
+                .and_then(|row| row.error.as_deref()),
+            Some("interrupted")
+        );
+
         drop(db);
         let _ = std::fs::remove_dir_all(&dir);
     }

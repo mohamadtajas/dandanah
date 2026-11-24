@@ -9,6 +9,7 @@ import type {
   AppInfo,
   Ayah,
   AyahReciter,
+  DeleteSummary,
   DownloadRow,
   HijriDate,
   HotkeyMap,
@@ -26,6 +27,7 @@ import type {
   ReaderPosition,
   Reciter,
   SearchResults,
+  StorageTotals,
   Surah,
   Track,
   WorshipSettings,
@@ -1823,11 +1825,66 @@ export function mockApi() {
       const entry = playlistStore.get(playlistId);
       if (entry) entry.tracks = entry.tracks.filter((t) => t.id !== trackId);
     },
-    async startDownload(_track: Track): Promise<string> {
-      throw new Error("Downloads run in the desktop app only");
+    async startDownload(track: Track): Promise<number> {
+      return this.startDownloads([track]);
     },
-    async cancelDownload(_trackId: string) {
-      return false;
+    async startDownloads(tracks: Track[]): Promise<number> {
+      let accepted = 0;
+      for (const track of tracks) {
+        const existing = downloadsStore.get(track.id);
+        if (
+          existing &&
+          (existing.status === "queued" ||
+            existing.status === "downloading" ||
+            existing.status === "done")
+        ) {
+          continue;
+        }
+        if (!track.streamUrl) continue;
+
+        const total = 1_200_000 + track.title.length * 8_000;
+        downloadsStore.set(track.id, {
+          track,
+          status: "queued",
+          bytesTotal: total,
+          bytesDone: 0,
+          createdAt: Date.now(),
+        });
+        accepted += 1;
+
+        const started = Date.now();
+        const timer = setInterval(() => {
+          const current = downloadsStore.get(track.id);
+          if (!current || current.status === "cancelled") {
+            clearInterval(timer);
+            return;
+          }
+          const progress = Math.min(1, (Date.now() - started) / 2_500);
+          if (progress >= 1) {
+            downloadsStore.set(track.id, {
+              ...current,
+              status: "done",
+              bytesDone: total,
+              bytesTotal: total,
+              filePath: `C:/mock/downloads/${track.id.replace(/[^a-z0-9]+/gi, "-")}.mp3`,
+            });
+            clearInterval(timer);
+          } else {
+            downloadsStore.set(track.id, {
+              ...current,
+              status: "downloading",
+              bytesDone: Math.round(total * progress),
+            });
+          }
+        }, 200);
+      }
+      return accepted;
+    },
+    async cancelDownload(trackId: string) {
+      const row = downloadsStore.get(trackId);
+      if (!row || (row.status !== "queued" && row.status !== "downloading")) return false;
+      downloadsStore.set(trackId, { ...row, status: "cancelled", error: undefined });
+      return true;
     },
     async getHotkeys(): Promise<HotkeyMap> {
       return {
@@ -1843,7 +1900,49 @@ export function mockApi() {
       return [...downloadsStore.values()];
     },
     async deleteDownload(trackId: string) {
+      const row = downloadsStore.get(trackId);
       downloadsStore.delete(trackId);
+      return row?.bytesDone ?? 0;
+    },
+    async deleteDownloads(trackIds: string[]): Promise<DeleteSummary> {
+      let deleted = 0;
+      let freedBytes = 0;
+      const failed: string[] = [];
+      for (const trackId of trackIds) {
+        const row = downloadsStore.get(trackId);
+        if (row && (row.status === "queued" || row.status === "downloading")) {
+          failed.push(`${trackId}: still downloading`);
+          continue;
+        }
+        downloadsStore.delete(trackId);
+        deleted += 1;
+        freedBytes += row?.bytesDone ?? 0;
+      }
+      return { deleted, freedBytes, failed };
+    },
+    async storageTotals(): Promise<StorageTotals> {
+      const totals: StorageTotals = {
+        downloadedBytes: 0,
+        downloadedCount: 0,
+        partialBytes: 0,
+        partialCount: 0,
+        localBytes: 0,
+        localCount: 0,
+        totalBytes: 0,
+        active: 0,
+      };
+      for (const row of downloadsStore.values()) {
+        if (row.status === "done") {
+          totals.downloadedBytes += row.bytesTotal;
+          totals.downloadedCount += 1;
+        } else if (row.bytesDone > 0) {
+          totals.partialBytes += row.bytesDone;
+          totals.partialCount += 1;
+        }
+        if (row.status === "queued" || row.status === "downloading") totals.active += 1;
+      }
+      totals.totalBytes = totals.downloadedBytes + totals.partialBytes + totals.localBytes;
+      return totals;
     },
     async importFolder(): Promise<ImportSummary> {
       throw new Error("Local import runs in the desktop app only");

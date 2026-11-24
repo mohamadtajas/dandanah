@@ -28,6 +28,28 @@
   let playlistLoading = $state(false);
   let playlistToken = 0;
 
+  let selectedDownloads = $state<string[]>([]);
+
+  const busyDownloads = $derived(
+    library.downloads.filter(
+      (row) => row.status === "queued" || row.status === "downloading",
+    ),
+  );
+  const removableDownloads = $derived(
+    library.downloads.filter(
+      (row) => row.status !== "queued" && row.status !== "downloading",
+    ),
+  );
+  const selectedCount = $derived(
+    selectedDownloads.filter((id) =>
+      library.downloads.some((row) => row.track.id === id),
+    ).length,
+  );
+  const allSelected = $derived(
+    removableDownloads.length > 0 &&
+      removableDownloads.every((row) => selectedDownloads.includes(row.track.id)),
+  );
+
   const tabs: { id: Tab; label: "library.recent" | "library.hifz" | "library.favorites" | "library.playlists" | "library.downloads" | "library.local"; icon: IconName }[] = [
     { id: "recent", label: "library.recent", icon: "clock" },
     { id: "favorites", label: "library.favorites", icon: "heart" },
@@ -135,6 +157,34 @@
     if (!bytes) return "";
     const mb = bytes / 1_048_576;
     return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+  }
+
+  function toggleSelected(trackId: string) {
+    selectedDownloads = selectedDownloads.includes(trackId)
+      ? selectedDownloads.filter((id) => id !== trackId)
+      : [...selectedDownloads, trackId];
+  }
+
+  function toggleSelectAll() {
+    selectedDownloads = allSelected
+      ? []
+      : removableDownloads.map((row) => row.track.id);
+  }
+
+  async function deleteSelected() {
+    const ids = selectedDownloads.filter((id) =>
+      removableDownloads.some((row) => row.track.id === id),
+    );
+    if (ids.length === 0) return;
+    const summary = await library.removeDownloads(ids);
+    if (summary) {
+      const failed = new Set(summary.failed.map((entry) => entry.split(": ")[0]));
+      selectedDownloads = ids.filter((id) => failed.has(id));
+    }
+  }
+
+  async function cancelAll() {
+    await Promise.all(busyDownloads.map((row) => library.cancelDownload(row.track.id)));
   }
 </script>
 
@@ -333,6 +383,64 @@
           </div>
         {/if}
       {:else if tab === "downloads"}
+        {#if library.storage}
+          {@const st = library.storage}
+          <div class="mb-4 rounded-2xl border border-line bg-ink-900/50 p-4">
+            <div class="flex flex-wrap items-center gap-4">
+              <div class="min-w-0 flex-1">
+                <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-gold/80">
+                  {i18n.t("library.storage")}
+                </p>
+                <p class="mt-1 text-xl font-bold text-cream">
+                  {fmtBytes(st.totalBytes) || "0 KB"}
+                </p>
+                <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-muted">
+                  <span>{i18n.t("library.storageDownloaded")}: {fmtBytes(st.downloadedBytes) || "0 KB"}</span>
+                  {#if st.partialBytes}
+                    <span>{i18n.t("library.storagePartial")}: {fmtBytes(st.partialBytes)}</span>
+                  {/if}
+                  {#if st.localBytes}
+                    <span>{i18n.t("library.storageLocal")}: {fmtBytes(st.localBytes)}</span>
+                  {/if}
+                  {#if st.active}
+                    <span class="text-gold">{i18n.t("library.storageActive")}: {fmtNumber(st.active)}</span>
+                  {/if}
+                </div>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                {#if busyDownloads.length > 0}
+                  <button
+                    type="button"
+                    onclick={cancelAll}
+                    class="rounded-lg border border-line px-2.5 py-1.5 text-[11px] text-muted transition-colors hover:border-red-400/40 hover:text-red-400"
+                  >
+                    {i18n.t("library.cancelAll")}
+                  </button>
+                {/if}
+                {#if removableDownloads.length > 0}
+                  <button
+                    type="button"
+                    onclick={toggleSelectAll}
+                    class="rounded-lg border border-line px-2.5 py-1.5 text-[11px] text-muted transition-colors hover:border-gold/40 hover:text-gold"
+                  >
+                    {i18n.t(allSelected ? "library.deselectAll" : "library.selectAll")}
+                  </button>
+                  <button
+                    type="button"
+                    onclick={deleteSelected}
+                    disabled={selectedCount === 0}
+                    class="flex items-center gap-1.5 rounded-lg border border-red-400/30 bg-red-400/10 px-2.5 py-1.5 text-[11px] text-red-300 transition-colors hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Icon name="x" size={12} />
+                    {i18n.t("library.deleteSelected")}
+                    {#if selectedCount}<span class="tabular-nums">({fmtNumber(selectedCount)})</span>{/if}
+                  </button>
+                {/if}
+              </div>
+            </div>
+          </div>
+        {/if}
+
         {#if library.downloads.length === 0}
           {@render emptyState("download", i18n.t("library.emptyDownloads"))}
         {:else}
@@ -340,7 +448,23 @@
             {#each library.downloads as row (row.track.id)}
               {@const busy = row.status === "queued" || row.status === "downloading"}
               {@const pct = row.bytesTotal > 0 ? Math.round((row.bytesDone / row.bytesTotal) * 100) : 0}
+              {@const picked = selectedDownloads.includes(row.track.id)}
               <div class="flex items-center gap-3 border-b border-line/50 px-3 py-2.5 last:border-0">
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={picked}
+                  disabled={busy}
+                  onclick={() => toggleSelected(row.track.id)}
+                  class="grid size-5 shrink-0 place-items-center rounded-md border transition-colors
+                         {picked
+                    ? 'border-gold/50 bg-gold/15 text-gold'
+                    : 'border-line text-transparent hover:border-gold/40'}
+                         disabled:opacity-30"
+                  aria-label={i18n.t("library.selectedCount", { count: 1 })}
+                >
+                  <Icon name="check" size={11} />
+                </button>
                 <button
                   type="button"
                   onclick={() => {
@@ -388,7 +512,9 @@
                   onclick={() =>
                     busy
                       ? library.cancelDownload(row.track.id)
-                      : library.removeDownload(row.track.id)}
+                      : library.removeDownloads([row.track.id]).then(() => {
+                          selectedDownloads = selectedDownloads.filter((id) => id !== row.track.id);
+                        })}
                   class="rounded-lg p-1.5 text-muted transition-colors hover:text-red-400"
                   aria-label={busy ? i18n.t("library.cancelDownload") : i18n.t("library.deleteDownload")}
                 >

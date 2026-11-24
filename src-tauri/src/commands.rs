@@ -9,10 +9,7 @@ use crate::providers::{
 use crate::adhkar::{self, AdhkarDay, AdhkarProgress, AdhkarStreak};
 use crate::worship::{self, HijriDate, PrayerDay, PrayerLog, QiblaInfo, Streak, WorshipSettings};
 use crate::{downloads, hotkeys, library, media};
-use parking_lot::Mutex;
 use serde::Serialize;
-use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -20,8 +17,8 @@ use tauri::{AppHandle, Emitter, Manager, State};
 pub struct AppState {
     pub db: Arc<Database>,
     pub http: reqwest::Client,
-    /// Cancellation flags for in-flight downloads, keyed by track id.
-    pub cancels: Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>,
+    /// Bounded bulk download queue shared by every command.
+    pub queue: Arc<downloads::DownloadQueue>,
 }
 
 const RECITERS_TTL: i64 = 60 * 60 * 24; // 24h
@@ -907,42 +904,60 @@ pub async fn start_download(
     app: AppHandle,
     state: State<'_, AppState>,
     track: Track,
-) -> Result<Option<String>, String> {
-    let cancel = Arc::new(AtomicBool::new(false));
-    state
-        .cancels
-        .lock()
-        .insert(track.id.clone(), cancel.clone());
-
-    let artwork_dir = app
-        .path()
-        .app_data_dir()
-        .map(|dir| dir.join("artwork"))
-        .unwrap_or_else(|_| std::env::temp_dir().join("sakeenah-artwork"));
-
-    let result = downloads::run(
-        app.clone(),
-        state.http.clone(),
-        state.db.clone(),
-        track.clone(),
-        cancel,
-        artwork_dir,
-    )
-    .await;
-
-    state.cancels.lock().remove(&track.id);
-    result.map_err(|error| error.to_string())
+) -> Result<usize, String> {
+    enqueue_tracks(&app, &state, vec![track])
 }
 
 #[tauri::command]
-pub fn cancel_download(state: State<'_, AppState>, track_id: String) -> bool {
-    match state.cancels.lock().get(&track_id) {
-        Some(flag) => {
-            flag.store(true, Ordering::Relaxed);
-            true
-        }
-        None => false,
+pub async fn start_downloads(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    tracks: Vec<Track>,
+) -> Result<usize, String> {
+    enqueue_tracks(&app, &state, tracks)
+}
+
+/// Hands a batch to the queue. Selection, persistence and worker admission
+/// happen under one lock inside the queue.
+fn enqueue_tracks(app: &AppHandle, state: &AppState, tracks: Vec<Track>) -> Result<usize, String> {
+    if tracks.is_empty() {
+        return Ok(0);
     }
+    state
+        .queue
+        .submit(
+            app.clone(),
+            state.http.clone(),
+            state.db.clone(),
+            tracks,
+        )
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn cancel_download(app: AppHandle, state: State<'_, AppState>, track_id: String) -> bool {
+    if state.queue.cancel(&track_id).is_none() {
+        return false;
+    }
+    // A job waiting for a slot has not touched the filesystem yet, so reflect
+    // the cancellation in the row and the UI immediately.
+    let _ = state.db.mark_cancelled(&track_id);
+    if let Ok(rows) = state.db.downloads() {
+        if let Some(row) = rows.into_iter().find(|row| row.track.id == track_id) {
+            let _ = app.emit(
+                downloads::EVENT,
+                downloads::Progress {
+                    track_id,
+                    status: "cancelled".into(),
+                    received: row.bytes_done,
+                    total: row.bytes_total,
+                    path: None,
+                    error: None,
+                },
+            );
+        }
+    }
+    true
 }
 
 #[tauri::command]
@@ -950,16 +965,106 @@ pub fn get_downloads(state: State<'_, AppState>) -> Result<Vec<DownloadRow>, Str
     state.db.downloads().map_err(|e| e.to_string())
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteSummary {
+    pub deleted: usize,
+    pub freed_bytes: u64,
+    pub failed: Vec<String>,
+}
+
 #[tauri::command]
-pub fn delete_download(state: State<'_, AppState>, track_id: String) -> Result<(), String> {
-    let path = state
-        .db
-        .delete_download(&track_id)
-        .map_err(|e| e.to_string())?;
-    if let Some(path) = path {
-        let _ = std::fs::remove_file(path);
+pub fn delete_download(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    track_id: String,
+) -> Result<u64, String> {
+    remove_download(
+        &app,
+        &state.db,
+        state.queue.is_active(&track_id),
+        &track_id,
+    )
+}
+
+#[tauri::command]
+pub fn delete_downloads(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    track_ids: Vec<String>,
+) -> DeleteSummary {
+    let mut summary = DeleteSummary {
+        deleted: 0,
+        freed_bytes: 0,
+        failed: Vec::new(),
+    };
+    for track_id in track_ids {
+        match remove_download(
+            &app,
+            &state.db,
+            state.queue.is_active(&track_id),
+            &track_id,
+        ) {
+            Ok(freed) => {
+                summary.deleted += 1;
+                summary.freed_bytes += freed;
+            }
+            Err(error) => summary.failed.push(format!("{track_id}: {error}")),
+        }
     }
-    Ok(())
+    summary
+}
+
+/// Removes the file(s) first and only then the DB row, so a failed delete
+/// never hides a file the user still has on disk.
+fn remove_download(
+    app: &AppHandle,
+    db: &Database,
+    active: bool,
+    track_id: &str,
+) -> Result<u64, String> {
+    if active {
+        return Err("still downloading".into());
+    }
+    let rows = db.downloads().map_err(|e| e.to_string())?;
+    let Some(row) = rows.into_iter().find(|row| row.track.id == track_id) else {
+        return Ok(0);
+    };
+    if matches!(row.status.as_str(), "queued" | "downloading") {
+        return Err("still downloading".into());
+    }
+
+    let mut candidates: Vec<(std::path::PathBuf, Option<std::path::PathBuf>)> = Vec::new();
+    if let Some(path) = row.file_path.as_deref() {
+        let path = std::path::PathBuf::from(path);
+        let part = downloads::sibling_part(&path);
+        candidates.push((path, Some(part)));
+    }
+    if let Ok((final_path, part_path)) = downloads::paths_for(app, &row.track) {
+        candidates.push((final_path, Some(part_path)));
+    }
+
+    let mut seen = std::collections::HashSet::new();
+    let mut freed = 0;
+    for (final_path, part_path) in candidates {
+        if !seen.insert(final_path.clone()) {
+            continue;
+        }
+        freed += downloads::remove_files(Some(&final_path.to_string_lossy()), part_path.as_deref())
+            .map_err(|error| error.to_string())?;
+    }
+
+    db.delete_download(track_id).map_err(|e| e.to_string())?;
+    Ok(freed)
+}
+
+#[tauri::command]
+pub fn get_storage_totals(
+    state: State<'_, AppState>,
+) -> Result<downloads::StorageTotals, String> {
+    let rows = state.db.downloads().map_err(|e| e.to_string())?;
+    let local = state.db.local_tracks().map_err(|e| e.to_string())?;
+    Ok(downloads::totals(&rows, &local, state.queue.active()))
 }
 
 // ---------------------------------------------------------------------------

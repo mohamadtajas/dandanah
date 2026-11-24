@@ -129,6 +129,23 @@ export interface DownloadRow {
   createdAt: number;
 }
 
+export interface DeleteSummary {
+  deleted: number;
+  freedBytes: number;
+  failed: string[];
+}
+
+export interface StorageTotals {
+  downloadedBytes: number;
+  downloadedCount: number;
+  partialBytes: number;
+  partialCount: number;
+  localBytes: number;
+  localCount: number;
+  totalBytes: number;
+  active: number;
+}
+
 export interface ImportSummary {
   imported: number;
   scannedFolders: number;

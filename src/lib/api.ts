@@ -6,6 +6,7 @@ import type {
   AppInfo,
   Ayah,
   AyahReciter,
+  DeleteSummary,
   DownloadRow,
   HijriDate,
   HotkeyMap,
@@ -24,6 +25,7 @@ import type {
   QiblaInfo,
   Reciter,
   SearchResults,
+  StorageTotals,
   Surah,
   Track,
   WorshipSettings,
@@ -250,10 +252,15 @@ export const api = {
 
   // --- downloads & local files -----------------------------------------
 
-  startDownload: async (track: Track): Promise<string | null> =>
+  startDownload: async (track: Track): Promise<number> =>
     isTauri
-      ? invoke<string | null>("start_download", { track })
+      ? invoke<number>("start_download", { track })
       : (await mock()).startDownload(track),
+
+  startDownloads: async (tracks: Track[]): Promise<number> =>
+    isTauri
+      ? invoke<number>("start_downloads", { tracks })
+      : (await mock()).startDownloads(tracks),
 
   cancelDownload: async (trackId: string): Promise<boolean> => {
     if (!isTauri) return (await mock()).cancelDownload(trackId);
@@ -263,10 +270,18 @@ export const api = {
   downloads: async (): Promise<DownloadRow[]> =>
     isTauri ? invoke<DownloadRow[]>("get_downloads") : (await mock()).downloads(),
 
-  deleteDownload: async (trackId: string): Promise<void> => {
+  deleteDownload: async (trackId: string): Promise<number> => {
     if (!isTauri) return (await mock()).deleteDownload(trackId);
-    await invoke<void>("delete_download", { trackId });
+    return invoke<number>("delete_download", { trackId });
   },
+
+  deleteDownloads: async (trackIds: string[]): Promise<DeleteSummary> => {
+    if (!isTauri) return (await mock()).deleteDownloads(trackIds);
+    return invoke<DeleteSummary>("delete_downloads", { trackIds });
+  },
+
+  storageTotals: async (): Promise<StorageTotals> =>
+    isTauri ? invoke<StorageTotals>("get_storage_totals") : (await mock()).storageTotals(),
 
   importFolder: async (paths: string[]): Promise<ImportSummary> =>
     isTauri

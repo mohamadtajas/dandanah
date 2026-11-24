@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "$lib/api";
+  import { api, isTauri } from "$lib/api";
   import type { Reciter, Surah, Track } from "$lib/types";
   import { fmtNumber, i18n } from "$lib/i18n/index.svelte.ts";
   import { nav } from "$lib/stores/nav.svelte.ts";
@@ -105,6 +105,22 @@
   function playAll() {
     if (tracks.length) player.play(tracks[0], tracks);
   }
+
+  async function downloadAll() {
+    if (!tracks.length || loadingTracks) return;
+    if (tracks.length > 20) {
+      const message = i18n.t("quran.downloadAllConfirm", { count: fmtNumber(tracks.length) });
+      let confirmed = false;
+      if (isTauri) {
+        const { ask } = await import("@tauri-apps/plugin-dialog");
+        confirmed = await ask(message, { kind: "warning" });
+      } else {
+        confirmed = window.confirm(message);
+      }
+      if (!confirmed) return;
+    }
+    await library.startDownloads(tracks);
+  }
 </script>
 
 <div class="fade-in">
@@ -164,6 +180,16 @@
       >
         <Icon name="play" size={14} />
         {i18n.t("quran.playAll")}
+      </button>
+      <button
+        type="button"
+        onclick={downloadAll}
+        disabled={!tracks.length || loadingTracks}
+        class="flex items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm font-medium text-cream transition-colors hover:border-gold/40 hover:text-gold disabled:cursor-not-allowed disabled:opacity-40"
+        title={i18n.t("library.downloadAll")}
+      >
+        <Icon name="download" size={14} />
+        {i18n.t("library.downloadAll")}
       </button>
     </header>
 
