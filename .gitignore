@@ -19,3 +19,6 @@ Thumbs.db
 # logs
 *.log
 npm-debug.log*
+
+# signing keys (never commit)
+*.key

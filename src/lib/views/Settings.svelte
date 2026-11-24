@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "$lib/api";
+  import { api, isTauri } from "$lib/api";
   import type { AppInfo } from "$lib/types";
   import { i18n } from "$lib/i18n/index.svelte.ts";
   import { nav } from "$lib/stores/nav.svelte.ts";
@@ -9,6 +9,14 @@
   import Icon from "$lib/components/Icon.svelte";
 
   let info = $state<AppInfo | null>(null);
+
+  type UpdateState = "idle" | "checking" | "available" | "none" | "error";
+  let updateState = $state<UpdateState>("idle");
+  let updateVersion = $state("");
+  let installing = $state(false);
+  let pendingUpdate = $state<{ version: string; downloadAndInstall: () => Promise<void> } | null>(
+    null,
+  );
 
   const speeds = [0.75, 0.85, 1, 1.15, 1.25, 1.5];
 
@@ -19,6 +27,40 @@
       info = null;
     }
   });
+
+  async function checkUpdates() {
+    if (!isTauri) {
+      ui.notify(i18n.t("settings.updatesDesktop"));
+      return;
+    }
+    updateState = "checking";
+    try {
+      const { check } = await import("@tauri-apps/plugin-updater");
+      const update = await check();
+      if (update) {
+        pendingUpdate = update;
+        updateVersion = update.version;
+        updateState = "available";
+      } else {
+        updateState = "none";
+      }
+    } catch {
+      updateState = "error";
+    }
+  }
+
+  async function installUpdate() {
+    if (!pendingUpdate) return;
+    installing = true;
+    try {
+      await pendingUpdate.downloadAndInstall();
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      await relaunch();
+    } catch {
+      installing = false;
+      ui.notify(i18n.t("settings.updateFailed"));
+    }
+  }
 </script>
 
 <div class="fade-in max-w-2xl">
@@ -89,6 +131,50 @@
           </button>
         {/each}
       </div>
+    </div>
+  </section>
+
+  <section class="mt-4 rounded-2xl border border-line bg-ink-900/60 p-5">
+    <h2 class="text-sm font-semibold text-cream">{i18n.t("settings.updates")}</h2>
+
+    <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="min-w-0">
+        {#if updateState === "checking"}
+          <p class="text-sm text-muted">{i18n.t("settings.checking")}</p>
+        {:else if updateState === "available"}
+          <p class="text-sm text-cream">
+            {i18n.t("settings.updateAvailable", { version: updateVersion })}
+          </p>
+        {:else if updateState === "none"}
+          <p class="text-sm text-teal">{i18n.t("settings.upToDate")}</p>
+        {:else if updateState === "error"}
+          <p class="text-sm text-muted">{i18n.t("settings.updateFailed")}</p>
+        {:else}
+          <p class="text-sm text-muted">{i18n.t("settings.updateHint")}</p>
+        {/if}
+      </div>
+
+      {#if updateState === "available"}
+        <button
+          type="button"
+          onclick={installUpdate}
+          disabled={installing}
+          class="flex items-center gap-2 rounded-xl bg-gold px-3.5 py-2 text-xs font-semibold text-ink-950 disabled:opacity-50"
+        >
+          <Icon name="download" size={13} />
+          {installing ? i18n.t("settings.installing") : i18n.t("settings.installUpdate")}
+        </button>
+      {:else}
+        <button
+          type="button"
+          onclick={checkUpdates}
+          disabled={updateState === "checking"}
+          class="flex items-center gap-2 rounded-xl border border-line px-3.5 py-2 text-xs font-medium text-cream transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50"
+        >
+          <Icon name="globe" size={13} />
+          {i18n.t("settings.checkUpdates")}
+        </button>
+      {/if}
     </div>
   </section>
 

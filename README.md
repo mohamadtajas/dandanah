@@ -27,7 +27,8 @@ Week 1 of the build plan is complete and working:
 | Favorites, playlists, downloads, local folder import | ✅ |
 | Openverse + archive.org catalogue with licence badges | ✅ |
 | Windows media session, tray, global hotkeys | ✅ |
-| Installer, auto-update, code signing | ⏳ week 6 |
+| Installer, auto-update pipeline, GitHub Actions | ✅ |
+| Code signing | ⏳ needs a certificate (see *Shipping*) |
 
 ---
 
@@ -49,6 +50,14 @@ npm run app        # tauri dev — opens the desktop window with hot reload
 
 ```bash
 npm run dist       # produces an NSIS installer in src-tauri/target/release/bundle/
+```
+
+Signed updater artifacts are produced when the key is present:
+
+```powershell
+$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content "$env:USERPROFILE\.tauri\dandanah.key" -Raw
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
+npm run dist
 ```
 
 Frontend-only checks:
@@ -199,6 +208,49 @@ provider fails the other's results are still shown.
 
 ---
 
+## Shipping
+
+**How an update reaches users**
+
+1. Settings → Updates calls the updater plugin, which fetches
+   `latest.json` from the GitHub release endpoint in `src-tauri/tauri.conf.json`.
+2. If the version is newer, the app downloads the signed `.nsis.zip`, verifies the signature
+   against the public key in the config, installs it, and relaunches.
+
+**Publish a release**
+
+```bash
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+`.github/workflows/release.yml` builds on a Windows runner, signs the updater artifacts and
+opens a **draft** GitHub release. Review it, then publish — publishing is what makes the
+update visible to installed copies.
+
+Required repository secrets:
+
+| Secret | Value |
+|---|---|
+| `TAURI_SIGNING_PRIVATE_KEY` | contents of `~/.tauri/dandanah.key` |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | the key password (empty here) |
+
+The endpoint currently points at `github.com/mohamadtajas/dandanah`. If the repository lives
+elsewhere, change the URL in `src-tauri/tauri.conf.json` — it must serve `latest.json` from
+the latest release.
+
+**Code signing** is not configured. The installer is unsigned, so Windows SmartScreen will
+warn on first run. Removing that requires an Authenticode certificate; Azure Trusted Signing
+(~$10/month) is the cheapest realistic option for an open-source project. The updater
+signature is separate and already in place — it protects update integrity, not the first
+download.
+
+**Verified locally:** the installer is 2.96 MiB, the app starts, fetches live data, migrates
+its database, and responds to Windows media keys. The release workflow has not been executed
+on GitHub yet because the repository has no remote.
+
+---
+
 ## Content sources
 
 | Source | Content | License |
@@ -241,7 +293,8 @@ Global (work when the window is unfocused):
 2. ~~**Library**~~ — shipped: favorites, playlists, downloads, local folder import.
 3. ~~**Creative Commons catalog**~~ — shipped: Openverse and archive.org with licence badges.
 4. ~~**Windows integration**~~ — shipped: SMTC, tray and global hotkeys.
-5. **Ship** — installer, GitHub Releases auto-update, code signing.
+5. ~~**Ship**~~ — shipped: NSIS installer, signed updater pipeline, GitHub Actions, CI.
+6. **Sign** — Authenticode certificate to clear SmartScreen.
 
 ## License
 

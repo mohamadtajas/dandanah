@@ -33,13 +33,17 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": [],
-      "pubkey": ""
+      "endpoints": [
+        "https://github.com/mohamadtajas/dandanah/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlBQ0I1N0ZDNzBFNTdGQjMKUldTemYrVncvRmZMbW1NU1FJWTJyeVN3Rk9oMGhCV29FT3FsT3lEZjhwa0JxUU5QSVZQZHJhdlgK"
     }
   },
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
+    "publisher": "Dandanah",
     "category": "Music",
     "shortDescription": "Quran, anasheed and free audio for Windows",
     "longDescription": "Dandanah is a light Arabic audio app for Quran recitation, anasheed, live radio and Creative Commons music.",
