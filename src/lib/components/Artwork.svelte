@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { convertFileSrc } from "@tauri-apps/api/core";
   import type { TrackKind } from "$lib/types";
+  import { isTauri } from "$lib/api";
 
   let {
     url,
@@ -18,6 +20,18 @@
   } = $props();
 
   let failed = $state(false);
+
+  // Remote URLs pass through; absolute paths (imported files, downloaded
+  // covers) are served through Tauri's asset protocol.
+  const src = $derived(
+    url
+      ? /^(https?:|data:|blob:)/i.test(url)
+        ? url
+        : isTauri
+          ? convertFileSrc(url)
+          : url
+      : undefined,
+  );
 
   const hue = $derived(hash(seed || "dandanah"));
   const second = $derived((hue + 62) % 360);
@@ -42,9 +56,9 @@
   style="background: {gradient}"
   aria-hidden="true"
 >
-  {#if url && !failed}
+  {#if src && !failed}
     <img
-      src={url}
+      src={src}
       alt=""
       loading="lazy"
       class="h-full w-full object-cover"

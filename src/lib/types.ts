@@ -82,7 +82,7 @@ export interface Playlist {
   trackCount: number;
 }
 
-export type DownloadStatus = "queued" | "downloading" | "done" | "error";
+export type DownloadStatus = "queued" | "downloading" | "done" | "error" | "cancelled";
 
 export interface DownloadRow {
   track: Track;
@@ -109,6 +109,13 @@ export interface NowPlaying {
   positionS: number;
   playing: boolean;
   artworkUrl?: string | null;
+}
+
+/** Global shortcuts, as accelerator strings understood by Tauri. */
+export interface HotkeyMap {
+  toggle: string;
+  next: string;
+  previous: string;
 }
 
 export interface AppInfo {

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api, isTauri } from "$lib/api";
-  import type { AppInfo } from "$lib/types";
+  import type { AppInfo, HotkeyMap } from "$lib/types";
   import { i18n } from "$lib/i18n/index.svelte.ts";
   import { nav } from "$lib/stores/nav.svelte.ts";
   import { player } from "$lib/stores/player.svelte.ts";
@@ -20,13 +20,104 @@
 
   const speeds = [0.75, 0.85, 1, 1.15, 1.25, 1.5];
 
+  const DEFAULT_HOTKEYS: HotkeyMap = {
+    toggle: "Ctrl+Alt+Space",
+    next: "Ctrl+Alt+ArrowRight",
+    previous: "Ctrl+Alt+ArrowLeft",
+  };
+
+  const hotkeyRows: {
+    id: keyof HotkeyMap;
+    label: "settings.hotkeyToggle" | "settings.hotkeyNext" | "settings.hotkeyPrevious";
+  }[] = [
+    { id: "toggle", label: "settings.hotkeyToggle" },
+    { id: "next", label: "settings.hotkeyNext" },
+    { id: "previous", label: "settings.hotkeyPrevious" },
+  ];
+
+  let hotkeys = $state<HotkeyMap>({ ...DEFAULT_HOTKEYS });
+  let hotkeyDraft = $state<HotkeyMap>({ ...DEFAULT_HOTKEYS });
+  let recording = $state<keyof HotkeyMap | null>(null);
+  let savingHotkeys = $state(false);
+
   onMount(async () => {
-    try {
-      info = await api.appInfo();
-    } catch {
-      info = null;
+    const [infoResult, hotkeyResult] = await Promise.allSettled([
+      api.appInfo(),
+      api.getHotkeys(),
+    ]);
+    info = infoResult.status === "fulfilled" ? infoResult.value : null;
+    if (hotkeyResult.status === "fulfilled") {
+      hotkeys = hotkeyResult.value;
+      hotkeyDraft = { ...hotkeyResult.value };
     }
   });
+
+  function prettyAccelerator(accelerator: string) {
+    if (!accelerator) return i18n.t("settings.hotkeyDisabled");
+    return accelerator
+      .replace("ArrowRight", "→")
+      .replace("ArrowLeft", "←")
+      .replace("ArrowUp", "↑")
+      .replace("ArrowDown", "↓")
+      .replace(/\bKey([A-Z])\b/g, "$1")
+      .replace(/\bDigit(\d)\b/g, "$1");
+  }
+
+  function startRecording(action: keyof HotkeyMap) {
+    if (!isTauri) {
+      ui.notify(i18n.t("settings.hotkeyDesktop"));
+      return;
+    }
+    recording = action;
+  }
+
+  function onHotkeyKey(event: KeyboardEvent) {
+    if (!recording) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.key === "Escape") {
+      recording = null;
+      return;
+    }
+    if (event.key === "Backspace" || event.key === "Delete") {
+      hotkeyDraft = { ...hotkeyDraft, [recording]: "" };
+      recording = null;
+      return;
+    }
+    if (["Control", "Alt", "Shift", "Meta", "CapsLock"].includes(event.key)) return;
+
+    const mods: string[] = [];
+    if (event.ctrlKey) mods.push("Ctrl");
+    if (event.altKey) mods.push("Alt");
+    if (event.shiftKey) mods.push("Shift");
+    if (event.metaKey) mods.push("Super");
+    if (mods.length === 0) {
+      ui.notify(i18n.t("settings.hotkeyNeedModifier"));
+      return;
+    }
+
+    hotkeyDraft = { ...hotkeyDraft, [recording]: [...mods, event.code].join("+") };
+    recording = null;
+  }
+
+  async function saveHotkeys() {
+    if (!isTauri) {
+      ui.notify(i18n.t("settings.hotkeyDesktop"));
+      return;
+    }
+    savingHotkeys = true;
+    try {
+      hotkeys = await api.setHotkeys(hotkeyDraft);
+      hotkeyDraft = { ...hotkeys };
+      ui.notify(i18n.t("settings.hotkeySaved"));
+    } catch (error) {
+      const detail = typeof error === "string" ? error : "";
+      ui.notify(`${i18n.t("settings.hotkeyFailed")} ${detail}`.trim());
+    } finally {
+      savingHotkeys = false;
+    }
+  }
 
   async function checkUpdates() {
     if (!isTauri) {
@@ -62,6 +153,8 @@
     }
   }
 </script>
+
+<svelte:window onkeydowncapture={onHotkeyKey} />
 
 <div class="fade-in max-w-2xl">
   <header>
@@ -131,6 +224,65 @@
           </button>
         {/each}
       </div>
+    </div>
+  </section>
+
+  <section class="mt-4 rounded-2xl border border-line bg-ink-900/60 p-5">
+    <div class="flex items-center justify-between gap-3">
+      <h2 class="text-sm font-semibold text-cream">{i18n.t("settings.hotkeys")}</h2>
+      <button
+        type="button"
+        onclick={() => (hotkeyDraft = { ...DEFAULT_HOTKEYS })}
+        class="rounded-lg border border-line px-2.5 py-1 text-[10px] text-muted transition-colors hover:border-gold/40 hover:text-gold"
+      >
+        {i18n.t("settings.hotkeyReset")}
+      </button>
+    </div>
+    <p class="mt-1 text-xs leading-relaxed text-muted">{i18n.t("settings.hotkeysHint")}</p>
+
+    <div class="mt-4 space-y-2">
+      {#each hotkeyRows as row (row.id)}
+        <div class="flex items-center justify-between gap-3 rounded-xl border border-line/70 bg-ink-850/60 px-3 py-2">
+          <span class="text-sm text-cream">{i18n.t(row.label)}</span>
+          <div class="flex items-center gap-2">
+            <kbd
+              class="min-w-28 rounded-md border px-2 py-1 text-center text-[11px] tabular-nums
+                     {recording === row.id
+                ? 'border-gold/60 text-gold'
+                : hotkeyDraft[row.id]
+                  ? 'border-line text-muted'
+                  : 'border-line/60 text-muted/50'}"
+            >
+              {recording === row.id
+                ? i18n.t("settings.hotkeyRecording")
+                : prettyAccelerator(hotkeyDraft[row.id])}
+            </kbd>
+            <button
+              type="button"
+              onclick={() => startRecording(row.id)}
+              class="rounded-lg border px-2.5 py-1 text-[10px] transition-colors
+                     {recording === row.id
+                ? 'border-gold/50 bg-gold/10 text-gold'
+                : 'border-line text-muted hover:border-gold/40 hover:text-gold'}"
+            >
+              {i18n.t("settings.hotkeyChange")}
+            </button>
+          </div>
+        </div>
+      {/each}
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        onclick={saveHotkeys}
+        disabled={savingHotkeys}
+        class="flex items-center gap-2 rounded-xl bg-gold px-3.5 py-2 text-xs font-semibold text-ink-950 transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+      >
+        <Icon name="check" size={13} />
+        {i18n.t("settings.hotkeySave")}
+      </button>
+      <span class="text-[10px] text-muted">{i18n.t("settings.hotkeyClearHint")}</span>
     </div>
   </section>
 

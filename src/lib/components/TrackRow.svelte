@@ -39,8 +39,9 @@
   function downloadHint() {
     if (!download) return i18n.t("library.download");
     if (download.status === "done") return i18n.t("library.downloaded");
-    if (download.status === "error") return i18n.t("library.downloadFailed");
-    return i18n.t("library.downloading");
+    if (download.status === "queued" || download.status === "downloading")
+      return i18n.t("library.cancelDownload");
+    return i18n.t("library.retryDownload");
   }
 </script>
 
@@ -124,9 +125,13 @@
     {#if track.streamUrl && !track.live}
       <button
         type="button"
-        onclick={() =>
-          download?.status === "done" ? null : library.startDownload(track)}
-        disabled={download?.status === "queued" || download?.status === "downloading"}
+        onclick={() => {
+          if (download?.status === "queued" || download?.status === "downloading") {
+            void library.cancelDownload(track.id);
+          } else if (download?.status !== "done") {
+            void library.startDownload(track);
+          }
+        }}
         aria-label={downloadHint()}
         title={downloadHint()}
         class="rounded-lg p-1.5 transition-all
@@ -134,13 +139,18 @@
           ? 'text-teal'
           : download?.status === 'error'
             ? 'text-red-400'
-            : download
-              ? 'text-gold'
-              : 'text-muted opacity-0 hover:text-cream group-hover:opacity-100 focus-visible:opacity-100'}"
+            : download?.status === 'cancelled'
+              ? 'text-muted hover:text-cream'
+              : download
+                ? 'text-gold'
+                : 'text-muted opacity-0 hover:text-cream group-hover:opacity-100 focus-visible:opacity-100'}"
       >
         {#if download?.status === "queued" || download?.status === "downloading"}
-          <span class="flex items-center gap-1 text-[9px] tabular-nums">
-            <span class="size-3 animate-spin rounded-full border border-gold/30 border-t-gold"></span>
+          <span class="flex items-center gap-1 text-[9px] tabular-nums" title={i18n.t("library.cancelDownload")}>
+            <span class="relative grid size-3.5 place-items-center">
+              <span class="absolute inset-0 animate-spin rounded-full border border-gold/30 border-t-gold"></span>
+              <span class="size-1 rounded-[1px] bg-gold"></span>
+            </span>
             {#if downloadPct > 0}{downloadPct}%{/if}
           </span>
         {:else if download?.status === "done"}

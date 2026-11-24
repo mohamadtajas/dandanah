@@ -168,6 +168,13 @@ impl Database {
             conn: Mutex::new(conn),
         };
         db.migrate()?;
+        // A download cannot survive a restart; surface it as interrupted rather
+        // than leaving a phantom "downloading" row forever.
+        let _ = db.conn.lock().execute(
+            "UPDATE downloads SET status = 'error', error = 'interrupted'
+             WHERE status IN ('queued', 'downloading')",
+            [],
+        );
         Ok(db)
     }
 
@@ -570,8 +577,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn finish_download(&self, track_id: &str, path: &str) -> Result<()> {
-        let conn = self.conn.lock();
+    pub fn finish_download(&self, track_id: &str, path: &str) -> Result<()> {        let conn = self.conn.lock();
         conn.execute(
             "UPDATE downloads SET status = 'done', file_path = ?2, error = NULL
              WHERE track_id = ?1",
@@ -645,6 +651,48 @@ impl Database {
         Ok(path)
     }
 
+    /// Stores an extracted cover path on every stored copy of a track: the
+    /// tracks table, the downloads queue and favourites.
+    pub fn set_track_artwork(&self, track_id: &str, artwork_url: &str) -> Result<()> {
+        let conn = self.conn.lock();
+
+        let track_payload: Option<Option<String>> = conn
+            .query_row("SELECT payload FROM tracks WHERE id = ?1", [track_id], |r| r.get(0))
+            .optional()?;
+        if let Some(Some(payload)) = track_payload {
+            if let Ok(mut value) = serde_json::from_str::<serde_json::Value>(&payload) {
+                value["artworkUrl"] = serde_json::Value::String(artwork_url.to_string());
+                let json = serde_json::to_string(&value)?;
+                conn.execute(
+                    "UPDATE tracks SET artwork_url = ?2, payload = ?3 WHERE id = ?1",
+                    params![track_id, artwork_url, json],
+                )?;
+            }
+        }
+
+        for table in ["downloads", "favorites"] {
+            let payload: Option<String> = conn
+                .query_row(
+                    &format!("SELECT payload FROM {table} WHERE track_id = ?1"),
+                    [track_id],
+                    |r| r.get(0),
+                )
+                .optional()?;
+            if let Some(payload) = payload {
+                if let Ok(mut value) = serde_json::from_str::<serde_json::Value>(&payload) {
+                    value["artworkUrl"] = serde_json::Value::String(artwork_url.to_string());
+                    let json = serde_json::to_string(&value)?;
+                    conn.execute(
+                        &format!("UPDATE {table} SET payload = ?2 WHERE track_id = ?1"),
+                        params![track_id, json],
+                    )?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     // --- local library -----------------------------------------------------
 
     pub fn local_tracks(&self) -> Result<Vec<Track>> {
@@ -713,15 +761,19 @@ pub fn now() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
 
     fn temp_db() -> (std::path::PathBuf, Database) {
         let dir = std::env::temp_dir().join(format!(
-            "dandanah-test-{}-{}",
+            "dandanah-test-{}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+            COUNTER.fetch_add(1, Ordering::Relaxed)
         ));
         std::fs::create_dir_all(&dir).unwrap();
         let db = Database::open(&dir.join("test.db")).unwrap();
@@ -842,6 +894,39 @@ mod tests {
 
         db.forget_local_track(&local.id).unwrap();
         assert!(db.local_tracks().unwrap().is_empty());
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn artwork_is_written_to_every_payload_copy() {
+        use crate::providers::TrackKind;
+        let (dir, db) = temp_db();
+
+        let quran = sample_track();
+        db.add_favorite(&quran).unwrap();
+        db.queue_download(&quran).unwrap();
+        db.upsert_track(&quran).unwrap();
+        db.set_track_artwork(&quran.id, "C:/art/1.png").unwrap();
+
+        assert_eq!(
+            db.favorites(10).unwrap()[0].artwork_url.as_deref(),
+            Some("C:/art/1.png")
+        );
+        assert_eq!(
+            db.downloads().unwrap()[0].track.artwork_url.as_deref(),
+            Some("C:/art/1.png")
+        );
+
+        let mut local = Track::new("local", "C:/m/001.mp3", "غلاف", TrackKind::Local);
+        local.local_path = Some("C:/m/001.mp3".into());
+        db.upsert_track(&local).unwrap();
+        db.set_track_artwork(&local.id, "C:/art/2.png").unwrap();
+        assert_eq!(
+            db.local_tracks().unwrap()[0].artwork_url.as_deref(),
+            Some("C:/art/2.png")
+        );
+
         drop(db);
         let _ = std::fs::remove_dir_all(&dir);
     }

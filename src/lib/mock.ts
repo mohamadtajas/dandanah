@@ -7,6 +7,7 @@ import type {
   Ayah,
   AyahReciter,
   DownloadRow,
+  HotkeyMap,
   ImportSummary,
   Memorization,
   Playlist,
@@ -1391,6 +1392,19 @@ export function mockApi() {
     },
     async startDownload(_track: Track): Promise<string> {
       throw new Error("Downloads run in the desktop app only");
+    },
+    async cancelDownload(_trackId: string) {
+      return false;
+    },
+    async getHotkeys(): Promise<HotkeyMap> {
+      return {
+        toggle: "Ctrl+Alt+Space",
+        next: "Ctrl+Alt+ArrowRight",
+        previous: "Ctrl+Alt+ArrowLeft",
+      };
+    },
+    async setHotkeys(hotkeys: HotkeyMap) {
+      return hotkeys;
     },
     async downloads(): Promise<DownloadRow[]> {
       return [...downloadsStore.values()];

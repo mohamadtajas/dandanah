@@ -338,21 +338,28 @@
         {:else}
           <div class="overflow-hidden rounded-2xl border border-line bg-ink-900/50">
             {#each library.downloads as row (row.track.id)}
+              {@const busy = row.status === "queued" || row.status === "downloading"}
               {@const pct = row.bytesTotal > 0 ? Math.round((row.bytesDone / row.bytesTotal) * 100) : 0}
               <div class="flex items-center gap-3 border-b border-line/50 px-3 py-2.5 last:border-0">
                 <button
                   type="button"
-                  onclick={() => row.status === "done" && player.play(row.track)}
-                  disabled={row.status !== "done"}
+                  onclick={() => {
+                    if (row.status === "done") player.play(row.track);
+                    else if (!busy) void library.startDownload(row.track);
+                  }}
+                  disabled={busy}
                   class="grid size-10 shrink-0 place-items-center rounded-xl border border-line text-gold disabled:opacity-40"
-                  aria-label={i18n.t("player.play")}
+                  aria-label={row.status === "done" ? i18n.t("player.play") : i18n.t("library.retryDownload")}
                 >
-                  <Icon name={row.status === "done" ? "play" : "download"} size={15} />
+                  <Icon
+                    name={row.status === "done" ? "play" : busy ? "download" : "repeat"}
+                    size={15}
+                  />
                 </button>
                 <div class="min-w-0 flex-1">
                   <div class="truncate text-sm text-cream">{row.track.title}</div>
                   <div class="truncate text-[11px] text-muted">{row.track.artist}</div>
-                  {#if row.status === "downloading" || row.status === "queued"}
+                  {#if busy}
                     <div class="mt-1.5 flex items-center gap-2">
                       <span class="h-1 flex-1 overflow-hidden rounded-full bg-ink-800">
                         <span class="block h-full rounded-full bg-gold transition-[width]" style="width: {pct}%"></span>
@@ -364,19 +371,28 @@
                       {i18n.t("library.downloaded")}
                       {#if row.bytesTotal} · {fmtBytes(row.bytesTotal)}{/if}
                     </div>
+                  {:else if row.status === "cancelled"}
+                    <div class="mt-0.5 text-[10px] text-muted">
+                      {i18n.t("library.downloadCancelled")}
+                    </div>
                   {:else if row.status === "error"}
                     <div class="mt-0.5 truncate text-[10px] text-red-400">
-                      {row.error ?? i18n.t("library.downloadFailed")}
+                      {row.error === "interrupted"
+                        ? i18n.t("library.downloadInterrupted")
+                        : (row.error ?? i18n.t("library.downloadFailed"))}
                     </div>
                   {/if}
                 </div>
                 <button
                   type="button"
-                  onclick={() => library.removeDownload(row.track.id)}
+                  onclick={() =>
+                    busy
+                      ? library.cancelDownload(row.track.id)
+                      : library.removeDownload(row.track.id)}
                   class="rounded-lg p-1.5 text-muted transition-colors hover:text-red-400"
-                  aria-label={i18n.t("library.deleteDownload")}
+                  aria-label={busy ? i18n.t("library.cancelDownload") : i18n.t("library.deleteDownload")}
                 >
-                  <Icon name="x" size={14} />
+                  <Icon name={busy ? "pause" : "x"} size={14} />
                 </button>
               </div>
             {/each}

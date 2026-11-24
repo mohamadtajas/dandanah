@@ -1,6 +1,7 @@
 mod commands;
 mod db;
 mod downloads;
+mod hotkeys;
 mod library;
 mod media;
 mod providers;
@@ -39,6 +40,7 @@ pub fn run() {
             app.manage(AppState {
                 db: Arc::new(db),
                 http,
+                cancels: Arc::new(parking_lot::Mutex::new(std::collections::HashMap::new())),
             });
 
             if !media::init(app.handle()) {
@@ -46,7 +48,12 @@ pub fn run() {
             }
 
             build_tray(app.handle())?;
-            register_shortcuts(app.handle());
+
+            let bindings = hotkeys::load(&app.state::<AppState>().db);
+            if let Err(error) = hotkeys::apply(app.handle(), &bindings) {
+                eprintln!("could not register global shortcuts: {error}");
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -79,11 +86,14 @@ pub fn run() {
             commands::add_to_playlist,
             commands::remove_from_playlist,
             commands::start_download,
+            commands::cancel_download,
             commands::get_downloads,
             commands::delete_download,
             commands::import_folder,
             commands::get_local_tracks,
             commands::forget_local_track,
+            commands::get_hotkeys,
+            commands::set_hotkeys,
             commands::update_now_playing,
             commands::get_settings,
             commands::set_setting,
@@ -148,37 +158,4 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     }
     builder.build(app)?;
     Ok(())
-}
-
-fn register_shortcuts(app: &tauri::AppHandle) {
-    use tauri_plugin_global_shortcut::{
-        Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
-    };
-
-    let combos = [
-        (
-            Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::Space),
-            "toggle",
-        ),
-        (
-            Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::ArrowRight),
-            "next",
-        ),
-        (
-            Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::ArrowLeft),
-            "previous",
-        ),
-    ];
-
-    for (shortcut, action) in combos {
-        let action = action.to_string();
-        let result = app.global_shortcut().on_shortcut(shortcut, move |app, _, event| {
-            if event.state == ShortcutState::Pressed {
-                let _ = app.emit("player:command", action.clone());
-            }
-        });
-        if let Err(error) = result {
-            eprintln!("could not register global shortcut: {error}");
-        }
-    }
 }

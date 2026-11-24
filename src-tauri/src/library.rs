@@ -1,4 +1,6 @@
 use crate::providers::{Track, TrackKind};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
 /// Extensions WebView2 can decode without transcoding.
@@ -15,12 +17,16 @@ pub struct ScanResult {
 
 /// Walks `root` and returns one track per audio file, reading tags with lofty
 /// when they exist and falling back to the filename and parent folder.
-pub fn scan_folder(root: &Path, limit: usize) -> ScanResult {
+/// When `artwork_dir` is set, embedded cover art is extracted next to it.
+pub fn scan_folder(root: &Path, limit: usize, artwork_dir: Option<&Path>) -> ScanResult {
     let mut files: Vec<PathBuf> = Vec::new();
     walk(root, 0, &mut files, limit);
     let truncated = files.len() >= limit;
 
-    let mut tracks: Vec<Track> = files.iter().filter_map(|p| track_from_file(p)).collect();
+    let mut tracks: Vec<Track> = files
+        .iter()
+        .filter_map(|p| track_from_file(p, artwork_dir))
+        .collect();
     tracks.sort_by(|a, b| a.title.cmp(&b.title));
     tracks.truncate(limit);
     ScanResult { tracks, truncated }
@@ -57,7 +63,7 @@ fn is_audio(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-fn track_from_file(path: &Path) -> Option<Track> {
+fn track_from_file(path: &Path, artwork_dir: Option<&Path>) -> Option<Track> {
     // `canonicalize` adds the `\\?\` verbatim prefix on Windows; strip it so
     // stored paths stay readable and portable.
     let absolute = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
@@ -127,7 +133,46 @@ fn track_from_file(path: &Path) -> Option<Track> {
         track.artist = "مكتبتي".to_string();
     }
 
+    if let Some(dir) = artwork_dir {
+        if let Some(artwork) = extract_artwork(&absolute, dir) {
+            track.artwork_url = Some(artwork);
+        }
+    }
+
     Some(track)
+}
+
+/// Saves the first embedded picture next to `dir` and returns its absolute path.
+/// The file name is derived from the audio path, so re-imports reuse it.
+pub fn extract_artwork(path: &Path, dir: &Path) -> Option<String> {
+    use lofty::prelude::TaggedFileExt;
+
+    let tagged = lofty::read_from_path(path).ok()?;
+    let tag = tagged.primary_tag().or_else(|| tagged.first_tag())?;
+    let picture = tag.pictures().first()?;
+    let data = picture.data();
+    if data.is_empty() || data.len() > 8 * 1024 * 1024 {
+        return None;
+    }
+
+    let extension = match picture.mime_type().map(|mime| mime.as_str()) {
+        Some("image/png") => "png",
+        Some("image/webp") => "webp",
+        Some("image/gif") => "gif",
+        Some("image/bmp") => "bmp",
+        _ => "jpg",
+    };
+
+    let mut hasher = DefaultHasher::new();
+    path.to_string_lossy().hash(&mut hasher);
+    let file = dir.join(format!("{:08x}.{extension}", hasher.finish() as u32));
+
+    if !file.exists() {
+        std::fs::create_dir_all(dir).ok()?;
+        std::fs::write(&file, data).ok()?;
+    }
+
+    Some(file.to_string_lossy().to_string())
 }
 
 /// Removes a leading track number ("03 - ", "03. ", "03 ") from a filename.
@@ -177,7 +222,7 @@ mod tests {
         std::fs::create_dir_all(dir.join("hidden")).ok();
         std::fs::write(dir.join("one.mp3"), b"not audio").ok();
         std::fs::write(dir.join("cover.jpg"), b"x").ok();
-        let result = scan_folder(&dir, 10);
+        let result = scan_folder(&dir, 10, None);
         assert_eq!(result.tracks.len(), 1);
         assert_eq!(result.tracks[0].kind, TrackKind::Local);
         assert_eq!(result.tracks[0].local_path.is_some(), true);

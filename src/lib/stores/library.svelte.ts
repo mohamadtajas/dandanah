@@ -141,7 +141,7 @@ class LibraryStore {
 
   async startDownload(track: Track) {
     const existing = this.downloadFor(track.id);
-    if (existing && existing.status !== "error") return;
+    if (existing && existing.status !== "error" && existing.status !== "cancelled") return;
     if (!track.streamUrl) {
       ui.notify(i18n.t("library.downloadUnavailable"));
       return;
@@ -168,12 +168,36 @@ class LibraryStore {
       await api.startDownload(track);
       await this.refreshDownloads();
     } catch {
+      // A cancelled download is not a failure; the event already updated it.
+      await this.refreshDownloads();
+      if (this.downloadFor(track.id)?.status !== "cancelled") {
+        this.downloads = this.downloads.map((d) =>
+          d.track.id === track.id
+            ? { ...d, status: "error" as DownloadStatus, error: i18n.t("library.downloadFailed") }
+            : d,
+        );
+        ui.notify(i18n.t("library.downloadFailed"));
+      }
+    }
+  }
+
+  async cancelDownload(trackId: string) {
+    try {
+      const accepted = await api.cancelDownload(trackId);
+      if (!accepted) {
+        // The download finished before the request landed; resync the row.
+        await this.refreshDownloads();
+        return;
+      }
+      // Reflect the intent immediately; the Rust event confirms it.
       this.downloads = this.downloads.map((d) =>
-        d.track.id === track.id
-          ? { ...d, status: "error" as DownloadStatus, error: i18n.t("library.downloadFailed") }
+        d.track.id === trackId && (d.status === "queued" || d.status === "downloading")
+          ? { ...d, status: "cancelled" as DownloadStatus, error: undefined }
           : d,
       );
-      ui.notify(i18n.t("library.downloadFailed"));
+      ui.notify(i18n.t("library.downloadCancelled"));
+    } catch {
+      ui.notify(i18n.t("library.saveFailed"));
     }
   }
 

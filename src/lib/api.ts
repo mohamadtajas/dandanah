@@ -4,6 +4,7 @@ import type {
   Ayah,
   AyahReciter,
   DownloadRow,
+  HotkeyMap,
   ImportSummary,
   Memorization,
   NowPlaying,
@@ -177,10 +178,15 @@ export const api = {
 
   // --- downloads & local files -----------------------------------------
 
-  startDownload: async (track: Track): Promise<string> =>
+  startDownload: async (track: Track): Promise<string | null> =>
     isTauri
-      ? invoke<string>("start_download", { track })
+      ? invoke<string | null>("start_download", { track })
       : (await mock()).startDownload(track),
+
+  cancelDownload: async (trackId: string): Promise<boolean> => {
+    if (!isTauri) return (await mock()).cancelDownload(trackId);
+    return invoke<boolean>("cancel_download", { trackId });
+  },
 
   downloads: async (): Promise<DownloadRow[]> =>
     isTauri ? invoke<DownloadRow[]>("get_downloads") : (await mock()).downloads(),
@@ -202,4 +208,14 @@ export const api = {
     if (!isTauri) return (await mock()).forgetLocalTrack(trackId);
     await invoke<void>("forget_local_track", { trackId });
   },
+
+  // --- global shortcuts -------------------------------------------------
+
+  getHotkeys: async (): Promise<HotkeyMap> =>
+    isTauri ? invoke<HotkeyMap>("get_hotkeys") : (await mock()).getHotkeys(),
+
+  setHotkeys: async (hotkeys: HotkeyMap): Promise<HotkeyMap> =>
+    isTauri
+      ? invoke<HotkeyMap>("set_hotkeys", { hotkeys })
+      : (await mock()).setHotkeys(hotkeys),
 };

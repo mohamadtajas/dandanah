@@ -3,14 +3,19 @@ use crate::providers::{
     archive, dedupe, everyayah, matches, mp3quran, openverse, quran_text, radiobrowser, score,
     surah, surahs, Reciter, Surah, Track, TrackKind,
 };
-use crate::{downloads, library, media};
+use crate::{downloads, hotkeys, library, media};
+use parking_lot::Mutex;
 use serde::Serialize;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 pub struct AppState {
     pub db: Arc<Database>,
     pub http: reqwest::Client,
+    /// Cancellation flags for in-flight downloads, keyed by track id.
+    pub cancels: Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>,
 }
 
 const RECITERS_TTL: i64 = 60 * 60 * 24; // 24h
@@ -535,10 +540,42 @@ pub async fn start_download(
     app: AppHandle,
     state: State<'_, AppState>,
     track: Track,
-) -> Result<String, String> {
-    downloads::run(app, state.http.clone(), state.db.clone(), track)
-        .await
-        .map_err(|e| e.to_string())
+) -> Result<Option<String>, String> {
+    let cancel = Arc::new(AtomicBool::new(false));
+    state
+        .cancels
+        .lock()
+        .insert(track.id.clone(), cancel.clone());
+
+    let artwork_dir = app
+        .path()
+        .app_data_dir()
+        .map(|dir| dir.join("artwork"))
+        .unwrap_or_else(|_| std::env::temp_dir().join("dandanah-artwork"));
+
+    let result = downloads::run(
+        app.clone(),
+        state.http.clone(),
+        state.db.clone(),
+        track.clone(),
+        cancel,
+        artwork_dir,
+    )
+    .await;
+
+    state.cancels.lock().remove(&track.id);
+    result.map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn cancel_download(state: State<'_, AppState>, track_id: String) -> bool {
+    match state.cancels.lock().get(&track_id) {
+        Some(flag) => {
+            flag.store(true, Ordering::Relaxed);
+            true
+        }
+        None => false,
+    }
 }
 
 #[tauri::command]
@@ -572,6 +609,7 @@ pub struct ImportSummary {
 
 #[tauri::command]
 pub async fn import_folder(
+    app: AppHandle,
     state: State<'_, AppState>,
     paths: Vec<String>,
 ) -> Result<ImportSummary, String> {
@@ -580,6 +618,11 @@ pub async fn import_folder(
     }
     let db = state.db.clone();
     let paths = paths.clone();
+    let artwork_dir = app
+        .path()
+        .app_data_dir()
+        .ok()
+        .map(|dir| dir.join("artwork"));
 
     tauri::async_runtime::spawn_blocking(move || {
         let mut imported = 0usize;
@@ -589,7 +632,7 @@ pub async fn import_folder(
             if !root.is_dir() {
                 continue;
             }
-            let outcome = library::scan_folder(&root, 5000);
+            let outcome = library::scan_folder(&root, 5000, artwork_dir.as_deref());
             truncated |= outcome.truncated;
             for track in &outcome.tracks {
                 if db.upsert_track(track).is_ok() {
@@ -618,6 +661,34 @@ pub fn forget_local_track(state: State<'_, AppState>, track_id: String) -> Resul
         .db
         .forget_local_track(&track_id)
         .map_err(|e| e.to_string())
+}
+
+// ---------------------------------------------------------------------------
+// Global shortcuts
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_hotkeys(state: State<'_, AppState>) -> hotkeys::HotkeyMap {
+    hotkeys::load(&state.db)
+}
+
+#[tauri::command]
+pub fn set_hotkeys(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    hotkeys: hotkeys::HotkeyMap,
+) -> Result<hotkeys::HotkeyMap, String> {
+    let previous = hotkeys::load(&state.db);
+    if let Err(error) = hotkeys::apply(&app, &hotkeys) {
+        // Roll back so the user is never left without working shortcuts.
+        let _ = hotkeys::apply(&app, &previous);
+        return Err(error);
+    }
+    if let Err(error) = hotkeys::save(&state.db, &hotkeys) {
+        let _ = hotkeys::apply(&app, &previous);
+        return Err(error);
+    }
+    Ok(hotkeys)
 }
 
 // ---------------------------------------------------------------------------

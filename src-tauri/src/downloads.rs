@@ -4,6 +4,8 @@ use anyhow::{anyhow, Context, Result};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager};
@@ -28,12 +30,15 @@ fn emit(app: &AppHandle, progress: Progress) {
 }
 
 /// Streams one track into the app data directory, reporting progress to the UI.
+/// Returns `Ok(None)` when the user cancelled the download.
 pub async fn run(
     app: AppHandle,
     http: reqwest::Client,
     db: Arc<Database>,
     track: Track,
-) -> Result<String> {
+    cancel: Arc<AtomicBool>,
+    artwork_dir: PathBuf,
+) -> Result<Option<String>> {
     let url = track
         .stream_url
         .clone()
@@ -52,9 +57,12 @@ pub async fn run(
         },
     );
 
-    match fetch_to_file(&app, &http, &db, &track, &url).await {
-        Ok(path) => {
+    match fetch_to_file(&app, &http, &db, &track, &url, &cancel).await {
+        Ok(Some(path)) => {
             db.finish_download(&track.id, &path)?;
+            if let Some(artwork) = crate::library::extract_artwork(Path::new(&path), &artwork_dir) {
+                let _ = db.set_track_artwork(&track.id, &artwork);
+            }
             emit(
                 &app,
                 Progress {
@@ -66,7 +74,22 @@ pub async fn run(
                     error: None,
                 },
             );
-            Ok(path)
+            Ok(Some(path))
+        }
+        Ok(None) => {
+            let _ = db.set_download_progress(&track.id, 0, 0, "cancelled");
+            emit(
+                &app,
+                Progress {
+                    track_id: track.id.clone(),
+                    status: "cancelled".into(),
+                    received: 0,
+                    total: 0,
+                    path: None,
+                    error: None,
+                },
+            );
+            Ok(None)
         }
         Err(error) => {
             let message = error.to_string();
@@ -93,7 +116,8 @@ async fn fetch_to_file(
     db: &Database,
     track: &Track,
     url: &str,
-) -> Result<String> {
+    cancel: &AtomicBool,
+) -> Result<Option<String>> {
     let dir = app
         .path()
         .app_data_dir()
@@ -113,6 +137,9 @@ async fn fetch_to_file(
         .error_for_status()
         .context("audio server returned an error")?;
     let total = response.content_length().unwrap_or(0);
+    if cancel.load(Ordering::Relaxed) {
+        return Ok(None);
+    }
 
     let mut file = std::fs::File::create(&part_path).context("creating download file")?;
     let mut response = response;
@@ -120,6 +147,11 @@ async fn fetch_to_file(
     let mut last_report = Instant::now();
 
     while let Some(chunk) = response.chunk().await.context("reading audio stream")? {
+        if cancel.load(Ordering::Relaxed) {
+            drop(file);
+            let _ = std::fs::remove_file(&part_path);
+            return Ok(None);
+        }
         file.write_all(&chunk).context("writing download file")?;
         received += chunk.len() as u64;
 
@@ -151,7 +183,7 @@ async fn fetch_to_file(
     std::fs::rename(&part_path, &final_path).context("finalising download")?;
     db.set_download_progress(&track.id, received, total.max(received), "done")?;
 
-    Ok(final_path.to_string_lossy().to_string())
+    Ok(Some(final_path.to_string_lossy().to_string()))
 }
 
 fn file_name(track: &Track, extension: &str) -> String {
