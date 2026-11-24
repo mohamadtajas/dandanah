@@ -31,7 +31,7 @@ pub struct NowPlaying {
 }
 
 /// Registers a media session with Windows so the lock screen, the volume
-/// flyout and hardware media keys control Dandanah.
+/// flyout and hardware media keys control Sakeenah.
 pub fn init(app: &AppHandle) -> bool {
     let Some(window) = app.get_webview_window("main") else {
         return false;
@@ -41,8 +41,8 @@ pub fn init(app: &AppHandle) -> bool {
     };
 
     let config = PlatformConfig {
-        display_name: "Dandanah",
-        dbus_name: "app.dandanah.desktop",
+        display_name: "Sakeenah",
+        dbus_name: "app.sakeenah.desktop",
         hwnd: Some(hwnd.0 as isize as *mut c_void),
     };
 

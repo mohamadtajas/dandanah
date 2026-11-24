@@ -3,7 +3,7 @@ import { i18n } from "$lib/i18n/index.svelte.ts";
 import { ui } from "$lib/stores/ui.svelte.ts";
 import type { DownloadRow, DownloadStatus, ImportSummary, Playlist, Track } from "$lib/types";
 
-const ALLOW_UNKNOWN_LICENSE_KEY = "dandanah.allowUnknownLicense";
+const ALLOW_UNKNOWN_LICENSE_KEY = "sakeenah.allowUnknownLicense";
 
 type ProgressEvent = {
   trackId: string;

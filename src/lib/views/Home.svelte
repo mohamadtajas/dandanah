@@ -46,7 +46,7 @@
       <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-gold/80">
         {i18n.t("app.tagline")}
       </p>
-      <h1 class="mt-2 pb-1 font-quran text-[2.1rem] leading-[1.35] text-cream">دندنة</h1>
+      <h1 class="mt-2 pb-1 font-quran text-[2.1rem] leading-[1.35] text-cream">{i18n.t("app.name")}</h1>
       <p class="mt-3 text-sm leading-relaxed text-muted">{i18n.t("home.heroLine")}</p>
       <div class="mt-6 flex flex-wrap gap-2.5">
         <button

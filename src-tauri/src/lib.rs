@@ -4,6 +4,7 @@ mod downloads;
 mod hotkeys;
 mod library;
 mod media;
+mod migrate;
 mod providers;
 
 use commands::AppState;
@@ -25,13 +26,22 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
-            let db = Database::open(&data_dir.join("dandanah.db"))?;
+            match migrate::migrate_legacy(&data_dir) {
+                Ok(Some(old_dir)) => {
+                    eprintln!("migrated library data from {}", old_dir.display());
+                }
+                Ok(None) => {}
+                Err(error) => {
+                    eprintln!("legacy data migration failed: {error:#}");
+                }
+            }
+            let db = Database::open(&data_dir.join(migrate::NEW_DB))?;
 
             let http = reqwest::Client::builder()
                 .user_agent(concat!(
-                    "Dandanah/",
+                    "Sakeenah/",
                     env!("CARGO_PKG_VERSION"),
-                    " (+https://github.com/dandanah/dandanah)"
+                    " (+https://github.com/mohamadtajas/sakeenah)"
                 ))
                 .connect_timeout(std::time::Duration::from_secs(10))
                 .timeout(std::time::Duration::from_secs(30))
@@ -100,11 +110,11 @@ pub fn run() {
             commands::app_info,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running the Dandanah application");
+        .expect("error while running the Sakeenah application");
 }
 
 fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
-    let show = MenuItem::with_id(app, "show", "إظهار Dandanah", true, None::<&str>)?;
+    let show = MenuItem::with_id(app, "show", "إظهار Sakeenah", true, None::<&str>)?;
     let hide = MenuItem::with_id(app, "hide", "إخفاء النافذة", true, None::<&str>)?;
     let toggle = MenuItem::with_id(app, "toggle", "تشغيل / إيقاف", true, None::<&str>)?;
     let previous = MenuItem::with_id(app, "previous", "السابق", true, None::<&str>)?;
@@ -124,7 +134,7 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     )?;
 
     let mut builder = TrayIconBuilder::with_id("main")
-        .tooltip("دندنة · Dandanah")
+        .tooltip("سَكينة · Sakeenah")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {

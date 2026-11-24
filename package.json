@@ -1,9 +1,9 @@
 {
-  "name": "dandanah",
+  "name": "sakeenah",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
-  "description": "دندنة — Dandanah. A light Arabic audio app for Quran, anasheed, radio and free music.",
+  "description": "سَكينة — Sakeenah. Quran, adhkar, prayer times and free audio.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

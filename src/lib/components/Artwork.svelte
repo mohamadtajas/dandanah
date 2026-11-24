@@ -33,7 +33,7 @@
       : undefined,
   );
 
-  const hue = $derived(hash(seed || "dandanah"));
+  const hue = $derived(hash(seed || "sakeenah"));
   const second = $derived((hue + 62) % 360);
 
   function hash(s: string): number {

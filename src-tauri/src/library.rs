@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn scan_skips_hidden_and_non_audio() {
-        let dir = std::env::temp_dir().join(format!("dandanah-scan-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("sakeenah-scan-{}", std::process::id()));
         std::fs::create_dir_all(dir.join("hidden")).ok();
         std::fs::write(dir.join("one.mp3"), b"not audio").ok();
         std::fs::write(dir.join("cover.jpg"), b"x").ok();

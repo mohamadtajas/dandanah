@@ -1,5 +1,5 @@
 const ar = {
-  "app.name": "دندنة",
+  "app.name": "سَكينة",
   "app.tagline": "القرآن والأناشيد والإذاعة",
 
   "nav.home": "الرئيسية",
@@ -184,7 +184,7 @@ const ar = {
   "settings.updates": "التحديثات",
   "settings.checkUpdates": "التحقق من التحديثات",
   "settings.checking": "جارٍ التحقق…",
-  "settings.updateHint": "دندنة تتحقق من الإصدارات المنشورة على GitHub.",
+  "settings.updateHint": "سَكينة تتحقق من الإصدارات المنشورة على GitHub.",
   "settings.updateAvailable": "يتوفر إصدار {version}.",
   "settings.upToDate": "أنت على أحدث إصدار.",
   "settings.installUpdate": "تثبيت التحديث",
@@ -197,7 +197,7 @@ const ar = {
 
   "credits.title": "المصادر والتراخيص",
   "credits.intro":
-    "دندنة لا تستضيف أي محتوى. كل صوت يُبثّ من مصدره الأصلي، والحقوق لأصحابها.",
+    "سَكينة لا تستضيف أي محتوى. كل صوت يُبثّ من مصدره الأصلي، والحقوق لأصحابها.",
   "credits.license": "الترخيص",
 
   "common.loading": "جارٍ التحميل…",
@@ -205,14 +205,14 @@ const ar = {
   "common.error": "حدث خطأ",
   "common.close": "إغلاق",
   "common.min": "د",
-  "common.offline": "لا يوجد اتصال — إن كنت تستخدم VPN مُدار مثل Cloudflare WARP فتأكد من السماح لدندنة.",
+  "common.offline": "لا يوجد اتصال — إن كنت تستخدم VPN مُدار مثل Cloudflare WARP فتأكد من السماح لسَكينة.",
 } as const;
 
 type Dict = typeof ar;
 type Key = keyof Dict;
 
 const en: Record<Key, string> = {
-  "app.name": "Dandanah",
+  "app.name": "Sakeenah",
   "app.tagline": "Quran, anasheed and radio",
 
   "nav.home": "Home",
@@ -397,7 +397,7 @@ const en: Record<Key, string> = {
   "settings.updates": "Updates",
   "settings.checkUpdates": "Check for updates",
   "settings.checking": "Checking…",
-  "settings.updateHint": "Dandanah checks published GitHub releases.",
+  "settings.updateHint": "Sakeenah checks published GitHub releases.",
   "settings.updateAvailable": "Version {version} is available.",
   "settings.upToDate": "You are on the latest version.",
   "settings.installUpdate": "Install update",
@@ -410,7 +410,7 @@ const en: Record<Key, string> = {
 
   "credits.title": "Sources & licenses",
   "credits.intro":
-    "Dandanah hosts nothing. Every stream comes from its original source and all rights belong to their owners.",
+    "Sakeenah hosts nothing. Every stream comes from its original source and all rights belong to their owners.",
   "credits.license": "License",
 
   "common.loading": "Loading…",
@@ -418,7 +418,7 @@ const en: Record<Key, string> = {
   "common.error": "Something went wrong",
   "common.close": "Close",
   "common.min": "min",
-  "common.offline": "No connection — if you use a managed VPN such as Cloudflare WARP, allow Dandanah in its policy.",
+  "common.offline": "No connection — if you use a managed VPN such as Cloudflare WARP, allow Sakeenah in its policy.",
 };
 
 export const dictionaries = { ar, en } as const;

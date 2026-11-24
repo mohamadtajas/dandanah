@@ -1,13 +1,13 @@
 [package]
-name = "dandanah"
-version = "0.1.0"
-description = "Dandanah — Arabic audio for Quran, anasheed, radio and free music"
-authors = ["Dandanah"]
+name = "sakeenah"
+version = "0.2.0"
+description = "Sakeenah — Quran, adhkar, prayer times and free audio"
+authors = ["Sakeenah"]
 edition = "2021"
 rust-version = "1.77"
 
 [lib]
-name = "dandanah_lib"
+name = "sakeenah_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

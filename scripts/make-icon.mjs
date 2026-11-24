@@ -56,35 +56,47 @@ for (let y = 0; y < SIZE; y++) {
   }
 }
 
-// --- gold waveform bars ---------------------------------------------------
-const bars = [180, 300, 430, 560, 430, 300, 180];
-const barW = 66;
-const gap = 26;
-const totalW = bars.length * barW + (bars.length - 1) * gap;
-let bx = (SIZE - totalW) / 2;
-
-function sdRoundRect(px, py, w, h, rad) {
-  const qx = Math.abs(px) - (w / 2 - rad);
-  const qy = Math.abs(py) - (h / 2 - rad);
-  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - rad;
+// --- gold crescent + sparkle ---------------------------------------------
+function sdCircle(px, py, x, y, r) {
+  return Math.hypot(px - x, py - y) - r;
 }
 
-for (const h of bars) {
-  const cxBar = bx + barW / 2;
-  const radius = barW / 2;
-  for (let y = Math.floor(cy - h / 2 - 2); y < cy + h / 2 + 2; y++) {
-    for (let x = Math.floor(bx - 2); x < bx + barW + 2; x++) {
-      const d = sdRoundRect(x - cxBar, y - cy, barW, h, radius);
-      const alpha = clamp(0.5 - d, 0, 1);
-      if (alpha <= 0) continue;
-      const t = (y - (cy - h / 2)) / h;
-      const r = lerp(246, 208, t);
-      const g = lerp(219, 152, t);
-      const b = lerp(163, 61, t);
+const outer = { x: 468, y: 536, r: 292 };
+const cut = { x: 604, y: 424, r: 282 };
+const star = { x: 762, y: 292, r: 52 };
+
+for (let y = 0; y < SIZE; y++) {
+  for (let x = 0; x < SIZE; x++) {
+    const px = x - cx;
+    const py = y - cy;
+
+    // soft halo behind the mark
+    const halo = sdCircle(px, py, outer.x - cx, outer.y - cy, outer.r + 46);
+    if (halo < 0) {
+      const a = clamp(-halo / 120, 0, 1) * 0.09;
+      if (a > 0) blend(x, y, 232, 186, 96, a);
+    }
+
+    const outerD = sdCircle(px, py, outer.x - cx, outer.y - cy, outer.r);
+    const cutD = sdCircle(px, py, cut.x - cx, cut.y - cy, cut.r);
+    const alpha = Math.min(clamp(0.5 - outerD, 0, 1), clamp(0.5 + cutD, 0, 1));
+    if (alpha > 0) {
+      const t = clamp((y - (outer.y - outer.r)) / (outer.r * 2), 0, 1);
+      const r = lerp(248, 201, t);
+      const g = lerp(224, 138, t);
+      const b = lerp(176, 46, t);
       blend(x, y, r, g, b, alpha);
     }
+
+    // four-point sparkle in the crescent's opening
+    const ax = Math.abs(px - (star.x - cx));
+    const ay = Math.abs(py - (star.y - cy));
+    const starD = Math.pow(ax, 0.55) + Math.pow(ay, 0.55) - Math.pow(star.r, 0.55);
+    const starAlpha = clamp(0.7 - starD, 0, 1);
+    if (starAlpha > 0) {
+      blend(x, y, 246, 219, 163, starAlpha);
+    }
   }
-  bx += barW + gap;
 }
 
 // --- PNG encode -----------------------------------------------------------

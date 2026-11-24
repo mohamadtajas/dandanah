@@ -1,6 +1,6 @@
 import { dictionaries, type Locale, type TranslationKey } from "./dict";
 
-const STORAGE_KEY = "dandanah.locale";
+const STORAGE_KEY = "sakeenah.locale";
 
 class I18nStore {
   locale = $state<Locale>("ar");

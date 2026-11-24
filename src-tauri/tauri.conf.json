@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Dandanah",
-  "version": "0.1.0",
-  "identifier": "app.dandanah.desktop",
+  "productName": "Sakeenah",
+  "version": "0.2.0",
+  "identifier": "app.sakeenah.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "دندنة · Dandanah",
+        "title": "سَكينة · Sakeenah",
         "width": 1180,
         "height": 780,
         "minWidth": 880,
@@ -34,7 +34,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/mohamadtajas/dandanah/releases/latest/download/latest.json"
+        "https://github.com/mohamadtajas/sakeenah/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlBQ0I1N0ZDNzBFNTdGQjMKUldTemYrVncvRmZMbW1NU1FJWTJyeVN3Rk9oMGhCV29FT3FsT3lEZjhwa0JxUU5QSVZQZHJhdlgK"
     }
@@ -43,10 +43,10 @@
     "active": true,
     "targets": ["nsis"],
     "createUpdaterArtifacts": true,
-    "publisher": "Dandanah",
+    "publisher": "Sakeenah",
     "category": "Music",
-    "shortDescription": "Quran, anasheed and free audio for Windows",
-    "longDescription": "Dandanah is a light Arabic audio app for Quran recitation, anasheed, live radio and Creative Commons music.",
+    "shortDescription": "Quran, adhkar, prayer times and free audio",
+    "longDescription": "Sakeenah is a light Arabic app for Quran recitation, adhkar, prayer times, live radio and Creative Commons music.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

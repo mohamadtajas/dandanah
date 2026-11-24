@@ -35,9 +35,11 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
-          releaseName: "Dandanah v__VERSION__"
+          releaseName: "Sakeenah v__VERSION__"
           releaseBody: |
-            دندنة v__VERSION__ — Quran, anasheed, radio and free audio.
+            سَكينة v__VERSION__ — Quran, adhkar, prayer times and free audio.
+
+            Updating from Dandanah 0.1.0? Your library and downloads migrate automatically on first launch. Uninstall the old app afterwards.
 
             See the assets below to download the installer.
           releaseDraft: false

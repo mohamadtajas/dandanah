@@ -1,8 +1,8 @@
-// Desktop smoke test. Runs against a *running* Dandanah window that was started
+// Desktop smoke test. Runs against a *running* Sakeenah window that was started
 // with WebView2 remote debugging enabled, e.g.:
 //
 //   $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--remote-debugging-port=9333"
-//   .\src-tauri\target\release\dandanah.exe
+//   .\src-tauri\target\release\sakeenah.exe
 //   node scripts/desktop-smoke.mjs "C:\path\to\audio\folder"
 //
 // It exercises the real IPC surface: local import, favourites, playlists and a

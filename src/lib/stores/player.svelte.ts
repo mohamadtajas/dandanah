@@ -5,8 +5,8 @@ import { library } from "$lib/stores/library.svelte.ts";
 
 type RepeatMode = "off" | "all" | "one";
 
-const VOLUME_KEY = "dandanah.volume";
-const RATE_KEY = "dandanah.rate";
+const VOLUME_KEY = "sakeenah.volume";
+const RATE_KEY = "sakeenah.rate";
 
 class PlayerStore {
   current = $state<Track | null>(null);
@@ -311,7 +311,7 @@ class PlayerStore {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: track.title,
         artist: track.artist,
-        album: track.album ?? "دندنة",
+        album: track.album ?? "سَكينة",
         artwork: track.artworkUrl ? [{ src: track.artworkUrl, sizes: "512x512" }] : [],
       });
       navigator.mediaSession.setActionHandler("play", () => this.toggle());

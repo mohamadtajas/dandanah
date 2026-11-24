@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    dandanah_lib::run();
+    sakeenah_lib::run();
 }

@@ -17,15 +17,10 @@
 
 <aside class="flex h-full flex-col border-e border-line bg-ink-900/80">
   <div class="flex items-center gap-3 px-5 pt-6 pb-6">
-    <div class="grid size-11 place-items-center rounded-2xl bg-gold/12 text-gold ring-1 ring-gold/25">
-      <svg viewBox="0 0 32 32" class="size-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 16h3l3-8 4 16 4-13 3 8h3" />
-        <path d="M25 16h4" opacity="0.5" />
-      </svg>
-    </div>
+    <img src="/logo.png" alt="" class="size-11 shrink-0 rounded-2xl ring-1 ring-gold/25" />
     <div class="min-w-0">
-      <div class="leading-none text-lg font-bold">دندنة</div>
-      <div class="mt-1 text-[10px] font-medium tracking-[0.18em] text-muted">DANDANAH</div>
+      <div class="leading-none text-lg font-bold">{i18n.t("app.name")}</div>
+      <div class="mt-1 text-[10px] font-medium tracking-[0.18em] text-muted">SAKEENAH</div>
     </div>
   </div>
 

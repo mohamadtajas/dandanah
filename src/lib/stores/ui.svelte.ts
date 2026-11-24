@@ -1,4 +1,4 @@
-const THEME_KEY = "dandanah.theme";
+const THEME_KEY = "sakeenah.theme";
 
 class UiStore {
   theme = $state<"dark" | "light">("dark");

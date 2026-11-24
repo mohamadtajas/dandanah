@@ -748,7 +748,7 @@ pub async fn start_download(
         .path()
         .app_data_dir()
         .map(|dir| dir.join("artwork"))
-        .unwrap_or_else(|_| std::env::temp_dir().join("dandanah-artwork"));
+        .unwrap_or_else(|_| std::env::temp_dir().join("sakeenah-artwork"));
 
     let result = downloads::run(
         app.clone(),

@@ -57,7 +57,7 @@ pub async fn search(client: &reqwest::Client, query: &str, limit: u32) -> Result
         .get(format!("{API}/v1/tracks/search"))
         .query(&[
             ("query", text),
-            ("app_name", "Dandanah"),
+            ("app_name", "Sakeenah"),
             ("limit", limit.as_str()),
         ])
         .send()
@@ -109,7 +109,7 @@ fn to_track(item: Item) -> Track {
     );
     track.artist = artist.clone();
     track.duration_s = duration.filter(|value| *value > 0);
-    track.stream_url = Some(format!("{API}/v1/tracks/{id}/stream?app_name=Dandanah"));
+    track.stream_url = Some(format!("{API}/v1/tracks/{id}/stream?app_name=Sakeenah"));
     track.artwork_url = artwork.and_then(|art| art.large.or(art.small));
     track.source_page = permalink.map(|path| format!("https://audius.co{path}"));
     track.attribution = Some(format!("{artist} — Audius"));
