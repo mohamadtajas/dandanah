@@ -3,6 +3,7 @@ use crate::providers::{
     archive, audius, dedupe, everyayah, matches, mp3quran, openverse, quran_text, quranicaudio,
     radiobrowser, score, surah, surahs, Reciter, Surah, Track, TrackKind,
 };
+use crate::worship::{self, HijriDate, PrayerDay, PrayerLog, QiblaInfo, Streak, WorshipSettings};
 use crate::{downloads, hotkeys, library, media};
 use parking_lot::Mutex;
 use serde::Serialize;
@@ -935,4 +936,113 @@ pub fn app_info() -> AppInfo {
         ],
         countries: radiobrowser::ARAB_COUNTRIES.to_vec(),
     }
+}
+
+// ---------------------------------------------------------------------------
+// Worship: prayer times, Hijri date, qibla, prayer log and streak
+// ---------------------------------------------------------------------------
+
+fn local_today(settings: &WorshipSettings) -> chrono::NaiveDate {
+    chrono::Utc::now()
+        .with_timezone(&settings.timezone())
+        .date_naive()
+}
+
+#[tauri::command]
+pub fn get_worship_settings(state: State<'_, AppState>) -> WorshipSettings {
+    worship::load_settings(&state.db)
+}
+
+#[tauri::command]
+pub fn set_worship_settings(
+    state: State<'_, AppState>,
+    settings: WorshipSettings,
+) -> Result<WorshipSettings, String> {
+    let mut settings = settings;
+    // Saving from the settings sheet means the user chose this location.
+    settings.configured = true;
+    worship::save_settings(&state.db, &settings).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_prayer_day(
+    state: State<'_, AppState>,
+    date: Option<String>,
+) -> Result<PrayerDay, String> {
+    let settings = worship::load_settings(&state.db);
+    let now = chrono::Utc::now();
+    let date = match date {
+        Some(raw) => chrono::NaiveDate::parse_from_str(&raw, "%Y-%m-%d")
+            .map_err(|error| format!("invalid date {raw}: {error}"))?,
+        None => now.with_timezone(&settings.timezone()).date_naive(),
+    };
+    worship::prayer_day(&settings, date, now)
+}
+
+#[tauri::command]
+pub fn get_hijri_date(
+    state: State<'_, AppState>,
+    date: Option<String>,
+) -> Option<HijriDate> {
+    let settings = worship::load_settings(&state.db);
+    let date = match date {
+        Some(raw) => chrono::NaiveDate::parse_from_str(&raw, "%Y-%m-%d").ok()?,
+        None => local_today(&settings),
+    };
+    worship::hijri_date(date, settings.hijri_adjustment)
+}
+
+#[tauri::command]
+pub fn get_qibla(state: State<'_, AppState>) -> QiblaInfo {
+    let settings = worship::load_settings(&state.db);
+    QiblaInfo {
+        bearing: worship::qibla_bearing(settings.latitude, settings.longitude),
+        latitude: settings.latitude,
+        longitude: settings.longitude,
+    }
+}
+
+#[tauri::command]
+pub fn get_prayer_log(
+    state: State<'_, AppState>,
+    date: String,
+) -> Result<PrayerLog, String> {
+    state.db.prayer_log(&date).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_prayer_logs(state: State<'_, AppState>) -> Result<Vec<PrayerLog>, String> {
+    state.db.prayer_logs().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_prayer_done(
+    state: State<'_, AppState>,
+    date: String,
+    prayer: String,
+    done: bool,
+) -> Result<PrayerLog, String> {
+    state
+        .db
+        .set_prayer_done(&date, &prayer, done)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_prayer_excused(
+    state: State<'_, AppState>,
+    date: String,
+    excused: bool,
+) -> Result<PrayerLog, String> {
+    state
+        .db
+        .set_prayer_excused(&date, excused)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_prayer_streak(state: State<'_, AppState>) -> Result<Streak, String> {
+    let settings = worship::load_settings(&state.db);
+    let logs = state.db.prayer_logs().map_err(|e| e.to_string())?;
+    Ok(worship::compute_streak(&logs, local_today(&settings)))
 }

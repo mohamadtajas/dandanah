@@ -109,6 +109,16 @@ pub fn run() {
             commands::get_settings,
             commands::set_setting,
             commands::app_info,
+            commands::get_worship_settings,
+            commands::set_worship_settings,
+            commands::get_prayer_day,
+            commands::get_hijri_date,
+            commands::get_qibla,
+            commands::get_prayer_log,
+            commands::get_prayer_logs,
+            commands::set_prayer_done,
+            commands::set_prayer_excused,
+            commands::get_prayer_streak,
         ])
         .run(tauri::generate_context!())
         .expect("error while running the Sakeenah application");

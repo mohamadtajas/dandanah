@@ -4,15 +4,21 @@ import type {
   Ayah,
   AyahReciter,
   DownloadRow,
+  HijriDate,
   HotkeyMap,
   ImportSummary,
   Memorization,
   NowPlaying,
   Playlist,
+  PrayerDay,
+  PrayerLog,
+  PrayerStreak,
+  QiblaInfo,
   Reciter,
   SearchResults,
   Surah,
   Track,
+  WorshipSettings,
 } from "./types";
 
 export const isTauri =
@@ -222,4 +228,50 @@ export const api = {
     isTauri
       ? invoke<HotkeyMap>("set_hotkeys", { hotkeys })
       : (await mock()).setHotkeys(hotkeys),
+
+  // --- worship ----------------------------------------------------------
+
+  worshipSettings: async (): Promise<WorshipSettings> =>
+    isTauri
+      ? invoke<WorshipSettings>("get_worship_settings")
+      : (await mock()).worshipSettings(),
+
+  setWorshipSettings: async (settings: WorshipSettings): Promise<WorshipSettings> => {
+    if (!isTauri) return (await mock()).setWorshipSettings(settings);
+    return invoke<WorshipSettings>("set_worship_settings", { settings });
+  },
+
+  prayerDay: async (date?: string): Promise<PrayerDay> =>
+    isTauri
+      ? invoke<PrayerDay>("get_prayer_day", { date })
+      : (await mock()).prayerDay(date),
+
+  hijriDate: async (date?: string): Promise<HijriDate | null> =>
+    isTauri
+      ? invoke<HijriDate | null>("get_hijri_date", { date })
+      : (await mock()).hijriDate(),
+
+  qibla: async (): Promise<QiblaInfo> =>
+    isTauri ? invoke<QiblaInfo>("get_qibla") : (await mock()).qibla(),
+
+  prayerLog: async (date: string): Promise<PrayerLog> =>
+    isTauri
+      ? invoke<PrayerLog>("get_prayer_log", { date })
+      : (await mock()).prayerLog(date),
+
+  prayerLogs: async (): Promise<PrayerLog[]> =>
+    isTauri ? invoke<PrayerLog[]>("get_prayer_logs") : (await mock()).prayerLogs(),
+
+  setPrayerDone: async (date: string, prayer: string, done: boolean): Promise<PrayerLog> => {
+    if (!isTauri) return (await mock()).setPrayerDone(date, prayer, done);
+    return invoke<PrayerLog>("set_prayer_done", { date, prayer, done });
+  },
+
+  setPrayerExcused: async (date: string, excused: boolean): Promise<PrayerLog> => {
+    if (!isTauri) return (await mock()).setPrayerExcused(date, excused);
+    return invoke<PrayerLog>("set_prayer_excused", { date, excused });
+  },
+
+  prayerStreak: async (): Promise<PrayerStreak> =>
+    isTauri ? invoke<PrayerStreak>("get_prayer_streak") : (await mock()).prayerStreak(),
 };

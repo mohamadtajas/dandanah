@@ -25,3 +25,6 @@ npm-debug.log*
 
 # private plans
 /docs/plans
+
+# agent scratch workspace
+/.superpowers

@@ -125,8 +125,95 @@ export interface AppInfo {
   countries: string[];
 }
 
+// ---------------------------------------------------------------------------
+// Worship: prayer times, Hijri, qibla, prayer log
+// ---------------------------------------------------------------------------
+
+export type PrayerKey = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
+
+export type PrayerMethod =
+  | "muslimWorldLeague"
+  | "egyptian"
+  | "karachi"
+  | "ummAlQura"
+  | "dubai"
+  | "moonsightingCommittee"
+  | "northAmerica"
+  | "kuwait"
+  | "qatar"
+  | "singapore"
+  | "tehran"
+  | "turkey";
+
+export interface WorshipSettings {
+  latitude: number;
+  longitude: number;
+  timezone: string;
+  method: PrayerMethod;
+  madhab: "shafi" | "hanafi";
+  hijriAdjustment: number;
+  configured: boolean;
+}
+
+export interface PrayerTime {
+  key: string;
+  name: string;
+  /** Local wall-clock time, `HH:MM`. */
+  time: string;
+  iso: string;
+  minutes: number;
+  passed: boolean;
+}
+
+export interface HijriDate {
+  year: number;
+  month: number;
+  day: number;
+  monthName: string;
+  monthNameEn: string;
+  dayName: string;
+  dayNameEn: string;
+  formatted: string;
+}
+
+export interface PrayerDay {
+  date: string;
+  timezone: string;
+  times: PrayerTime[];
+  next: PrayerTime | null;
+  remainingS: number;
+  qibla: number;
+  hijri: HijriDate | null;
+  now: string;
+}
+
+export interface PrayerLog {
+  date: string;
+  fajr: boolean;
+  dhuhr: boolean;
+  asr: boolean;
+  maghrib: boolean;
+  isha: boolean;
+  excused: boolean;
+}
+
+export interface PrayerStreak {
+  current: number;
+  best: number;
+  todayComplete: boolean;
+  todayExcused: boolean;
+  todayCount: number;
+}
+
+export interface QiblaInfo {
+  bearing: number;
+  latitude: number;
+  longitude: number;
+}
+
 export type View =
   | "home"
+  | "worship"
   | "search"
   | "quran"
   | "explore"

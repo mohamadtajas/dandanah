@@ -5,7 +5,7 @@
 
 use crate::db::Database;
 use anyhow::Result;
-use chrono::{DateTime, Datelike, Duration, NaiveDate, TimeZone, Timelike, Utc};
+use chrono::{DateTime, Datelike, Duration, NaiveDate, Timelike, Utc};
 use chrono_tz::Tz;
 use hijridate::{Gregorian, Language};
 use salah::prelude::*;
@@ -205,28 +205,14 @@ impl PrayerLog {
         self.count() == 5
     }
 
-    pub fn get(&self, prayer: &str) -> Option<bool> {
-        match prayer {
-            "fajr" => Some(self.fajr),
-            "dhuhr" => Some(self.dhuhr),
-            "asr" => Some(self.asr),
-            "maghrib" => Some(self.maghrib),
-            "isha" => Some(self.isha),
-            _ => None,
-        }
-    }
+}
 
-    pub fn set(&mut self, prayer: &str, done: bool) -> Result<(), String> {
-        match prayer {
-            "fajr" => self.fajr = done,
-            "dhuhr" => self.dhuhr = done,
-            "asr" => self.asr = done,
-            "maghrib" => self.maghrib = done,
-            "isha" => self.isha = done,
-            _ => return Err(format!("unknown prayer: {prayer}")),
-        }
-        Ok(())
-    }
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QiblaInfo {
+    pub bearing: f64,
+    pub latitude: f64,
+    pub longitude: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -316,7 +302,7 @@ pub fn prayer_day(
     let schedule = calculate(settings, date)?;
     let raw = raw_times(&schedule, tz);
 
-    let mut times: Vec<PrayerTime> = raw
+    let times: Vec<PrayerTime> = raw
         .iter()
         .map(|item| {
             let instant = item.at.with_timezone(&Utc);
