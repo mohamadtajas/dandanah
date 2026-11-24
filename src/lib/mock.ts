@@ -3,6 +3,9 @@
 // sample; only Al-Fatiha is real so the follow-along layout can be previewed.
 
 import type {
+  AdhkarDay,
+  AdhkarProgress,
+  AdhkarStreak,
   AppInfo,
   Ayah,
   AyahReciter,
@@ -1196,6 +1199,64 @@ const favoriteSet = new Map<string, Track>();
 const playlistStore = new Map<string, { meta: Playlist; tracks: Track[] }>();
 const downloadsStore = new Map<string, DownloadRow>();
 const prayerLogStore = new Map<string, PrayerLog>();
+const adhkarProgressStore = new Map<string, Map<string, number>>();
+const adhkarDayStore = new Map<string, AdhkarDay>();
+
+function todayKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function mockAdhkarDay(date: string): AdhkarDay {
+  return adhkarDayStore.get(date) ?? { date, morning: false, evening: false };
+}
+
+function mockAdhkarProgress(date: string): AdhkarProgress[] {
+  const map = adhkarProgressStore.get(date);
+  if (!map) return [];
+  return [...map.entries()]
+    .map(([key, remaining]) => {
+      const [categoryId, itemId] = key.split("::");
+      return { date, categoryId, itemId, remaining };
+    })
+    .sort((a, b) =>
+      `${a.categoryId}::${a.itemId}`.localeCompare(`${b.categoryId}::${b.itemId}`),
+    );
+}
+
+function mockAdhkarStreak(): AdhkarStreak {
+  const days = [...adhkarDayStore.values()].sort((a, b) => a.date.localeCompare(b.date));
+  const qualifies = (day?: AdhkarDay) => !!day && (day.morning || day.evening);
+  const today = todayKey();
+  let current = 0;
+  const cursor = new Date(today + "T00:00:00Z");
+  if (!qualifies(adhkarDayStore.get(today))) cursor.setUTCDate(cursor.getUTCDate() - 1);
+  while (qualifies(adhkarDayStore.get(cursor.toISOString().slice(0, 10)))) {
+    current += 1;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+
+  let best = 0;
+  let run = 0;
+  let previous = "";
+  for (const day of days) {
+    if (!qualifies(day)) {
+      run = 0;
+    } else {
+      const expected = new Date(day.date + "T00:00:00Z");
+      expected.setUTCDate(expected.getUTCDate() - 1);
+      run = previous === expected.toISOString().slice(0, 10) ? run + 1 : 1;
+      best = Math.max(best, run);
+    }
+    previous = day.date;
+  }
+  const todayDay = adhkarDayStore.get(today);
+  return {
+    current,
+    best,
+    todayMorning: todayDay?.morning ?? false,
+    todayEvening: todayDay?.evening ?? false,
+  };
+}
 
 const MOCK_WORSHIP: WorshipSettings = {
   latitude: 21.4225,
@@ -1515,6 +1576,48 @@ export function mockApi() {
     },
     async prayerStreak(): Promise<PrayerStreak> {
       return mockStreak();
+    },
+
+    async adhkarProgress(date?: string): Promise<AdhkarProgress[]> {
+      return mockAdhkarProgress(date ?? todayKey());
+    },
+    async adhkarDay(date?: string): Promise<AdhkarDay> {
+      return mockAdhkarDay(date ?? todayKey());
+    },
+    async setAdhkarRemaining(
+      date: string,
+      categoryId: string,
+      itemId: string,
+      remaining: number,
+    ): Promise<AdhkarProgress> {
+      const map = adhkarProgressStore.get(date) ?? new Map<string, number>();
+      const value = Math.max(0, Math.min(1000, Math.floor(remaining)));
+      map.set(`${categoryId}::${itemId}`, value);
+      adhkarProgressStore.set(date, map);
+      return { date, categoryId, itemId, remaining: value };
+    },
+    async markAdhkarDone(date: string, categoryId: string): Promise<AdhkarDay> {
+      const day = { ...mockAdhkarDay(date) };
+      if (categoryId === "morning") day.morning = true;
+      if (categoryId === "evening") day.evening = true;
+      adhkarDayStore.set(date, day);
+      return day;
+    },
+    async clearAdhkarCategory(date: string, categoryId: string): Promise<AdhkarDay> {
+      const map = adhkarProgressStore.get(date);
+      if (map) {
+        for (const key of [...map.keys()]) {
+          if (key.startsWith(`${categoryId}::`)) map.delete(key);
+        }
+      }
+      const day = { ...mockAdhkarDay(date) };
+      if (categoryId === "morning") day.morning = false;
+      if (categoryId === "evening") day.evening = false;
+      adhkarDayStore.set(date, day);
+      return day;
+    },
+    async adhkarStreak(): Promise<AdhkarStreak> {
+      return mockAdhkarStreak();
     },
 
     async favorites(_limit?: number) {

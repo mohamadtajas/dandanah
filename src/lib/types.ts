@@ -218,9 +218,61 @@ export interface QiblaInfo {
   longitude: number;
 }
 
+// ---------------------------------------------------------------------------
+// Adhkar
+// ---------------------------------------------------------------------------
+
+export interface AdhkarItem {
+  id: string;
+  text: string;
+  count: number;
+  reference: string;
+}
+
+export interface AdhkarCategory {
+  id: string;
+  title: string;
+  featured: boolean;
+  streakKey?: "morning" | "evening";
+  items: AdhkarItem[];
+}
+
+export interface AdhkarData {
+  source: {
+    title: string;
+    author: string;
+    repository: string;
+    commit: string;
+    license: string;
+    generated: string;
+  };
+  categories: AdhkarCategory[];
+}
+
+export interface AdhkarProgress {
+  date: string;
+  categoryId: string;
+  itemId: string;
+  remaining: number;
+}
+
+export interface AdhkarDay {
+  date: string;
+  morning: boolean;
+  evening: boolean;
+}
+
+export interface AdhkarStreak {
+  current: number;
+  best: number;
+  todayMorning: boolean;
+  todayEvening: boolean;
+}
+
 export type View =
   | "home"
   | "worship"
+  | "adhkar"
   | "search"
   | "quran"
   | "explore"

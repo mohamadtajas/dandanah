@@ -3,6 +3,7 @@ use crate::providers::{
     archive, audius, dedupe, everyayah, matches, mp3quran, openverse, quran_text, quranicaudio,
     radiobrowser, score, surah, surahs, Reciter, Surah, Track, TrackKind,
 };
+use crate::adhkar::{self, AdhkarDay, AdhkarProgress, AdhkarStreak};
 use crate::worship::{self, HijriDate, PrayerDay, PrayerLog, QiblaInfo, Streak, WorshipSettings};
 use crate::{downloads, hotkeys, library, media};
 use parking_lot::Mutex;
@@ -1044,4 +1045,82 @@ pub fn get_prayer_streak(state: State<'_, AppState>) -> Result<Streak, String> {
     let settings = worship::load_settings(&state.db);
     let logs = state.db.prayer_logs().map_err(|e| e.to_string())?;
     Ok(worship::compute_streak(&logs, local_today(&settings)))
+}
+
+// ---------------------------------------------------------------------------
+// Adhkar: progress, completion and the adhkar streak
+// ---------------------------------------------------------------------------
+
+fn adhkar_today(state: &AppState) -> String {
+    let settings = worship::load_settings(&state.db);
+    local_today(&settings).format("%Y-%m-%d").to_string()
+}
+
+#[tauri::command]
+pub fn get_adhkar_progress(
+    state: State<'_, AppState>,
+    date: Option<String>,
+) -> Result<Vec<AdhkarProgress>, String> {
+    let date = date.unwrap_or_else(|| adhkar_today(&state));
+    state.db.adhkar_progress(&date).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_adhkar_day(
+    state: State<'_, AppState>,
+    date: Option<String>,
+) -> Result<AdhkarDay, String> {
+    let date = date.unwrap_or_else(|| adhkar_today(&state));
+    state.db.adhkar_day(&date).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_adhkar_logs(state: State<'_, AppState>) -> Result<Vec<AdhkarDay>, String> {
+    state.db.adhkar_logs().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_adhkar_remaining(
+    state: State<'_, AppState>,
+    date: String,
+    category_id: String,
+    item_id: String,
+    remaining: u32,
+) -> Result<AdhkarProgress, String> {
+    state
+        .db
+        .set_adhkar_remaining(&date, &category_id, &item_id, remaining)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn mark_adhkar_done(
+    state: State<'_, AppState>,
+    date: String,
+    category_id: String,
+) -> Result<AdhkarDay, String> {
+    state
+        .db
+        .mark_adhkar_done(&date, &category_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn clear_adhkar_category(
+    state: State<'_, AppState>,
+    date: String,
+    category_id: String,
+) -> Result<AdhkarDay, String> {
+    state
+        .db
+        .clear_adhkar_category(&date, &category_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_adhkar_streak(state: State<'_, AppState>) -> Result<AdhkarStreak, String> {
+    let logs = state.db.adhkar_logs().map_err(|e| e.to_string())?;
+    let today = chrono::NaiveDate::parse_from_str(&adhkar_today(&state), "%Y-%m-%d")
+        .unwrap_or_else(|_| chrono::Utc::now().date_naive());
+    Ok(adhkar::compute_adhkar_streak(&logs, today))
 }

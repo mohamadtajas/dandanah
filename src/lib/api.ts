@@ -1,5 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  AdhkarDay,
+  AdhkarProgress,
+  AdhkarStreak,
   AppInfo,
   Ayah,
   AyahReciter,
@@ -274,4 +277,42 @@ export const api = {
 
   prayerStreak: async (): Promise<PrayerStreak> =>
     isTauri ? invoke<PrayerStreak>("get_prayer_streak") : (await mock()).prayerStreak(),
+
+  // --- adhkar -----------------------------------------------------------
+
+  adhkarProgress: async (date?: string): Promise<AdhkarProgress[]> =>
+    isTauri
+      ? invoke<AdhkarProgress[]>("get_adhkar_progress", { date })
+      : (await mock()).adhkarProgress(date),
+
+  adhkarDay: async (date?: string): Promise<AdhkarDay> =>
+    isTauri ? invoke<AdhkarDay>("get_adhkar_day", { date }) : (await mock()).adhkarDay(date),
+
+  setAdhkarRemaining: async (
+    date: string,
+    categoryId: string,
+    itemId: string,
+    remaining: number,
+  ): Promise<AdhkarProgress> => {
+    if (!isTauri) return (await mock()).setAdhkarRemaining(date, categoryId, itemId, remaining);
+    return invoke<AdhkarProgress>("set_adhkar_remaining", {
+      date,
+      categoryId,
+      itemId,
+      remaining,
+    });
+  },
+
+  markAdhkarDone: async (date: string, categoryId: string): Promise<AdhkarDay> => {
+    if (!isTauri) return (await mock()).markAdhkarDone(date, categoryId);
+    return invoke<AdhkarDay>("mark_adhkar_done", { date, categoryId });
+  },
+
+  clearAdhkarCategory: async (date: string, categoryId: string): Promise<AdhkarDay> => {
+    if (!isTauri) return (await mock()).clearAdhkarCategory(date, categoryId);
+    return invoke<AdhkarDay>("clear_adhkar_category", { date, categoryId });
+  },
+
+  adhkarStreak: async (): Promise<AdhkarStreak> =>
+    isTauri ? invoke<AdhkarStreak>("get_adhkar_streak") : (await mock()).adhkarStreak(),
 };
