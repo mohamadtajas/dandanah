@@ -3,7 +3,7 @@ use crate::providers::{
     archive, dedupe, everyayah, matches, mp3quran, openverse, quran_text, radiobrowser, score,
     surah, surahs, Reciter, Surah, Track, TrackKind,
 };
-use crate::{downloads, library};
+use crate::{downloads, library, media};
 use serde::Serialize;
 use std::sync::Arc;
 use tauri::{AppHandle, State};
@@ -618,6 +618,15 @@ pub fn forget_local_track(state: State<'_, AppState>, track_id: String) -> Resul
         .db
         .forget_local_track(&track_id)
         .map_err(|e| e.to_string())
+}
+
+// ---------------------------------------------------------------------------
+// Windows media session
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn update_now_playing(app: AppHandle, info: media::NowPlaying) {
+    media::update(&app, info);
 }
 
 // ---------------------------------------------------------------------------

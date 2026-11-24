@@ -30,6 +30,7 @@ class PlayerStore {
     null;
 
   private audio: HTMLAudioElement | null = null;
+  private lastNowPlayingAt = 0;
 
   constructor() {
     if (typeof localStorage !== "undefined") {
@@ -60,6 +61,7 @@ class PlayerStore {
 
     a.addEventListener("timeupdate", () => {
       this.position = a.currentTime;
+      this.syncNowPlaying();
     });
     a.addEventListener("durationchange", () => {
       this.duration = Number.isFinite(a.duration) ? a.duration : 0;
@@ -73,9 +75,11 @@ class PlayerStore {
       this.playing = true;
       this.loading = false;
       this.error = null;
+      this.syncNowPlaying(true);
     });
     a.addEventListener("pause", () => {
       this.playing = false;
+      this.syncNowPlaying(true);
     });
     a.addEventListener("waiting", () => {
       this.loading = true;
@@ -99,6 +103,26 @@ class PlayerStore {
     const localPath = track.localPath ?? library.localPathFor(track.id);
     if (localPath && isTauri) return convertFileSrc(localPath);
     return track.streamUrl ?? "";
+  }
+
+  /** Mirrors playback into the native media session (SMTC on Windows). */
+  private syncNowPlaying(force = false) {
+    if (!isTauri || !this.current) return;
+    const now = Date.now();
+    if (!force && now - this.lastNowPlayingAt < 4000) return;
+    this.lastNowPlayingAt = now;
+    const track = this.current;
+    void api
+      .updateNowPlaying({
+        title: track.title,
+        artist: track.artist,
+        album: track.album ?? null,
+        durationS: this.duration || track.durationS || null,
+        positionS: this.position,
+        playing: this.playing,
+        artworkUrl: track.artworkUrl ?? null,
+      })
+      .catch(() => {});
   }
 
   async play(track: Track, queue?: Track[]) {
@@ -137,6 +161,7 @@ class PlayerStore {
     }
 
     this.updateMediaSession(track);
+    this.syncNowPlaying(true);
     api.recordPlay(track).catch(() => {});
   }
 
@@ -197,6 +222,7 @@ class PlayerStore {
     const a = this.ensureAudio();
     a.currentTime = Math.max(0, Math.min(seconds, this.duration || 0));
     this.position = a.currentTime;
+    this.syncNowPlaying(true);
   }
 
   seekToFraction(fraction: number) {
@@ -241,6 +267,7 @@ class PlayerStore {
       a.removeAttribute("src");
       a.load();
     }
+    this.syncNowPlaying(true);
     this.current = null;
     this.playing = false;
     this.position = 0;
@@ -254,6 +281,7 @@ class PlayerStore {
         this.playing = false;
         this.position = this.duration;
         this.setMediaPlaybackState("paused");
+        this.syncNowPlaying(true);
         return;
       }
       if (outcome === "handled") return;

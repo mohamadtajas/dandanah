@@ -14,10 +14,50 @@
   import { nav } from "$lib/stores/nav.svelte.ts";
   import { player } from "$lib/stores/player.svelte.ts";
   import { library } from "$lib/stores/library.svelte.ts";
+  import { isTauri } from "$lib/api";
   import { i18n } from "$lib/i18n/index.svelte.ts";
 
   onMount(() => {
     void library.load();
+    const cleanups: (() => void)[] = [];
+
+    // Tray menu, global hotkeys and Windows media keys all arrive here.
+    void (async () => {
+      if (!isTauri) return;
+      try {
+        const { listen } = await import("@tauri-apps/api/event");
+        cleanups.push(
+          await listen<string>("player:command", (event) => {
+            switch (event.payload) {
+              case "toggle":
+                void player.toggle();
+                break;
+              case "play":
+                if (!player.playing) void player.toggle();
+                break;
+              case "pause":
+                if (player.playing) void player.toggle();
+                break;
+              case "next":
+                void player.next();
+                break;
+              case "previous":
+                void player.prev();
+                break;
+              case "stop":
+                player.stop();
+                break;
+            }
+          }),
+        );
+        cleanups.push(
+          await listen<number>("player:seek", (event) => player.seek(event.payload)),
+        );
+      } catch {
+        /* media keys are best-effort */
+      }
+    })();
+
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) {
@@ -52,7 +92,10 @@
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      for (const cleanup of cleanups) cleanup();
+    };
   });
 </script>
 

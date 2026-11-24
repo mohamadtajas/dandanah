@@ -26,7 +26,7 @@ Week 1 of the build plan is complete and working:
 | Hifz loops: repeat an ayah range N times, mark memorised | ✅ |
 | Favorites, playlists, downloads, local folder import | ✅ |
 | Openverse + archive.org catalogue with licence badges | ✅ |
-| Windows SMTC integration, tray, hotkeys | ⏳ week 5 |
+| Windows media session, tray, global hotkeys | ✅ |
 | Installer, auto-update, code signing | ⏳ week 6 |
 
 ---
@@ -95,6 +95,7 @@ src-tauri/src/               Rust backend
 ├─ db/mod.rs                 SQLite schema, migrations, cache, history
 ├─ downloads.rs              streaming downloader with progress events
 ├─ library.rs                folder scan + tag reading for local files
+├─ media.rs                  Windows SMTC session (metadata, transport buttons)
 ├─ commands.rs               the IPC surface
 └─ lib.rs                    app wiring
 ```
@@ -183,6 +184,21 @@ provider fails the other's results are still shown.
 
 ---
 
+## Windows integration
+
+- **System Media Transport Controls** — the lock screen, volume flyout and hardware media
+  keys show Dandanah's current track and control play/pause, previous and next. Implemented
+  with `souvlaki` against the window's HWND; playback position is mirrored every few seconds
+  so seeking from the OS works.
+- **Tray icon** — left click restores the window; the menu offers show/hide, play/pause,
+  previous, next and quit. Hiding the window keeps playback running.
+- **Global hotkeys** — `Ctrl+Alt+Space` toggles playback, `Ctrl+Alt+→` / `Ctrl+Alt+←` skip.
+  Tray menu labels are Arabic-first; hotkeys are fixed (not configurable yet).
+- **Second launch** — starting the app again focuses the existing instance instead of
+  opening a second copy.
+
+---
+
 ## Content sources
 
 | Source | Content | License |
@@ -209,6 +225,14 @@ distributable, the installer small, and the project on solid legal ground.
 | `↑` / `↓` | Volume |
 | `M` | Mute |
 
+Global (work when the window is unfocused):
+
+| Key | Action |
+|---|---|
+| `Ctrl+Alt+Space` | Play / pause |
+| `Ctrl+Alt+→` / `Ctrl+Alt+←` | Next / previous |
+| Media keys | Routed through the Windows media session |
+
 ---
 
 ## Roadmap
@@ -216,7 +240,7 @@ distributable, the installer small, and the project on solid legal ground.
 1. ~~**Quran depth**~~ — shipped: ayah mode, repeat ranges, memorisation tracker, Uthmani follow-along.
 2. ~~**Library**~~ — shipped: favorites, playlists, downloads, local folder import.
 3. ~~**Creative Commons catalog**~~ — shipped: Openverse and archive.org with licence badges.
-4. **Windows integration** — SMTC lock-screen controls, tray, global hotkeys.
+4. ~~**Windows integration**~~ — shipped: SMTC, tray and global hotkeys.
 5. **Ship** — installer, GitHub Releases auto-update, code signing.
 
 ## License

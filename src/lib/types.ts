@@ -100,6 +100,17 @@ export interface ImportSummary {
   truncated: boolean;
 }
 
+/** Payload pushed to the native media session. */
+export interface NowPlaying {
+  title: string;
+  artist: string;
+  album?: string | null;
+  durationS?: number | null;
+  positionS: number;
+  playing: boolean;
+  artworkUrl?: string | null;
+}
+
 export interface AppInfo {
   version: string;
   providers: string[];

@@ -2,26 +2,26 @@ mod commands;
 mod db;
 mod downloads;
 mod library;
+mod media;
 mod providers;
 
 use commands::AppState;
 use db::Database;
 use std::sync::Arc;
-use tauri::Manager;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{Emitter, Manager};
 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.show();
-                let _ = window.unminimize();
-                let _ = window.set_focus();
-            }
+            media::show_main(app);
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             let db = Database::open(&data_dir.join("dandanah.db"))?;
@@ -40,6 +40,13 @@ pub fn run() {
                 db: Arc::new(db),
                 http,
             });
+
+            if !media::init(app.handle()) {
+                eprintln!("SMTC unavailable; hardware media keys will not control the app");
+            }
+
+            build_tray(app.handle())?;
+            register_shortcuts(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -77,10 +84,101 @@ pub fn run() {
             commands::import_folder,
             commands::get_local_tracks,
             commands::forget_local_track,
+            commands::update_now_playing,
             commands::get_settings,
             commands::set_setting,
             commands::app_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running the Dandanah application");
+}
+
+fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
+    let show = MenuItem::with_id(app, "show", "إظهار Dandanah", true, None::<&str>)?;
+    let hide = MenuItem::with_id(app, "hide", "إخفاء النافذة", true, None::<&str>)?;
+    let toggle = MenuItem::with_id(app, "toggle", "تشغيل / إيقاف", true, None::<&str>)?;
+    let previous = MenuItem::with_id(app, "previous", "السابق", true, None::<&str>)?;
+    let next = MenuItem::with_id(app, "next", "التالي", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "خروج", true, None::<&str>)?;
+    let menu = Menu::with_items(
+        app,
+        &[
+            &show,
+            &hide,
+            &toggle,
+            &previous,
+            &next,
+            &PredefinedMenuItem::separator(app)?,
+            &quit,
+        ],
+    )?;
+
+    let mut builder = TrayIconBuilder::with_id("main")
+        .tooltip("دندنة · Dandanah")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "show" => media::show_main(app),
+            "hide" => media::hide_main(app),
+            "toggle" => {
+                let _ = app.emit("player:command", "toggle");
+            }
+            "previous" => {
+                let _ = app.emit("player:command", "previous");
+            }
+            "next" => {
+                let _ = app.emit("player:command", "next");
+            }
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                media::show_main(tray.app_handle());
+            }
+        });
+
+    if let Some(icon) = app.default_window_icon() {
+        builder = builder.icon(icon.clone());
+    }
+    builder.build(app)?;
+    Ok(())
+}
+
+fn register_shortcuts(app: &tauri::AppHandle) {
+    use tauri_plugin_global_shortcut::{
+        Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
+    };
+
+    let combos = [
+        (
+            Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::Space),
+            "toggle",
+        ),
+        (
+            Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::ArrowRight),
+            "next",
+        ),
+        (
+            Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::ArrowLeft),
+            "previous",
+        ),
+    ];
+
+    for (shortcut, action) in combos {
+        let action = action.to_string();
+        let result = app.global_shortcut().on_shortcut(shortcut, move |app, _, event| {
+            if event.state == ShortcutState::Pressed {
+                let _ = app.emit("player:command", action.clone());
+            }
+        });
+        if let Err(error) = result {
+            eprintln!("could not register global shortcut: {error}");
+        }
+    }
 }

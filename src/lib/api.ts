@@ -6,6 +6,7 @@ import type {
   DownloadRow,
   ImportSummary,
   Memorization,
+  NowPlaying,
   Playlist,
   Reciter,
   SearchResults,
@@ -119,6 +120,11 @@ export const api = {
 
   appInfo: async (): Promise<AppInfo> =>
     isTauri ? invoke<AppInfo>("app_info") : (await mock()).appInfo(),
+
+  updateNowPlaying: async (info: NowPlaying): Promise<void> => {
+    if (!isTauri) return;
+    await invoke<void>("update_now_playing", { info });
+  },
 
   // --- library ---------------------------------------------------------
 

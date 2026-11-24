@@ -9,6 +9,7 @@
     "core:window:allow-set-title",
     "opener:default",
     "dialog:default",
+    "global-shortcut:default",
     "process:default",
     "updater:default"
   ]
