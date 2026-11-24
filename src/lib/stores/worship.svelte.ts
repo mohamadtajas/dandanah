@@ -153,12 +153,14 @@ class WorshipStore {
   localDate(): string {
     const timezone = this.settings?.timezone ?? "UTC";
     try {
-      return new Intl.DateTimeFormat("en-CA", {
+      const parts = new Intl.DateTimeFormat("en-US", {
         timeZone: timezone,
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
-      }).format(new Date());
+      }).formatToParts(new Date());
+      const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+      return `${value("year")}-${value("month")}-${value("day")}`;
     } catch {
       return new Date().toISOString().slice(0, 10);
     }

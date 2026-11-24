@@ -1203,7 +1203,14 @@ const adhkarProgressStore = new Map<string, Map<string, number>>();
 const adhkarDayStore = new Map<string, AdhkarDay>();
 
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: MOCK_WORSHIP.timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
 function mockAdhkarDay(date: string): AdhkarDay {
@@ -1229,6 +1236,9 @@ function mockAdhkarStreak(): AdhkarStreak {
   const today = todayKey();
   let current = 0;
   const cursor = new Date(today + "T00:00:00Z");
+  if (Number.isNaN(cursor.getTime())) {
+    return { current: 0, best: 0, todayMorning: false, todayEvening: false };
+  }
   if (!qualifies(adhkarDayStore.get(today))) cursor.setUTCDate(cursor.getUTCDate() - 1);
   while (qualifies(adhkarDayStore.get(cursor.toISOString().slice(0, 10)))) {
     current += 1;
@@ -1299,7 +1309,7 @@ function mockStreak(): PrayerStreak {
   const complete = (log?: PrayerLog) =>
     !!log && ["fajr", "dhuhr", "asr", "maghrib", "isha"].every((k) => log[k as keyof PrayerLog] === true);
   const quality = (log?: PrayerLog) => complete(log) || !!log?.excused;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayKey();
   let current = 0;
   let cursor = new Date(today + "T00:00:00Z");
   if (!quality(prayerLogStore.get(today))) cursor.setUTCDate(cursor.getUTCDate() - 1);
@@ -1493,7 +1503,7 @@ export function mockApi() {
       return MOCK_WORSHIP;
     },
     async prayerDay(date?: string): Promise<PrayerDay> {
-      const day = date ?? new Date().toISOString().slice(0, 10);
+      const day = date ?? todayKey();
       const now = new Date();
       const minutesNow = now.getHours() * 60 + now.getMinutes();
       const rows: [string, string, number][] = [

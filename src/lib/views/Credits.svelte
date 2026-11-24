@@ -23,6 +23,18 @@
       license: { ar: "بيانات مفتوحة", en: "Open data" },
     },
     {
+      name: "Hisn al-Muslim (HisnElMuslim)",
+      url: "https://github.com/asellam/HisnElMuslim",
+      what: {
+        ar: "نصوص الأذكار وتكرارها ومصادرها من حصن المسلم",
+        en: "Adhkar texts, repeat counts and references from Hisn al-Muslim",
+      },
+      license: {
+        ar: "MIT — نُقلت من النسخة المطبوعة",
+        en: "MIT — transcribed from the printed book",
+      },
+    },
+    {
       name: "radio-browser.info",
       url: "https://www.radio-browser.info",
       what: { ar: "دليل محطات الإذاعة المباشرة", en: "Live radio station directory" },

@@ -10,6 +10,7 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { view: "home", icon: "home", label: "nav.home" },
   { view: "worship", icon: "compass", label: "nav.worship" },
+  { view: "adhkar", icon: "moon", label: "nav.adhkar" },
   { view: "quran", icon: "book", label: "nav.quran" },
   { view: "explore", icon: "sparkle", label: "nav.explore" },
   { view: "radio", icon: "radio", label: "nav.radio" },
@@ -58,6 +59,7 @@ class NavStore {
     const known: View[] = [
       "home",
       "worship",
+      "adhkar",
       "search",
       "quran",
       "explore",

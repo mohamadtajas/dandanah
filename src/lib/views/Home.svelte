@@ -9,6 +9,7 @@
   import ReciterCard from "$lib/components/ReciterCard.svelte";
   import StationCard from "$lib/components/StationCard.svelte";
   import NextPrayer from "$lib/components/NextPrayer.svelte";
+  import AdhkarCards from "$lib/components/AdhkarCards.svelte";
   import Icon from "$lib/components/Icon.svelte";
 
   let reciters = $state<Reciter[]>([]);
@@ -40,6 +41,7 @@
 
 <div class="fade-in">
   <NextPrayer />
+  <AdhkarCards />
 
   <!-- Hero -->
   <section class="relative mt-4 overflow-hidden rounded-3xl border border-line bg-ink-900 px-7 py-8">
