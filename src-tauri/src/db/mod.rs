@@ -1,3 +1,4 @@
+use crate::adhkar::{AdhkarDay, AdhkarProgress, EVENING, MORNING};
 use crate::providers::Track;
 use crate::worship::PrayerLog;
 use anyhow::{Context, Result};
@@ -116,6 +117,24 @@ const MIGRATIONS: &[&str] = &[
         maghrib    INTEGER NOT NULL DEFAULT 0,
         isha       INTEGER NOT NULL DEFAULT 0,
         excused    INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL
+    );
+    "#,
+    // --- v5 : adhkar progress and daily completion --------------------------
+    r#"
+    CREATE TABLE IF NOT EXISTS adhkar_progress (
+        date        TEXT NOT NULL,
+        category_id TEXT NOT NULL,
+        item_id     TEXT NOT NULL,
+        remaining   INTEGER NOT NULL,
+        updated_at  INTEGER NOT NULL,
+        PRIMARY KEY (date, category_id, item_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS adhkar_log (
+        date       TEXT PRIMARY KEY,
+        morning    INTEGER NOT NULL DEFAULT 0,
+        evening    INTEGER NOT NULL DEFAULT 0,
         updated_at INTEGER NOT NULL
     );
     "#,
@@ -428,6 +447,132 @@ impl Database {
             )?;
         }
         self.prayer_log(date)
+    }
+
+    // --- adhkar ------------------------------------------------------------
+
+    pub fn adhkar_progress(&self, date: &str) -> Result<Vec<AdhkarProgress>> {
+        validate_log_date(date)?;
+        let conn = self.conn.lock();
+        let mut stmt = conn.prepare(
+            "SELECT date, category_id, item_id, remaining
+             FROM adhkar_progress WHERE date = ?1
+             ORDER BY category_id, item_id",
+        )?;
+        let rows = stmt
+            .query_map([date], |r| {
+                Ok(AdhkarProgress {
+                    date: r.get(0)?,
+                    category_id: r.get(1)?,
+                    item_id: r.get(2)?,
+                    remaining: r.get::<_, i64>(3)?.max(0) as u32,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
+    pub fn set_adhkar_remaining(
+        &self,
+        date: &str,
+        category_id: &str,
+        item_id: &str,
+        remaining: u32,
+    ) -> Result<AdhkarProgress> {
+        validate_log_date(date)?;
+        if category_id.trim().is_empty() || item_id.trim().is_empty() {
+            anyhow::bail!("adhkar category and item ids are required");
+        }
+        let remaining = remaining.min(1000);
+        {
+            let conn = self.conn.lock();
+            conn.execute(
+                "INSERT INTO adhkar_progress(date, category_id, item_id, remaining, updated_at)
+                 VALUES(?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(date, category_id, item_id) DO UPDATE SET
+                    remaining  = excluded.remaining,
+                    updated_at = excluded.updated_at",
+                params![date, category_id, item_id, remaining as i64, now()],
+            )?;
+        }
+        Ok(AdhkarProgress {
+            date: date.to_string(),
+            category_id: category_id.to_string(),
+            item_id: item_id.to_string(),
+            remaining,
+        })
+    }
+
+    /// Clear one category's progress for a day and its streak flag if it has
+    /// one. Used by the "start over" action.
+    pub fn clear_adhkar_category(&self, date: &str, category_id: &str) -> Result<AdhkarDay> {
+        validate_log_date(date)?;
+        {
+            let conn = self.conn.lock();
+            conn.execute(
+                "DELETE FROM adhkar_progress WHERE date = ?1 AND category_id = ?2",
+                params![date, category_id],
+            )?;
+            if category_id == MORNING || category_id == EVENING {
+                let column = if category_id == MORNING {
+                    "morning"
+                } else {
+                    "evening"
+                };
+                conn.execute(
+                    &format!("UPDATE adhkar_log SET {column} = 0, updated_at = ?1 WHERE date = ?2"),
+                    params![now(), date],
+                )?;
+            }
+        }
+        self.adhkar_day(date)
+    }
+
+    pub fn adhkar_day(&self, date: &str) -> Result<AdhkarDay> {
+        let conn = self.conn.lock();
+        let row = conn
+            .query_row(
+                "SELECT date, morning, evening FROM adhkar_log WHERE date = ?1",
+                [date],
+                adhkar_row,
+            )
+            .optional()?;
+        Ok(row.unwrap_or_else(|| AdhkarDay::empty(date)))
+    }
+
+    pub fn adhkar_logs(&self) -> Result<Vec<AdhkarDay>> {
+        let conn = self.conn.lock();
+        let mut stmt =
+            conn.prepare("SELECT date, morning, evening FROM adhkar_log ORDER BY date ASC")?;
+        let rows = stmt
+            .query_map([], adhkar_row)?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
+    /// Mark morning/evening finished. Other categories never affect the streak.
+    pub fn mark_adhkar_done(&self, date: &str, category_id: &str) -> Result<AdhkarDay> {
+        validate_log_date(date)?;
+        if category_id != MORNING && category_id != EVENING {
+            return self.adhkar_day(date);
+        }
+        {
+            let conn = self.conn.lock();
+            let (morning, evening) = (
+                (category_id == MORNING) as i32,
+                (category_id == EVENING) as i32,
+            );
+            conn.execute(
+                "INSERT INTO adhkar_log(date, morning, evening, updated_at)
+                 VALUES(?1, ?2, ?3, ?4)
+                 ON CONFLICT(date) DO UPDATE SET
+                    morning    = MAX(morning, excluded.morning),
+                    evening    = MAX(evening, excluded.evening),
+                    updated_at = excluded.updated_at",
+                params![date, morning, evening, now()],
+            )?;
+        }
+        self.adhkar_day(date)
     }
 
     // --- favourites --------------------------------------------------------
@@ -850,6 +995,14 @@ fn validate_log_date(date: &str) -> Result<()> {
         .map_err(|error| anyhow::anyhow!("invalid prayer-log date {date}: {error}"))
 }
 
+fn adhkar_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<AdhkarDay> {
+    Ok(AdhkarDay {
+        date: r.get(0)?,
+        morning: r.get::<_, i64>(1)? != 0,
+        evening: r.get::<_, i64>(2)? != 0,
+    })
+}
+
 fn prayer_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<PrayerLog> {
     Ok(PrayerLog {
         date: r.get(0)?,
@@ -1082,6 +1235,88 @@ mod tests {
         assert!(db.set_prayer_done("2026-11-20", "tahajjud", true).is_err());
         assert!(db.set_prayer_done("2026-13-40", "fajr", true).is_err());
         assert!(db.set_prayer_excused("not-a-date", true).is_err());
+
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn adhkar_progress_round_trips_and_resets_by_date() {
+        let (dir, db) = temp_db();
+        assert!(db.adhkar_progress("2026-11-26").unwrap().is_empty());
+
+        db.set_adhkar_remaining("2026-11-26", "morning", "morning-01", 3)
+            .unwrap();
+        db.set_adhkar_remaining("2026-11-26", "evening", "evening-01", 1)
+            .unwrap();
+        db.set_adhkar_remaining("2026-11-25", "morning", "morning-01", 9)
+            .unwrap();
+
+        let today = db.adhkar_progress("2026-11-26").unwrap();
+        assert_eq!(today.len(), 2);
+        assert_eq!(
+            (today[0].category_id.as_str(), today[0].remaining),
+            ("evening", 1)
+        );
+        assert_eq!(
+            (today[1].category_id.as_str(), today[1].remaining),
+            ("morning", 3)
+        );
+
+        db.mark_adhkar_done("2026-11-26", "morning").unwrap();
+        assert!(db.adhkar_day("2026-11-26").unwrap().morning);
+        db.clear_adhkar_category("2026-11-26", "morning").unwrap();
+        let day = db.adhkar_day("2026-11-26").unwrap();
+        assert!(!day.morning);
+        assert_eq!(db.adhkar_progress("2026-11-26").unwrap().len(), 1);
+        assert_eq!(db.adhkar_progress("2026-11-25").unwrap()[0].remaining, 9);
+
+        drop(db);
+        let reopened = Database::open(&dir.join("test.db")).unwrap();
+        assert_eq!(reopened.adhkar_progress("2026-11-25").unwrap()[0].remaining, 9);
+        drop(reopened);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn adhkar_completion_and_streak_survive_reopen() {
+        use crate::adhkar::compute_adhkar_streak;
+        use chrono::NaiveDate;
+
+        let (dir, db) = temp_db();
+        for date in ["2026-11-24", "2026-11-25", "2026-11-26"] {
+            db.mark_adhkar_done(date, "morning").unwrap();
+        }
+        db.mark_adhkar_done("2026-11-25", "evening").unwrap();
+
+        let day = db.adhkar_day("2026-11-25").unwrap();
+        assert!(day.morning && day.evening);
+        let logs = db.adhkar_logs().unwrap();
+        assert_eq!(logs.len(), 3);
+
+        let today = NaiveDate::from_ymd_opt(2026, 11, 26).unwrap();
+        let streak = compute_adhkar_streak(&logs, today);
+        assert_eq!(streak.current, 3);
+        assert!(streak.today_morning);
+        assert!(!streak.today_evening);
+
+        drop(db);
+        let reopened = Database::open(&dir.join("test.db")).unwrap();
+        let streak = compute_adhkar_streak(&reopened.adhkar_logs().unwrap(), today);
+        assert_eq!(streak.current, 3);
+        drop(reopened);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn adhkar_rejects_bad_input_and_other_categories_do_not_count() {
+        let (dir, db) = temp_db();
+        assert!(db.set_adhkar_remaining("bad", "morning", "x", 1).is_err());
+        assert!(db.set_adhkar_remaining("2026-11-26", "", "x", 1).is_err());
+
+        let day = db.mark_adhkar_done("2026-11-26", "sleep").unwrap();
+        assert!(!day.morning && !day.evening);
+        assert!(db.adhkar_logs().unwrap().is_empty());
 
         drop(db);
         let _ = std::fs::remove_dir_all(&dir);

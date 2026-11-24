@@ -1,3 +1,4 @@
+mod adhkar;
 mod commands;
 mod db;
 mod downloads;
