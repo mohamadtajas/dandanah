@@ -5,9 +5,10 @@
   import type { TranslationKey } from "$lib/i18n/dict";
   import Icon from "./Icon.svelte";
 
-  let { showLink = true }: { showLink?: boolean } = $props();
+  let { showLink = true, showSetup = true }: { showLink?: boolean; showSetup?: boolean } = $props();
 
   const day = $derived(worship.day);
+  const unconfigured = $derived(!!worship.settings && !worship.settings.configured);
   const next = $derived(day?.next ?? null);
   const hijri = $derived(day?.hijri ?? null);
   const streak = $derived(worship.streak);
@@ -24,6 +25,18 @@
 >
   <div class="pointer-events-none absolute -end-16 -top-20 size-56 rounded-full bg-gold/[0.08] blur-3xl"></div>
   <div class="pointer-events-none absolute -bottom-24 start-1/3 size-52 rounded-full bg-teal/[0.06] blur-3xl"></div>
+
+  {#if showSetup && unconfigured}
+    <button
+      type="button"
+      onclick={() => nav.go("settings")}
+      class="relative flex w-full items-center gap-2 border-b border-gold/20 bg-gold/[0.07] px-6 py-2 text-start text-[11px] text-gold transition-colors hover:bg-gold/[0.11]"
+    >
+      <Icon name="compass" size={13} class="shrink-0" />
+      <span class="min-w-0 flex-1">{i18n.t("prayer.notConfigured")}</span>
+      <span class="shrink-0 font-semibold">{i18n.t("prayer.openSettings")}</span>
+    </button>
+  {/if}
 
   {#if day && next}
     <div class="relative flex flex-col gap-7 px-6 py-6 lg:flex-row lg:items-center lg:justify-between">

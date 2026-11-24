@@ -93,7 +93,7 @@
     </button>
   {/if}
 
-  <NextPrayer showLink={false} />
+  <NextPrayer showLink={false} showSetup={false} />
 
   {#if worship.error && !day}
     <div class="mt-6 rounded-2xl border border-line bg-ink-900 px-6 py-10 text-center">
