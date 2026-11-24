@@ -3,7 +3,10 @@ import type {
   AppInfo,
   Ayah,
   AyahReciter,
+  DownloadRow,
+  ImportSummary,
   Memorization,
+  Playlist,
   Reciter,
   SearchResults,
   Surah,
@@ -111,4 +114,81 @@ export const api = {
 
   appInfo: async (): Promise<AppInfo> =>
     isTauri ? invoke<AppInfo>("app_info") : (await mock()).appInfo(),
+
+  // --- library ---------------------------------------------------------
+
+  favorites: async (limit = 200): Promise<Track[]> =>
+    isTauri ? invoke<Track[]>("get_favorites", { limit }) : (await mock()).favorites(limit),
+
+  favoriteIds: async (): Promise<string[]> =>
+    isTauri ? invoke<string[]>("get_favorite_ids") : (await mock()).favoriteIds(),
+
+  addFavorite: async (track: Track): Promise<void> => {
+    if (!isTauri) return (await mock()).addFavorite(track);
+    await invoke<void>("add_favorite", { track });
+  },
+
+  removeFavorite: async (trackId: string): Promise<void> => {
+    if (!isTauri) return (await mock()).removeFavorite(trackId);
+    await invoke<void>("remove_favorite", { trackId });
+  },
+
+  playlists: async (): Promise<Playlist[]> =>
+    isTauri ? invoke<Playlist[]>("get_playlists") : (await mock()).playlists(),
+
+  createPlaylist: async (name: string): Promise<Playlist> =>
+    isTauri ? invoke<Playlist>("create_playlist", { name }) : (await mock()).createPlaylist(name),
+
+  renamePlaylist: async (playlistId: string, name: string): Promise<void> => {
+    if (!isTauri) return (await mock()).renamePlaylist(playlistId, name);
+    await invoke<void>("rename_playlist", { playlistId, name });
+  },
+
+  deletePlaylist: async (playlistId: string): Promise<void> => {
+    if (!isTauri) return (await mock()).deletePlaylist(playlistId);
+    await invoke<void>("delete_playlist", { playlistId });
+  },
+
+  playlistTracks: async (playlistId: string): Promise<Track[]> =>
+    isTauri
+      ? invoke<Track[]>("get_playlist_tracks", { playlistId })
+      : (await mock()).playlistTracks(playlistId),
+
+  addToPlaylist: async (playlistId: string, track: Track): Promise<void> => {
+    if (!isTauri) return (await mock()).addToPlaylist(playlistId, track);
+    await invoke<void>("add_to_playlist", { playlistId, track });
+  },
+
+  removeFromPlaylist: async (playlistId: string, trackId: string): Promise<void> => {
+    if (!isTauri) return (await mock()).removeFromPlaylist(playlistId, trackId);
+    await invoke<void>("remove_from_playlist", { playlistId, trackId });
+  },
+
+  // --- downloads & local files -----------------------------------------
+
+  startDownload: async (track: Track): Promise<string> =>
+    isTauri
+      ? invoke<string>("start_download", { track })
+      : (await mock()).startDownload(track),
+
+  downloads: async (): Promise<DownloadRow[]> =>
+    isTauri ? invoke<DownloadRow[]>("get_downloads") : (await mock()).downloads(),
+
+  deleteDownload: async (trackId: string): Promise<void> => {
+    if (!isTauri) return (await mock()).deleteDownload(trackId);
+    await invoke<void>("delete_download", { trackId });
+  },
+
+  importFolder: async (paths: string[]): Promise<ImportSummary> =>
+    isTauri
+      ? invoke<ImportSummary>("import_folder", { paths })
+      : (await mock()).importFolder(),
+
+  localTracks: async (): Promise<Track[]> =>
+    isTauri ? invoke<Track[]>("get_local_tracks") : (await mock()).localTracks(),
+
+  forgetLocalTrack: async (trackId: string): Promise<void> => {
+    if (!isTauri) return (await mock()).forgetLocalTrack(trackId);
+    await invoke<void>("forget_local_track", { trackId });
+  },
 };

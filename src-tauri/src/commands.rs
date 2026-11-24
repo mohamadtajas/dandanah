@@ -1,11 +1,12 @@
-use crate::db::{Database, Memorization};
+use crate::db::{Database, DownloadRow, Memorization, Playlist};
 use crate::providers::{
     dedupe, everyayah, matches, mp3quran, quran_text, radiobrowser, score, surah, surahs, Reciter,
     Surah, Track, TrackKind,
 };
+use crate::{downloads, library};
 use serde::Serialize;
 use std::sync::Arc;
-use tauri::State;
+use tauri::{AppHandle, State};
 
 pub struct AppState {
     pub db: Arc<Database>,
@@ -358,6 +359,210 @@ pub fn get_recent(state: State<'_, AppState>, limit: Option<u32>) -> Result<Vec<
 #[tauri::command]
 pub fn record_play(state: State<'_, AppState>, track: Track) -> Result<(), String> {
     state.db.record_play(&track).map_err(|e| e.to_string())
+}
+
+// ---------------------------------------------------------------------------
+// Favourites
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_favorites(state: State<'_, AppState>, limit: Option<u32>) -> Result<Vec<Track>, String> {
+    state
+        .db
+        .favorites(limit.unwrap_or(200))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_favorite_ids(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    state.db.favorite_ids().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn add_favorite(state: State<'_, AppState>, track: Track) -> Result<(), String> {
+    state.db.add_favorite(&track).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn remove_favorite(state: State<'_, AppState>, track_id: String) -> Result<(), String> {
+    state
+        .db
+        .remove_favorite(&track_id)
+        .map_err(|e| e.to_string())
+}
+
+// ---------------------------------------------------------------------------
+// Playlists
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_playlists(state: State<'_, AppState>) -> Result<Vec<Playlist>, String> {
+    state.db.playlists().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn create_playlist(state: State<'_, AppState>, name: String) -> Result<Playlist, String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err("playlist name is required".into());
+    }
+    state
+        .db
+        .create_playlist(&name.chars().take(80).collect::<String>())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn rename_playlist(
+    state: State<'_, AppState>,
+    playlist_id: String,
+    name: String,
+) -> Result<(), String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err("playlist name is required".into());
+    }
+    state
+        .db
+        .rename_playlist(&playlist_id, &name.chars().take(80).collect::<String>())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn delete_playlist(state: State<'_, AppState>, playlist_id: String) -> Result<(), String> {
+    state
+        .db
+        .delete_playlist(&playlist_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_playlist_tracks(
+    state: State<'_, AppState>,
+    playlist_id: String,
+) -> Result<Vec<Track>, String> {
+    state
+        .db
+        .playlist_tracks(&playlist_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn add_to_playlist(
+    state: State<'_, AppState>,
+    playlist_id: String,
+    track: Track,
+) -> Result<(), String> {
+    state
+        .db
+        .add_to_playlist(&playlist_id, &track)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn remove_from_playlist(
+    state: State<'_, AppState>,
+    playlist_id: String,
+    track_id: String,
+) -> Result<(), String> {
+    state
+        .db
+        .remove_from_playlist(&playlist_id, &track_id)
+        .map_err(|e| e.to_string())
+}
+
+// ---------------------------------------------------------------------------
+// Downloads
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn start_download(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    track: Track,
+) -> Result<String, String> {
+    downloads::run(app, state.http.clone(), state.db.clone(), track)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_downloads(state: State<'_, AppState>) -> Result<Vec<DownloadRow>, String> {
+    state.db.downloads().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn delete_download(state: State<'_, AppState>, track_id: String) -> Result<(), String> {
+    let path = state
+        .db
+        .delete_download(&track_id)
+        .map_err(|e| e.to_string())?;
+    if let Some(path) = path {
+        let _ = std::fs::remove_file(path);
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Local import
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportSummary {
+    pub imported: usize,
+    pub scanned_folders: usize,
+    pub truncated: bool,
+}
+
+#[tauri::command]
+pub async fn import_folder(
+    state: State<'_, AppState>,
+    paths: Vec<String>,
+) -> Result<ImportSummary, String> {
+    if paths.is_empty() {
+        return Err("no folder selected".into());
+    }
+    let db = state.db.clone();
+    let paths = paths.clone();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut imported = 0usize;
+        let mut truncated = false;
+        for raw in &paths {
+            let root = std::path::PathBuf::from(raw);
+            if !root.is_dir() {
+                continue;
+            }
+            let outcome = library::scan_folder(&root, 5000);
+            truncated |= outcome.truncated;
+            for track in &outcome.tracks {
+                if db.upsert_track(track).is_ok() {
+                    imported += 1;
+                }
+            }
+        }
+        ImportSummary {
+            imported,
+            scanned_folders: paths.len(),
+            truncated,
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_local_tracks(state: State<'_, AppState>) -> Result<Vec<Track>, String> {
+    state.db.local_tracks().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn forget_local_track(state: State<'_, AppState>, track_id: String) -> Result<(), String> {
+    state
+        .db
+        .forget_local_track(&track_id)
+        .map_err(|e| e.to_string())
 }
 
 // ---------------------------------------------------------------------------

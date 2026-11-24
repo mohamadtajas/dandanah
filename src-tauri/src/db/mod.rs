@@ -99,6 +99,12 @@ const MIGRATIONS: &[&str] = &[
         updated_at INTEGER NOT NULL
     );
     "#,
+    // --- v3 : track payloads for playlists and local files ------------------
+    r#"
+    ALTER TABLE tracks ADD COLUMN payload TEXT;
+    CREATE INDEX IF NOT EXISTS idx_tracks_kind ON tracks(kind);
+    CREATE INDEX IF NOT EXISTS idx_tracks_added ON tracks(added_at DESC);
+    "#,
 ];
 
 /// Memorisation state for one surah. Ayah numbers are 1-based.
@@ -117,6 +123,31 @@ impl Memorization {
     pub fn count(&self) -> usize {
         self.memorized.len()
     }
+}
+
+/// A saved playlist with its item count, for the library list.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Playlist {
+    pub id: String,
+    pub name: String,
+    pub created_at: i64,
+    pub track_count: u32,
+}
+
+/// One row of the downloads table.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadRow {
+    pub track: Track,
+    pub status: String,
+    pub bytes_total: u64,
+    pub bytes_done: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    pub created_at: i64,
 }
 
 pub struct Database {
@@ -306,6 +337,339 @@ impl Database {
         Ok(())
     }
 
+    // --- favourites --------------------------------------------------------
+
+    pub fn upsert_track(&self, track: &Track) -> Result<()> {
+        let payload = serde_json::to_string(track)?;
+        let conn = self.conn.lock();
+        conn.execute(
+            "INSERT INTO tracks(id, provider, provider_id, title, artist, album,
+                                duration_s, artwork_url, local_path, is_local,
+                                license, license_url, attribution, source_page,
+                                kind, added_at, payload)
+             VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
+             ON CONFLICT(id) DO UPDATE SET
+                title       = excluded.title,
+                artist      = excluded.artist,
+                album       = excluded.album,
+                duration_s  = excluded.duration_s,
+                artwork_url = excluded.artwork_url,
+                local_path  = excluded.local_path,
+                is_local    = excluded.is_local,
+                payload     = excluded.payload",
+            params![
+                track.id,
+                track.provider,
+                track.provider_id,
+                track.title,
+                track.artist,
+                track.album,
+                track.duration_s,
+                track.artwork_url,
+                track.local_path,
+                track.local_path.is_some() as i32,
+                track.license,
+                track.license_url,
+                track.attribution,
+                track.source_page,
+                track.kind.as_str(),
+                now(),
+                payload
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn add_favorite(&self, track: &Track) -> Result<()> {
+        self.upsert_track(track)?;
+        let conn = self.conn.lock();
+        conn.execute(
+            "INSERT INTO favorites(track_id, added_at, payload) VALUES(?1, ?2, ?3)
+             ON CONFLICT(track_id) DO UPDATE SET added_at = excluded.added_at,
+                                                payload  = excluded.payload",
+            params![track.id, now(), serde_json::to_string(track)?],
+        )?;
+        Ok(())
+    }
+
+    pub fn remove_favorite(&self, track_id: &str) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute("DELETE FROM favorites WHERE track_id = ?1", [track_id])?;
+        Ok(())
+    }
+
+    pub fn favorite_ids(&self) -> Result<Vec<String>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn.prepare("SELECT track_id FROM favorites")?;
+        let rows = stmt
+            .query_map([], |r| r.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
+    pub fn favorites(&self, limit: u32) -> Result<Vec<Track>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn.prepare(
+            "SELECT f.payload, d.file_path
+             FROM favorites f
+             LEFT JOIN downloads d ON d.track_id = f.track_id AND d.status = 'done'
+             ORDER BY f.added_at DESC
+             LIMIT ?1",
+        )?;
+        let rows = stmt
+            .query_map([limit], |r| {
+                Ok((r.get::<_, String>(0)?, r.get::<_, Option<String>>(1)?))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows
+            .into_iter()
+            .filter_map(|(payload, file)| {
+                let mut track: Track = serde_json::from_str(&payload).ok()?;
+                if file.is_some() {
+                    track.local_path = file;
+                }
+                Some(track)
+            })
+            .collect())
+    }
+
+    // --- playlists ---------------------------------------------------------
+
+    pub fn create_playlist(&self, name: &str) -> Result<Playlist> {
+        let id = uuid::Uuid::new_v4().to_string();
+        let created = now();
+        let conn = self.conn.lock();
+        conn.execute(
+            "INSERT INTO playlists(id, name, created_at) VALUES(?1, ?2, ?3)",
+            params![id, name, created],
+        )?;
+        Ok(Playlist {
+            id,
+            name: name.to_string(),
+            created_at: created,
+            track_count: 0,
+        })
+    }
+
+    pub fn rename_playlist(&self, id: &str, name: &str) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute("UPDATE playlists SET name = ?2 WHERE id = ?1", params![id, name])?;
+        Ok(())
+    }
+
+    pub fn delete_playlist(&self, id: &str) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute("DELETE FROM playlist_items WHERE playlist_id = ?1", [id])?;
+        conn.execute("DELETE FROM playlists WHERE id = ?1", [id])?;
+        Ok(())
+    }
+
+    pub fn playlists(&self) -> Result<Vec<Playlist>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn.prepare(
+            "SELECT p.id, p.name, p.created_at,
+                    (SELECT COUNT(*) FROM playlist_items i WHERE i.playlist_id = p.id)
+             FROM playlists p
+             ORDER BY p.sort ASC, p.created_at DESC",
+        )?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok(Playlist {
+                    id: r.get(0)?,
+                    name: r.get(1)?,
+                    created_at: r.get(2)?,
+                    track_count: r.get(3)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
+    pub fn playlist_tracks(&self, playlist_id: &str) -> Result<Vec<Track>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn.prepare(
+            "SELECT t.payload, d.file_path
+             FROM playlist_items i
+             JOIN tracks t ON t.id = i.track_id
+             LEFT JOIN downloads d ON d.track_id = i.track_id AND d.status = 'done'
+             WHERE i.playlist_id = ?1
+             ORDER BY i.position ASC",
+        )?;
+        let rows = stmt
+            .query_map([playlist_id], |r| {
+                Ok((r.get::<_, String>(0)?, r.get::<_, Option<String>>(1)?))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows
+            .into_iter()
+            .filter_map(|(payload, file)| {
+                let mut track: Track = serde_json::from_str(&payload).ok()?;
+                if file.is_some() {
+                    track.local_path = file;
+                }
+                Some(track)
+            })
+            .collect())
+    }
+
+    pub fn add_to_playlist(&self, playlist_id: &str, track: &Track) -> Result<()> {
+        self.upsert_track(track)?;
+        let conn = self.conn.lock();
+        conn.execute(
+            "INSERT INTO playlist_items(playlist_id, track_id, position)
+             SELECT ?1, ?2, COALESCE(MAX(position), 0) + 1
+             FROM playlist_items WHERE playlist_id = ?1
+             ON CONFLICT(playlist_id, track_id) DO NOTHING",
+            params![playlist_id, track.id],
+        )?;
+        Ok(())
+    }
+
+    pub fn remove_from_playlist(&self, playlist_id: &str, track_id: &str) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "DELETE FROM playlist_items WHERE playlist_id = ?1 AND track_id = ?2",
+            params![playlist_id, track_id],
+        )?;
+        Ok(())
+    }
+
+    // --- downloads ---------------------------------------------------------
+
+    pub fn queue_download(&self, track: &Track) -> Result<()> {
+        self.upsert_track(track)?;
+        let conn = self.conn.lock();
+        conn.execute(
+            "INSERT INTO downloads(track_id, payload, status, created_at)
+             VALUES(?1, ?2, 'queued', ?3)
+             ON CONFLICT(track_id) DO UPDATE SET
+                status     = 'queued',
+                bytes_done = 0,
+                bytes_total = 0,
+                file_path  = NULL,
+                error      = NULL,
+                created_at = excluded.created_at",
+            params![track.id, serde_json::to_string(track)?, now()],
+        )?;
+        Ok(())
+    }
+
+    pub fn set_download_progress(
+        &self,
+        track_id: &str,
+        done: u64,
+        total: u64,
+        status: &str,
+    ) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "UPDATE downloads SET bytes_done = ?2, bytes_total = ?3, status = ?4
+             WHERE track_id = ?1",
+            params![track_id, done as i64, total as i64, status],
+        )?;
+        Ok(())
+    }
+
+    pub fn finish_download(&self, track_id: &str, path: &str) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "UPDATE downloads SET status = 'done', file_path = ?2, error = NULL
+             WHERE track_id = ?1",
+            params![track_id, path],
+        )?;
+        Ok(())
+    }
+
+    pub fn fail_download(&self, track_id: &str, error: &str) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "UPDATE downloads SET status = 'error', error = ?2 WHERE track_id = ?1",
+            params![track_id, error],
+        )?;
+        Ok(())
+    }
+
+    pub fn downloads(&self) -> Result<Vec<DownloadRow>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn.prepare(
+            "SELECT payload, status, bytes_total, bytes_done, file_path, error, created_at
+             FROM downloads ORDER BY created_at DESC",
+        )?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, i64>(2)? as u64,
+                    r.get::<_, i64>(3)? as u64,
+                    r.get::<_, Option<String>>(4)?,
+                    r.get::<_, Option<String>>(5)?,
+                    r.get::<_, i64>(6)?,
+                ))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows
+            .into_iter()
+            .filter_map(
+                |(payload, status, bytes_total, bytes_done, file_path, error, created_at)| {
+                    Some(DownloadRow {
+                        track: serde_json::from_str(&payload).ok()?,
+                        status,
+                        bytes_total,
+                        bytes_done,
+                        file_path,
+                        error,
+                        created_at,
+                    })
+                },
+            )
+            .collect())
+    }
+
+    pub fn download_path(&self, track_id: &str) -> Result<Option<String>> {
+        let conn = self.conn.lock();
+        let path = conn
+            .query_row(
+                "SELECT file_path FROM downloads WHERE track_id = ?1 AND status = 'done'",
+                [track_id],
+                |r| r.get(0),
+            )
+            .optional()?;
+        Ok(path)
+    }
+
+    pub fn delete_download(&self, track_id: &str) -> Result<Option<String>> {
+        let path = self.download_path(track_id)?;
+        let conn = self.conn.lock();
+        conn.execute("DELETE FROM downloads WHERE track_id = ?1", [track_id])?;
+        Ok(path)
+    }
+
+    // --- local library -----------------------------------------------------
+
+    pub fn local_tracks(&self) -> Result<Vec<Track>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn.prepare(
+            "SELECT payload FROM tracks WHERE is_local = 1 ORDER BY added_at DESC",
+        )?;
+        let rows = stmt
+            .query_map([], |r| r.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows
+            .into_iter()
+            .filter_map(|payload| serde_json::from_str(&payload).ok())
+            .collect())
+    }
+
+    pub fn forget_local_track(&self, track_id: &str) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "DELETE FROM tracks WHERE id = ?1 AND is_local = 1",
+            [track_id],
+        )?;
+        Ok(())
+    }
+
     // --- history ----------------------------------------------------------
 
     pub fn record_play(&self, track: &Track) -> Result<()> {
@@ -393,6 +757,91 @@ mod tests {
         assert!(db.cache_get("k", 60).unwrap().is_some());
         assert!(db.cache_get("k", -1).unwrap().is_none());
         assert_eq!(db.stale_cache("k").unwrap().map(|(p, _)| p), Some("v".into()));
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn sample_track() -> Track {
+        use crate::providers::TrackKind;
+        let mut track = Track::new("mp3quran", "1-1", "سورة الفاتحة", TrackKind::Quran);
+        track.artist = "محمود خليل الحصري".into();
+        track.stream_url = Some("https://cdn.example/001.mp3".into());
+        track
+    }
+
+    #[test]
+    fn favourites_playlists_and_downloads_round_trip() {
+        let (dir, db) = temp_db();
+        let track = sample_track();
+
+        db.add_favorite(&track).unwrap();
+        assert_eq!(db.favorite_ids().unwrap(), vec![track.id.clone()]);
+        let favorites = db.favorites(10).unwrap();
+        assert_eq!(favorites.len(), 1);
+        assert_eq!(
+            favorites[0].stream_url.as_deref(),
+            Some("https://cdn.example/001.mp3")
+        );
+
+        let playlist = db.create_playlist("حفظ").unwrap();
+        db.add_to_playlist(&playlist.id, &track).unwrap();
+        // Adding the same track twice must not duplicate the row.
+        db.add_to_playlist(&playlist.id, &track).unwrap();
+        let all = db.playlists().unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0].track_count, 1);
+        assert_eq!(db.playlist_tracks(&playlist.id).unwrap().len(), 1);
+
+        // A finished download is surfaced as a local path on library tracks.
+        db.queue_download(&track).unwrap();
+        db.set_download_progress(&track.id, 10, 20, "downloading").unwrap();
+        db.finish_download(&track.id, "C:/audio/001.mp3").unwrap();
+        assert_eq!(
+            db.favorites(10).unwrap()[0].local_path.as_deref(),
+            Some("C:/audio/001.mp3")
+        );
+        assert_eq!(
+            db.playlist_tracks(&playlist.id).unwrap()[0]
+                .local_path
+                .as_deref(),
+            Some("C:/audio/001.mp3")
+        );
+        assert_eq!(db.downloads().unwrap()[0].status, "done");
+
+        assert_eq!(
+            db.delete_download(&track.id).unwrap().as_deref(),
+            Some("C:/audio/001.mp3")
+        );
+        assert!(db.downloads().unwrap().is_empty());
+        assert!(db.favorites(10).unwrap()[0].local_path.is_none());
+
+        db.remove_from_playlist(&playlist.id, &track.id).unwrap();
+        assert!(db.playlist_tracks(&playlist.id).unwrap().is_empty());
+        db.delete_playlist(&playlist.id).unwrap();
+        assert!(db.playlists().unwrap().is_empty());
+
+        db.remove_favorite(&track.id).unwrap();
+        assert!(db.favorite_ids().unwrap().is_empty());
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn local_tracks_are_kept_separate() {
+        use crate::providers::TrackKind;
+        let (dir, db) = temp_db();
+        let mut local = Track::new("local", "C:/m/001.mp3", "سورة الكهف", TrackKind::Local);
+        local.artist = "مكتبتي".into();
+        local.local_path = Some("C:/m/001.mp3".into());
+        db.upsert_track(&local).unwrap();
+
+        let imported = db.local_tracks().unwrap();
+        assert_eq!(imported.len(), 1);
+        assert_eq!(imported[0].local_path.as_deref(), Some("C:/m/001.mp3"));
+        assert_eq!(imported[0].kind, TrackKind::Local);
+
+        db.forget_local_track(&local.id).unwrap();
+        assert!(db.local_tracks().unwrap().is_empty());
         drop(db);
         let _ = std::fs::remove_dir_all(&dir);
     }

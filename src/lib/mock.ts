@@ -6,7 +6,10 @@ import type {
   AppInfo,
   Ayah,
   AyahReciter,
+  DownloadRow,
+  ImportSummary,
   Memorization,
+  Playlist,
   Reciter,
   SearchResults,
   Surah,
@@ -1181,6 +1184,11 @@ const AYAH_RECITERS: AyahReciter[] = [
 const memorized = new Map<number, number[]>();
 const positions = new Map<string, number>();
 
+/** Browser-mode library data. Downloads and local import need the desktop app. */
+const favoriteSet = new Map<string, Track>();
+const playlistStore = new Map<string, { meta: Playlist; tracks: Track[] }>();
+const downloadsStore = new Map<string, DownloadRow>();
+
 export function mockApi() {
   return {
     async surahs() {
@@ -1301,9 +1309,74 @@ export function mockApi() {
     async appInfo(): Promise<AppInfo> {
       return {
         version: "0.1.0-dev",
-        providers: ["mp3quran", "mp3quran-radio", "radiobrowser"],
+        providers: ["mp3quran", "mp3quran-radio", "radiobrowser", "everyayah"],
         countries: ["SA", "EG", "AE"],
       };
     },
+
+    async favorites(_limit?: number) {
+      return [...favoriteSet.values()];
+    },
+    async favoriteIds() {
+      return [...favoriteSet.keys()];
+    },
+    async addFavorite(track: Track) {
+      favoriteSet.set(track.id, track);
+    },
+    async removeFavorite(trackId: string) {
+      favoriteSet.delete(trackId);
+    },
+    async playlists(): Promise<Playlist[]> {
+      return [...playlistStore.values()].map((p) => ({
+        ...p.meta,
+        trackCount: p.tracks.length,
+      }));
+    },
+    async createPlaylist(name: string): Promise<Playlist> {
+      const meta: Playlist = {
+        id: `pl-${Date.now()}-${playlistStore.size}`,
+        name,
+        createdAt: Date.now(),
+        trackCount: 0,
+      };
+      playlistStore.set(meta.id, { meta, tracks: [] });
+      return meta;
+    },
+    async renamePlaylist(playlistId: string, name: string) {
+      const entry = playlistStore.get(playlistId);
+      if (entry) entry.meta.name = name;
+    },
+    async deletePlaylist(playlistId: string) {
+      playlistStore.delete(playlistId);
+    },
+    async playlistTracks(playlistId: string) {
+      return playlistStore.get(playlistId)?.tracks ?? [];
+    },
+    async addToPlaylist(playlistId: string, track: Track) {
+      const entry = playlistStore.get(playlistId);
+      if (entry && !entry.tracks.some((t) => t.id === track.id)) {
+        entry.tracks.push(track);
+      }
+    },
+    async removeFromPlaylist(playlistId: string, trackId: string) {
+      const entry = playlistStore.get(playlistId);
+      if (entry) entry.tracks = entry.tracks.filter((t) => t.id !== trackId);
+    },
+    async startDownload(_track: Track): Promise<string> {
+      throw new Error("Downloads run in the desktop app only");
+    },
+    async downloads(): Promise<DownloadRow[]> {
+      return [...downloadsStore.values()];
+    },
+    async deleteDownload(trackId: string) {
+      downloadsStore.delete(trackId);
+    },
+    async importFolder(): Promise<ImportSummary> {
+      throw new Error("Local import runs in the desktop app only");
+    },
+    async localTracks() {
+      return [] as Track[];
+    },
+    async forgetLocalTrack(_trackId: string) {},
   };
 }

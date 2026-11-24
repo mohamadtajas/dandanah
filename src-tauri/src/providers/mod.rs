@@ -71,6 +71,10 @@ pub struct Track {
     /// True when the track is a continuous live stream (no seek, no duration).
     #[serde(default)]
     pub live: bool,
+    /// Absolute path for an imported or downloaded file. The UI plays this via
+    /// the Tauri asset protocol instead of the remote URL.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub local_path: Option<String>,
 }
 
 impl Track {
@@ -93,6 +97,7 @@ impl Track {
             kind,
             subtitle: None,
             live: false,
+            local_path: None,
         }
     }
 }

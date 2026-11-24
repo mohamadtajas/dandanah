@@ -24,7 +24,7 @@ Week 1 of the build plan is complete and working:
 | Recently played (persisted history) | ✅ |
 | Ayah-by-ayah playback with Uthmani text and translation | ✅ |
 | Hifz loops: repeat an ayah range N times, mark memorised | ✅ |
-| Playlists, favorites, downloads, local import | ⏳ week 3 |
+| Favorites, playlists, downloads, local folder import | ✅ |
 | Jamendo / archive.org / Creative Commons providers | ⏳ week 4 |
 | Windows SMTC integration, tray, hotkeys | ⏳ week 5 |
 | Installer, auto-update, code signing | ⏳ week 6 |
@@ -59,6 +59,14 @@ npx svelte-check --tsconfig ./tsconfig.json
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
+Desktop smoke test against the real window (import, favourites, playlists, download):
+
+```powershell
+$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--remote-debugging-port=9333"
+.\src-tauri\target\release\dandanah.exe
+node scripts\desktop-smoke.mjs "C:\path\to\music"
+```
+
 ---
 
 ## Architecture
@@ -68,7 +76,7 @@ src/                         Svelte 5 frontend (runes, no router dependency)
 ├─ lib/
 │  ├─ components/            Icon, Artwork, SeekBar, TrackRow, PlayerBar, Sidebar…
 │  ├─ views/                 Home, Quran, Radio, Search, Library, Settings, Credits
-│  ├─ stores/                player, hifz, nav, ui — runes-based, no store library
+│  ├─ stores/                player, hifz, library, nav, ui — runes-based, no store library
 │  ├─ i18n/                  ar/en dictionaries + locale-aware formatters
 │  ├─ data/                  country list
 │  ├─ api.ts                 typed wrappers over Tauri commands
@@ -83,6 +91,8 @@ src-tauri/src/               Rust backend
 │  ├─ quran_text.rs          Uthmani text + translation from AlQuran Cloud
 │  └─ radiobrowser.rs        live station directory with mirror fallback
 ├─ db/mod.rs                 SQLite schema, migrations, cache, history
+├─ downloads.rs              streaming downloader with progress events
+├─ library.rs                folder scan + tag reading for local files
 ├─ commands.rs               the IPC surface
 └─ lib.rs                    app wiring
 ```
@@ -133,6 +143,29 @@ second queue, so there is no duplicate playback engine to keep in sync.
 
 ---
 
+## Library
+
+**Favorites** — the heart on any row or in the player bar. Stored in SQLite with the whole
+track payload, so a favorite survives provider outages.
+
+**Playlists** — create, rename, delete, add from the `+` action on any row, remove in the
+playlist view. Ordering is insertion order.
+
+**Downloads** — one click on a surah row (or any non-live track) streams the file into
+`%APPDATA%\app.dandanah.desktop\downloads`, emitting progress events that drive the
+downloads tab. Playback prefers the downloaded file over the network, so a downloaded
+track works offline.
+
+**Local import** — pick one or more folders; Dandanah walks them (8 levels deep, 5000 files
+per import), reads ID3/FLAC/MP4 tags with `lofty`, and falls back to filename + folder name
+when tags are missing. Imported files are played through Tauri's asset protocol, which
+supports range requests, so seeking works.
+
+Downloads are a single track at a time and cannot be cancelled yet. Embedded artwork is
+read for display but not extracted into the cache.
+
+---
+
 ## Content sources
 
 | Source | Content | License |
@@ -163,7 +196,7 @@ distributable, the installer small, and the project on solid legal ground.
 ## Roadmap
 
 1. ~~**Quran depth**~~ — shipped: ayah mode, repeat ranges, memorisation tracker, Uthmani follow-along.
-2. **Library** — playlists, favorites, offline downloads, local folder import.
+2. ~~**Library**~~ — shipped: favorites, playlists, downloads, local folder import.
 3. **Creative Commons catalog** — Jamendo, Openverse, archive.org with license badges.
 4. **Windows integration** — SMTC lock-screen controls, tray, global hotkeys.
 5. **Ship** — installer, GitHub Releases auto-update, code signing.

@@ -1,16 +1,17 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "$lib/api";
-  import type { Track } from "$lib/types";
-  import type { Memorization, Surah } from "$lib/types";
+  import { api, isTauri } from "$lib/api";
+  import type { Memorization, Playlist, Surah, Track } from "$lib/types";
   import { nav } from "$lib/stores/nav.svelte.ts";
+  import { library } from "$lib/stores/library.svelte.ts";
+  import { player } from "$lib/stores/player.svelte.ts";
   import { fmtNumber, i18n } from "$lib/i18n/index.svelte.ts";
   import { DEFAULT_AYAH_RECITER } from "$lib/constants";
   import TrackRow from "$lib/components/TrackRow.svelte";
   import Icon from "$lib/components/Icon.svelte";
   import type { IconName } from "$lib/components/Icon.svelte";
 
-  type Tab = "recent" | "hifz" | "favorites" | "playlists" | "downloads";
+  type Tab = "recent" | "hifz" | "favorites" | "playlists" | "downloads" | "local";
 
   let tab = $state<Tab>("recent");
   let recent = $state<Track[]>([]);
@@ -18,13 +19,28 @@
   let surahs = $state<Surah[]>([]);
   let loading = $state(true);
 
-  const tabs: { id: Tab; label: "library.recent" | "library.hifz" | "library.favorites" | "library.playlists" | "library.downloads"; icon: IconName }[] = [
+  let newPlaylistName = $state("");
+  let creating = $state(false);
+  let renaming = $state(false);
+  let renameValue = $state("");
+
+  let playlistTracks = $state<Track[]>([]);
+  let playlistLoading = $state(false);
+  let playlistToken = 0;
+
+  const tabs: { id: Tab; label: "library.recent" | "library.hifz" | "library.favorites" | "library.playlists" | "library.downloads" | "library.local"; icon: IconName }[] = [
     { id: "recent", label: "library.recent", icon: "clock" },
-    { id: "hifz", label: "library.hifz", icon: "bookmark" },
     { id: "favorites", label: "library.favorites", icon: "heart" },
     { id: "playlists", label: "library.playlists", icon: "list" },
     { id: "downloads", label: "library.downloads", icon: "download" },
+    { id: "local", label: "library.local", icon: "disc" },
+    { id: "hifz", label: "library.hifz", icon: "bookmark" },
   ];
+
+  const playlistId = $derived(nav.params[0] ?? null);
+  const openPlaylist = $derived(
+    playlistId ? (library.playlists.find((p) => p.id === playlistId) ?? null) : null,
+  );
 
   onMount(async () => {
     const [r, m, s] = await Promise.allSettled([
@@ -38,111 +54,393 @@
     loading = false;
   });
 
+  $effect(() => {
+    const id = nav.params[0];
+    if (!id) {
+      playlistTracks = [];
+      return;
+    }
+    // Wait until the store knows this playlist, then load its contents.
+    if (!library.playlists.some((p) => p.id === id)) return;
+    tab = "playlists";
+    void loadPlaylist(id);
+  });
+
+  async function loadPlaylist(id: string) {
+    const token = ++playlistToken;
+    playlistLoading = true;
+    const tracks = await api.playlistTracks(id).catch(() => [] as Track[]);
+    if (token === playlistToken) {
+      playlistTracks = tracks;
+      playlistLoading = false;
+    }
+  }
+
   const hifzRows = $derived(
     memorisation
-      .map((row) => ({
-        row,
-        surah: surahs.find((s) => s.number === row.surah),
-      }))
+      .map((row) => ({ row, surah: surahs.find((s) => s.number === row.surah) }))
       .filter((x): x is { row: Memorization; surah: Surah } => Boolean(x.surah)),
   );
 
   function shortName(name: string) {
     return name.replace(/^سُورَةُ\s*/, "").replace(/^سورة\s*/, "");
   }
+
+  function removeFromOpenPlaylist(track: Track) {
+    if (!openPlaylist) return;
+    const id = openPlaylist.id;
+    playlistTracks = playlistTracks.filter((t) => t.id !== track.id);
+    void library.removeFromPlaylist(id, track.id);
+  }
+
+  async function createPlaylist(event: Event) {
+    event.preventDefault();
+    if (creating) return;
+    creating = true;
+    const playlist = await library.createPlaylist(newPlaylistName);
+    creating = false;
+    if (playlist) {
+      newPlaylistName = "";
+      nav.go("library", playlist.id);
+    }
+  }
+
+  async function saveRename(event: Event) {
+    event.preventDefault();
+    if (!openPlaylist || !renameValue.trim()) return;
+    await library.renamePlaylist(openPlaylist.id, renameValue);
+    renaming = false;
+  }
+
+  async function askDelete(playlist: Playlist) {
+    const message = i18n.t("library.deleteConfirm", { name: playlist.name });
+    let confirmed = false;
+    if (isTauri) {
+      const { ask } = await import("@tauri-apps/plugin-dialog");
+      confirmed = await ask(message, { kind: "warning" });
+    } else {
+      confirmed = window.confirm(message);
+    }
+    if (confirmed) {
+      await library.deletePlaylist(playlist.id);
+      nav.go("library");
+    }
+  }
+
+  function playAll(tracks: Track[]) {
+    if (tracks.length) player.play(tracks[0], tracks);
+  }
+
+  function fmtBytes(bytes: number) {
+    if (!bytes) return "";
+    const mb = bytes / 1_048_576;
+    return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+  }
 </script>
 
-<div class="fade-in">
-  <header>
-    <h1 class="text-2xl font-bold text-cream">{i18n.t("library.title")}</h1>
-  </header>
+{#snippet emptyState(icon: IconName, text: string)}
+  <div class="rounded-2xl border border-line bg-ink-900/50 px-6 py-14 text-center">
+    <Icon name={icon} size={28} class="mx-auto text-ink-700" />
+    <p class="mt-3 text-sm text-muted">{text}</p>
+  </div>
+{/snippet}
 
-  <div class="mt-5 flex flex-wrap gap-2">
-    {#each tabs as t (t.id)}
-      <button
-        type="button"
-        onclick={() => (tab = t.id)}
-        class="flex items-center gap-2 rounded-xl border px-3 py-2 text-[12px] transition-colors
-               {tab === t.id
-          ? 'border-gold/45 bg-gold/10 text-gold'
-          : 'border-line text-muted hover:border-gold/25 hover:text-cream'}"
-      >
-        <Icon name={t.icon} size={14} />
-        {i18n.t(t.label)}
-      </button>
+{#snippet trackList(tracks: Track[], onRemove?: (track: Track) => void)}
+  <div class="overflow-hidden rounded-2xl border border-line bg-ink-900/50 p-1.5">
+    {#each tracks as track (track.id)}
+      <TrackRow {track} queue={tracks} onRemove={onRemove ? () => onRemove(track) : undefined} />
     {/each}
   </div>
+{/snippet}
 
-  <div class="mt-6">
-    {#if tab === "recent"}
-      {#if loading}
+<div class="fade-in">
+  {#if openPlaylist}
+    <!-- Playlist detail -->
+    <button
+      type="button"
+      onclick={() => nav.go("library")}
+      class="mb-5 flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-gold"
+    >
+      <Icon name="chevron" size={13} class="rotate-180 rtl:rotate-0" />
+      {i18n.t("library.playlists")}
+    </button>
+
+    <header class="flex flex-wrap items-end gap-4">
+      <div class="min-w-0 flex-1">
+        {#if renaming}
+          <form onsubmit={saveRename} class="flex items-center gap-2">
+            <input
+              bind:value={renameValue}
+              class="w-full max-w-sm rounded-lg border border-gold/40 bg-ink-850 px-3 py-1.5 text-xl font-bold text-cream focus:outline-none"
+            />
+            <button type="submit" class="rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-ink-950">
+              {i18n.t("library.create")}
+            </button>
+          </form>
+        {:else}
+          <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gold/80">
+            {i18n.t("library.playlists")}
+          </p>
+          <h1 class="mt-1 text-2xl font-bold text-cream">{openPlaylist.name}</h1>
+        {/if}
+        <p class="mt-1 text-xs text-muted">
+          {fmtNumber(playlistTracks.length)} {i18n.t("library.tracks")}
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          onclick={() => playAll(playlistTracks)}
+          disabled={!playlistTracks.length}
+          class="flex items-center gap-2 rounded-xl bg-gold px-4 py-2.5 text-sm font-semibold text-ink-950 transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-40"
+        >
+          <Icon name="play" size={14} />
+          {i18n.t("library.playAll")}
+        </button>
+        <button
+          type="button"
+          onclick={() => {
+            renameValue = openPlaylist.name;
+            renaming = true;
+          }}
+          class="rounded-lg border border-line p-2 text-muted transition-colors hover:text-cream"
+          aria-label={i18n.t("library.rename")}
+        >
+          <Icon name="pencil" size={15} />
+        </button>
+        <button
+          type="button"
+          onclick={() => askDelete(openPlaylist)}
+          class="rounded-lg border border-line p-2 text-muted transition-colors hover:border-red-400/40 hover:text-red-400"
+          aria-label={i18n.t("library.delete")}
+        >
+          <Icon name="x" size={15} />
+        </button>
+      </div>
+    </header>
+
+    <div class="mt-6">
+      {#if playlistLoading}
         <div class="space-y-1">
-          {#each Array(8) as _, i (i)}
+          {#each Array(6) as _, i (i)}
             <div class="flex animate-pulse items-center gap-3 px-2.5 py-2">
               <div class="size-11 rounded-lg bg-ink-800"></div>
               <div class="h-3 w-56 rounded bg-ink-800"></div>
             </div>
           {/each}
         </div>
-      {:else if recent.length === 0}
-        <div class="rounded-2xl border border-line bg-ink-900/50 px-6 py-14 text-center">
-          <Icon name="clock" size={28} class="mx-auto text-ink-700" />
-          <p class="mt-3 text-sm text-muted">{i18n.t("home.empty")}</p>
-        </div>
+      {:else if playlistTracks.length === 0}
+        {@render emptyState("list", i18n.t("library.noTracks"))}
       {:else}
-        <div class="overflow-hidden rounded-2xl border border-line bg-ink-900/50 p-1.5">
-          {#each recent as track (track.id)}
-            <TrackRow {track} queue={recent} />
-          {/each}
-        </div>
+        {@render trackList(playlistTracks, removeFromOpenPlaylist)}
       {/if}
-    {:else if tab === "hifz"}
-      {#if hifzRows.length === 0}
-        <div class="rounded-2xl border border-line bg-ink-900/50 px-6 py-14 text-center">
-          <Icon name="bookmark" size={28} class="mx-auto text-ink-700" />
-          <p class="mt-3 text-sm text-muted">{i18n.t("library.noHifz")}</p>
-        </div>
-      {:else}
-        <div class="overflow-hidden rounded-2xl border border-line bg-ink-900/50">
-          {#each hifzRows as { row, surah } (row.surah)}
-            {@const pct = surah.ayahs > 0 ? Math.round((row.memorized.length / surah.ayahs) * 100) : 0}
-            <button
-              type="button"
-              onclick={() =>
-                nav.go("quran", "ayah", DEFAULT_AYAH_RECITER, surah.number)}
-              class="group flex w-full items-center gap-3 border-b border-line/50 px-4 py-3 text-start transition-colors last:border-0 hover:bg-ink-800/60"
-            >
-              <span
-                class="grid size-9 shrink-0 place-items-center rounded-lg border border-line text-[11px] tabular-nums text-muted group-hover:border-gold/30 group-hover:text-gold"
+    </div>
+  {:else}
+    <header>
+      <h1 class="text-2xl font-bold text-cream">{i18n.t("library.title")}</h1>
+    </header>
+
+    <div class="mt-5 flex flex-wrap gap-2">
+      {#each tabs as t (t.id)}
+        <button
+          type="button"
+          onclick={() => (tab = t.id)}
+          class="flex items-center gap-2 rounded-xl border px-3 py-2 text-[12px] transition-colors
+                 {tab === t.id
+            ? 'border-gold/45 bg-gold/10 text-gold'
+            : 'border-line text-muted hover:border-gold/25 hover:text-cream'}"
+        >
+          <Icon name={t.icon} size={14} />
+          {i18n.t(t.label)}
+        </button>
+      {/each}
+    </div>
+
+    <div class="mt-6">
+      {#if tab === "recent"}
+        {#if loading}
+          <div class="space-y-1">
+            {#each Array(8) as _, i (i)}
+              <div class="flex animate-pulse items-center gap-3 px-2.5 py-2">
+                <div class="size-11 rounded-lg bg-ink-800"></div>
+                <div class="h-3 w-56 rounded bg-ink-800"></div>
+              </div>
+            {/each}
+          </div>
+        {:else if recent.length === 0}
+          {@render emptyState("clock", i18n.t("home.empty"))}
+        {:else}
+          {@render trackList(recent)}
+        {/if}
+      {:else if tab === "favorites"}
+        {#if library.favorites.length === 0}
+          {@render emptyState("heart", i18n.t("library.emptyFavorites"))}
+        {:else}
+          {@render trackList(library.favorites)}
+        {/if}
+      {:else if tab === "playlists"}
+        <form onsubmit={createPlaylist} class="mb-4 flex max-w-md items-center gap-2">
+          <input
+            bind:value={newPlaylistName}
+            placeholder={i18n.t("library.playlistName")}
+            class="min-w-0 flex-1 rounded-xl border border-line bg-ink-850 px-3 py-2 text-sm text-cream placeholder:text-muted/70 focus:border-gold/50 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={!newPlaylistName.trim() || creating}
+            class="flex items-center gap-1.5 rounded-xl border border-gold/40 bg-gold/10 px-3 py-2 text-xs font-semibold text-gold disabled:opacity-40"
+          >
+            <Icon name="list" size={13} />
+            {i18n.t("library.newPlaylist")}
+          </button>
+        </form>
+
+        {#if library.playlists.length === 0}
+          {@render emptyState("list", i18n.t("library.emptyPlaylists"))}
+        {:else}
+          <div class="overflow-hidden rounded-2xl border border-line bg-ink-900/50">
+            {#each library.playlists as playlist (playlist.id)}
+              <div
+                class="group flex items-center gap-3 border-b border-line/50 px-4 py-3 last:border-0 transition-colors hover:bg-ink-800/60"
               >
-                {fmtNumber(surah.number)}
-              </span>
-              <span class="min-w-0 flex-1">
-                <span class="block truncate font-quran text-[1.05rem] leading-snug text-cream group-hover:text-gold">
-                  {shortName(surah.name)}
-                </span>
-                <span class="mt-1 block h-1 w-full max-w-40 overflow-hidden rounded-full bg-ink-800">
-                  <span class="block h-full rounded-full bg-teal" style="width: {pct}%"></span>
-                </span>
-              </span>
-              <span class="shrink-0 text-[11px] tabular-nums text-teal">
-                {fmtNumber(row.memorized.length)} / {fmtNumber(surah.ayahs)}
-              </span>
-              <Icon
-                name="chevron"
-                size={13}
-                class="shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-100"
-              />
-            </button>
-          {/each}
+                <button
+                  type="button"
+                  onclick={() => nav.go("library", playlist.id)}
+                  class="flex min-w-0 flex-1 items-center gap-3 text-start"
+                >
+                  <span
+                    class="grid size-10 shrink-0 place-items-center rounded-xl border border-line text-gold/80 group-hover:border-gold/30"
+                  >
+                    <Icon name="list" size={16} />
+                  </span>
+                  <span class="min-w-0">
+                    <span class="block truncate text-sm font-medium text-cream group-hover:text-gold">
+                      {playlist.name}
+                    </span>
+                    <span class="block text-[11px] text-muted">
+                      {fmtNumber(playlist.trackCount)} {i18n.t("library.tracks")}
+                    </span>
+                  </span>
+                </button>
+                <Icon
+                  name="chevron"
+                  size={14}
+                  class="shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-100"
+                />
+              </div>
+            {/each}
+          </div>
+        {/if}
+      {:else if tab === "downloads"}
+        {#if library.downloads.length === 0}
+          {@render emptyState("download", i18n.t("library.emptyDownloads"))}
+        {:else}
+          <div class="overflow-hidden rounded-2xl border border-line bg-ink-900/50">
+            {#each library.downloads as row (row.track.id)}
+              {@const pct = row.bytesTotal > 0 ? Math.round((row.bytesDone / row.bytesTotal) * 100) : 0}
+              <div class="flex items-center gap-3 border-b border-line/50 px-3 py-2.5 last:border-0">
+                <button
+                  type="button"
+                  onclick={() => row.status === "done" && player.play(row.track)}
+                  disabled={row.status !== "done"}
+                  class="grid size-10 shrink-0 place-items-center rounded-xl border border-line text-gold disabled:opacity-40"
+                  aria-label={i18n.t("player.play")}
+                >
+                  <Icon name={row.status === "done" ? "play" : "download"} size={15} />
+                </button>
+                <div class="min-w-0 flex-1">
+                  <div class="truncate text-sm text-cream">{row.track.title}</div>
+                  <div class="truncate text-[11px] text-muted">{row.track.artist}</div>
+                  {#if row.status === "downloading" || row.status === "queued"}
+                    <div class="mt-1.5 flex items-center gap-2">
+                      <span class="h-1 flex-1 overflow-hidden rounded-full bg-ink-800">
+                        <span class="block h-full rounded-full bg-gold transition-[width]" style="width: {pct}%"></span>
+                      </span>
+                      <span class="shrink-0 text-[10px] tabular-nums text-muted">{pct}%</span>
+                    </div>
+                  {:else if row.status === "done"}
+                    <div class="mt-0.5 text-[10px] text-teal">
+                      {i18n.t("library.downloaded")}
+                      {#if row.bytesTotal} · {fmtBytes(row.bytesTotal)}{/if}
+                    </div>
+                  {:else if row.status === "error"}
+                    <div class="mt-0.5 truncate text-[10px] text-red-400">
+                      {row.error ?? i18n.t("library.downloadFailed")}
+                    </div>
+                  {/if}
+                </div>
+                <button
+                  type="button"
+                  onclick={() => library.removeDownload(row.track.id)}
+                  class="rounded-lg p-1.5 text-muted transition-colors hover:text-red-400"
+                  aria-label={i18n.t("library.deleteDownload")}
+                >
+                  <Icon name="x" size={14} />
+                </button>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      {:else if tab === "local"}
+        <div class="mb-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onclick={() => library.importFolders()}
+            class="flex items-center gap-2 rounded-xl border border-gold/40 bg-gold/10 px-3.5 py-2 text-xs font-semibold text-gold transition-colors hover:bg-gold/15"
+          >
+            <Icon name="download" size={13} />
+            {i18n.t("library.importFolder")}
+          </button>
+          <span class="text-[11px] text-muted">
+            {fmtNumber(library.local.length)} {i18n.t("library.tracks")}
+          </span>
         </div>
+
+        {#if library.local.length === 0}
+          {@render emptyState("disc", i18n.t("library.emptyLocal"))}
+        {:else}
+          {@render trackList(library.local, (track) => library.forgetLocalTrack(track.id))}
+        {/if}
+      {:else if tab === "hifz"}
+        {#if hifzRows.length === 0}
+          {@render emptyState("bookmark", i18n.t("library.noHifz"))}
+        {:else}
+          <div class="overflow-hidden rounded-2xl border border-line bg-ink-900/50">
+            {#each hifzRows as { row, surah } (row.surah)}
+              {@const pct = surah.ayahs > 0 ? Math.round((row.memorized.length / surah.ayahs) * 100) : 0}
+              <button
+                type="button"
+                onclick={() =>
+                  nav.go("quran", "ayah", DEFAULT_AYAH_RECITER, surah.number)}
+                class="group flex w-full items-center gap-3 border-b border-line/50 px-4 py-3 text-start transition-colors last:border-0 hover:bg-ink-800/60"
+              >
+                <span
+                  class="grid size-9 shrink-0 place-items-center rounded-lg border border-line text-[11px] tabular-nums text-muted group-hover:border-gold/30 group-hover:text-gold"
+                >
+                  {fmtNumber(surah.number)}
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate font-quran text-[1.05rem] leading-snug text-cream group-hover:text-gold">
+                    {shortName(surah.name)}
+                  </span>
+                  <span class="mt-1 block h-1 w-full max-w-40 overflow-hidden rounded-full bg-ink-800">
+                    <span class="block h-full rounded-full bg-teal" style="width: {pct}%"></span>
+                  </span>
+                </span>
+                <span class="shrink-0 text-[11px] tabular-nums text-teal">
+                  {fmtNumber(row.memorized.length)} / {fmtNumber(surah.ayahs)}
+                </span>
+                <Icon
+                  name="chevron"
+                  size={13}
+                  class="shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-100"
+                />
+              </button>
+            {/each}
+          </div>
+        {/if}
       {/if}
-    {:else}
-      <div class="rounded-2xl border border-dashed border-line bg-ink-900/40 px-6 py-16 text-center">
-        <Icon name="sparkle" size={26} class="mx-auto text-gold/40" />
-        <p class="mt-3 text-sm font-medium text-cream">{i18n.t("library.comingSoon")}</p>
-        <p class="mt-1 text-xs text-muted">{i18n.t("library.empty")}</p>
-      </div>
-    {/if}
-  </div>
+    </div>
+  {/if}
 </div>

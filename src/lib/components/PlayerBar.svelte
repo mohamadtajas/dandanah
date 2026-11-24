@@ -1,5 +1,6 @@
 <script lang="ts">
   import { player } from "$lib/stores/player.svelte.ts";
+  import { library } from "$lib/stores/library.svelte.ts";
   import { ayahOf } from "$lib/stores/hifz.svelte.ts";
   import { fmtNumber, fmtTime, i18n } from "$lib/i18n/index.svelte.ts";
   import Artwork from "./Artwork.svelte";
@@ -9,6 +10,7 @@
   const track = $derived(player.current);
   const rateLabel = $derived(Number(player.rate.toFixed(2)).toString());
   const ayah = $derived(ayahOf(track));
+  const favorite = $derived(track ? library.isFavorite(track.id) : false);
 
   function ctrlClass(active = false) {
     return `grid place-items-center rounded-full p-2 transition-colors ${
@@ -80,7 +82,14 @@
             {track.artist || i18n.t("player.nowPlaying")}
           </div>
         </div>
-        <button type="button" class="{ctrlClass()} ms-1" aria-label={i18n.t("library.favorites")}>
+        <button
+          type="button"
+          class="{ctrlClass(favorite)} ms-1"
+          onclick={() => track && library.toggleFavorite(track)}
+          disabled={!track}
+          aria-label={i18n.t("library.favorites")}
+          aria-pressed={favorite}
+        >
           <Icon name="heart" size={16} />
         </button>
       {:else}

@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
   import PlayerBar from "$lib/components/PlayerBar.svelte";
+  import Toast from "$lib/components/Toast.svelte";
   import Home from "$lib/views/Home.svelte";
   import Quran from "$lib/views/Quran.svelte";
   import Radio from "$lib/views/Radio.svelte";
@@ -11,9 +12,11 @@
   import Credits from "$lib/views/Credits.svelte";
   import { nav } from "$lib/stores/nav.svelte.ts";
   import { player } from "$lib/stores/player.svelte.ts";
+  import { library } from "$lib/stores/library.svelte.ts";
   import { i18n } from "$lib/i18n/index.svelte.ts";
 
   onMount(() => {
+    void library.load();
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) {
@@ -85,4 +88,6 @@
   <div class="col-span-2">
     <PlayerBar />
   </div>
+
+  <Toast />
 </div>

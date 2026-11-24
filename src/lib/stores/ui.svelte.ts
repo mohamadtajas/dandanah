@@ -2,6 +2,18 @@ const THEME_KEY = "dandanah.theme";
 
 class UiStore {
   theme = $state<"dark" | "light">("dark");
+  /** Transient message shown above the player bar. */
+  toast = $state<string | null>(null);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  notify(message: string, ms = 3600) {
+    this.toast = message;
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => {
+      this.toast = null;
+      this.toastTimer = null;
+    }, ms);
+  }
 
   constructor() {
     if (typeof localStorage !== "undefined") {

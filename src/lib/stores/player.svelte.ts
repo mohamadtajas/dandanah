@@ -1,5 +1,7 @@
-import { api } from "$lib/api";
+import { api, isTauri } from "$lib/api";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import type { Track } from "$lib/types";
+import { library } from "$lib/stores/library.svelte.ts";
 
 type RepeatMode = "off" | "all" | "one";
 
@@ -49,8 +51,7 @@ class PlayerStore {
     return Math.min(1, this.position / this.duration);
   }
 
-  private ensureAudio(): HTMLAudioElement {
-    if (this.audio) return this.audio;
+  private ensureAudio(): HTMLAudioElement {    if (this.audio) return this.audio;
 
     const a = new Audio();
     a.preload = "auto";
@@ -93,6 +94,13 @@ class PlayerStore {
     return a;
   }
 
+  /** Prefers a downloaded or imported file over the remote stream. */
+  private sourceFor(track: Track): string {
+    const localPath = track.localPath ?? library.localPathFor(track.id);
+    if (localPath && isTauri) return convertFileSrc(localPath);
+    return track.streamUrl ?? "";
+  }
+
   async play(track: Track, queue?: Track[]) {
     if (queue && queue.length) {
       this.queue = queue;
@@ -116,7 +124,7 @@ class PlayerStore {
     this.loading = true;
 
     const a = this.ensureAudio();
-    a.src = track.streamUrl ?? "";
+    a.src = this.sourceFor(track);
     a.playbackRate = this.rate;
 
     try {

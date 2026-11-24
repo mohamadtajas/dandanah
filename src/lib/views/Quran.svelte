@@ -5,6 +5,7 @@
   import { fmtNumber, i18n } from "$lib/i18n/index.svelte.ts";
   import { nav } from "$lib/stores/nav.svelte.ts";
   import { player } from "$lib/stores/player.svelte.ts";
+  import { library } from "$lib/stores/library.svelte.ts";
   import { normalizeArabic } from "$lib/text";
   import Artwork from "$lib/components/Artwork.svelte";
   import Icon from "$lib/components/Icon.svelte";
@@ -196,43 +197,76 @@
       {:else}
         {#each rows as row, i (row.surah.number)}
           {@const active = player.current?.id === row.track.id}
-          <button
-            type="button"
-            onclick={() => play(row.track)}
-            class="group flex w-full items-center gap-3 border-b border-line/50 px-4 py-2.5 text-start transition-colors last:border-0
+          {@const dl = library.downloadFor(row.track.id)}
+          <div
+            class="group flex w-full items-center gap-3 border-b border-line/50 px-4 py-2.5 transition-colors last:border-0
                    {active ? 'bg-gold/8' : 'hover:bg-ink-800/60'}"
           >
-            <span
-              class="grid size-9 shrink-0 place-items-center rounded-lg border text-[11px] tabular-nums transition-colors
-                     {active
-                ? 'border-gold/40 bg-gold/10 text-gold'
-                : 'border-line text-muted group-hover:border-gold/30 group-hover:text-gold'}"
+            <button
+              type="button"
+              onclick={() => play(row.track)}
+              class="flex min-w-0 flex-1 items-center gap-3 text-start"
             >
-              {#if active && player.playing}
-                <div class="eq"><i></i><i></i><i></i><i></i></div>
-              {:else}
-                {fmtNumber(row.surah.number)}
-              {/if}
-            </span>
-            <span class="min-w-0 flex-1">
-              <span class="block truncate font-quran text-[1.05rem] leading-snug {active ? 'text-gold' : 'text-cream'}">
-                {shortName(row.surah.name)}
+              <span
+                class="grid size-9 shrink-0 place-items-center rounded-lg border text-[11px] tabular-nums transition-colors
+                       {active
+                  ? 'border-gold/40 bg-gold/10 text-gold'
+                  : 'border-line text-muted group-hover:border-gold/30 group-hover:text-gold'}"
+              >
+                {#if active && player.playing}
+                  <div class="eq"><i></i><i></i><i></i><i></i></div>
+                {:else}
+                  {fmtNumber(row.surah.number)}
+                {/if}
               </span>
-              <span class="block truncate text-[11px] text-muted">
-                {row.surah.englishName} · {fmtNumber(row.surah.ayahs)} {i18n.t("quran.ayahs")}
+              <span class="min-w-0 flex-1">
+                <span class="block truncate font-quran text-[1.05rem] leading-snug {active ? 'text-gold' : 'text-cream'}">
+                  {shortName(row.surah.name)}
+                </span>
+                <span class="block truncate text-[11px] text-muted">
+                  {row.surah.englishName} · {fmtNumber(row.surah.ayahs)} {i18n.t("quran.ayahs")}
+                </span>
               </span>
-            </span>
-            <span
-              class="hidden shrink-0 rounded-md border border-line px-1.5 py-0.5 text-[10px] text-muted sm:block"
-            >
-              {i18n.t(row.surah.revelation === "makkah" ? "quran.makkah" : "quran.madinah")}
-            </span>
-            <Icon
-              name="play"
-              size={13}
-              class="shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-100"
-            />
-          </button>
+              <span
+                class="hidden shrink-0 rounded-md border border-line px-1.5 py-0.5 text-[10px] text-muted sm:block"
+              >
+                {i18n.t(row.surah.revelation === "makkah" ? "quran.makkah" : "quran.madinah")}
+              </span>
+            </button>
+
+            <div class="flex shrink-0 items-center gap-0.5">
+              <button
+                type="button"
+                onclick={() => library.startDownload(row.track)}
+                disabled={dl?.status === "queued" || dl?.status === "downloading"}
+                title={dl?.status === "done"
+                  ? i18n.t("library.downloaded")
+                  : i18n.t("library.download")}
+                aria-label={i18n.t("library.download")}
+                class="rounded-lg p-1.5 transition-colors
+                       {dl?.status === 'done'
+                  ? 'text-teal'
+                  : dl?.status === 'error'
+                    ? 'text-red-400'
+                    : dl
+                      ? 'text-gold'
+                      : 'text-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-cream'}"
+              >
+                {#if dl?.status === "queued" || dl?.status === "downloading"}
+                  <span class="size-3.5 animate-spin rounded-full border border-gold/30 border-t-gold"></span>
+                {:else if dl?.status === "done"}
+                  <Icon name="check" size={13} />
+                {:else}
+                  <Icon name="download" size={13} />
+                {/if}
+              </button>
+              <Icon
+                name="play"
+                size={13}
+                class="text-muted opacity-0 transition-opacity group-hover:opacity-100"
+              />
+            </div>
+          </div>
         {/each}
       {/if}
     </div>

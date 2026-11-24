@@ -1,5 +1,7 @@
 mod commands;
 mod db;
+mod downloads;
+mod library;
 mod providers;
 
 use commands::AppState;
@@ -17,6 +19,7 @@ pub fn run() {
             }
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
@@ -56,6 +59,23 @@ pub fn run() {
             commands::search,
             commands::get_recent,
             commands::record_play,
+            commands::get_favorites,
+            commands::get_favorite_ids,
+            commands::add_favorite,
+            commands::remove_favorite,
+            commands::get_playlists,
+            commands::create_playlist,
+            commands::rename_playlist,
+            commands::delete_playlist,
+            commands::get_playlist_tracks,
+            commands::add_to_playlist,
+            commands::remove_from_playlist,
+            commands::start_download,
+            commands::get_downloads,
+            commands::delete_download,
+            commands::import_folder,
+            commands::get_local_tracks,
+            commands::forget_local_track,
             commands::get_settings,
             commands::set_setting,
             commands::app_info,

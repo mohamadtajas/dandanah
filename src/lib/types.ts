@@ -17,6 +17,8 @@ export interface Track {
   kind: TrackKind;
   subtitle?: string;
   live?: boolean;
+  /** Absolute file path for an imported or downloaded track. */
+  localPath?: string;
 }
 
 export interface Moshaf {
@@ -71,6 +73,31 @@ export interface Memorization {
   surah: number;
   memorized: number[];
   updatedAt: number;
+}
+
+export interface Playlist {
+  id: string;
+  name: string;
+  createdAt: number;
+  trackCount: number;
+}
+
+export type DownloadStatus = "queued" | "downloading" | "done" | "error";
+
+export interface DownloadRow {
+  track: Track;
+  status: DownloadStatus;
+  bytesTotal: number;
+  bytesDone: number;
+  filePath?: string;
+  error?: string;
+  createdAt: number;
+}
+
+export interface ImportSummary {
+  imported: number;
+  scannedFolders: number;
+  truncated: boolean;
 }
 
 export interface AppInfo {
