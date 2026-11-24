@@ -65,6 +65,14 @@
           <Icon name="radio" size={16} />
           {i18n.t("home.startRadio")}
         </button>
+        <button
+          type="button"
+          onclick={() => nav.go("explore")}
+          class="flex items-center gap-2 rounded-xl border border-line bg-ink-850 px-4 py-2.5 text-sm font-medium text-cream transition-colors hover:border-gold/40 hover:text-gold"
+        >
+          <Icon name="sparkle" size={16} />
+          {i18n.t("home.startExplore")}
+        </button>
       </div>
     </div>
   </section>

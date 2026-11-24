@@ -110,6 +110,7 @@ export type View =
   | "home"
   | "search"
   | "quran"
+  | "explore"
   | "radio"
   | "library"
   | "settings"

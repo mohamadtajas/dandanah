@@ -91,6 +91,14 @@
         {:else if track.subtitle}
           <span class="truncate text-muted/60">· {track.subtitle}</span>
         {/if}
+        {#if track.license && (track.kind === "music" || track.kind === "anasheed")}
+          <span
+            class="shrink-0 rounded border border-gold/25 bg-gold/8 px-1 py-px text-[9px] font-medium text-gold/90"
+            title={track.licenseUrl ?? track.license}
+          >
+            {track.license}
+          </span>
+        {/if}
       </div>
     </div>
   </button>

@@ -100,6 +100,33 @@ const script = `(async () => {
   const localTrack = (await invoke("get_local_tracks"))[0];
   out.localPlayback = localTrack ? await probe(localTrack.localPath) : { ok: false, code: "none" };
 
+  // Creative Commons catalogue: both providers, plus a real stream probe.
+  const probeUrl = async (url) => {
+    const audio = new Audio(url);
+    return await new Promise((resolve) => {
+      audio.addEventListener("loadedmetadata", () =>
+        resolve({ ok: true, duration: Math.round(audio.duration * 10) / 10 }),
+      );
+      audio.addEventListener("error", () => resolve({ ok: false, code: audio.error?.code ?? -1 }));
+      setTimeout(() => resolve({ ok: false, code: "timeout" }), 15000);
+      audio.load();
+    });
+  };
+
+  const cc = await invoke("explore_cc", { section: "all", limit: 10 });
+  out.cc = {
+    count: cc.length,
+    providers: [...new Set(cc.map((t) => t.provider))],
+    licensed: cc.filter((t) => Boolean(t.license)).length,
+    sample: cc.slice(0, 3).map((t) => ({
+      title: t.title,
+      artist: t.artist,
+      license: t.license,
+      provider: t.provider,
+    })),
+  };
+  out.ccPlayback = cc[0] ? await probeUrl(cc[0].streamUrl) : { ok: false, code: "none" };
+
   out.ms = Date.now() - started;
   return out;
 })()`;

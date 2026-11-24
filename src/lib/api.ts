@@ -96,6 +96,11 @@ export const api = {
   search: async (query: string, kinds?: string[]): Promise<SearchResults> =>
     isTauri ? invoke<SearchResults>("search", { query, kinds }) : (await mock()).search(query),
 
+  exploreCc: async (query = "", section = "all", limit = 24): Promise<Track[]> =>
+    isTauri
+      ? invoke<Track[]>("explore_cc", { query, section, limit })
+      : (await mock()).exploreCc(query, section, limit),
+
   recent: async (limit?: number): Promise<Track[]> =>
     isTauri ? invoke<Track[]>("get_recent", { limit }) : (await mock()).recent(),
 

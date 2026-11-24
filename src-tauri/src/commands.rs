@@ -1,7 +1,7 @@
 use crate::db::{Database, DownloadRow, Memorization, Playlist};
 use crate::providers::{
-    dedupe, everyayah, matches, mp3quran, quran_text, radiobrowser, score, surah, surahs, Reciter,
-    Surah, Track, TrackKind,
+    archive, dedupe, everyayah, matches, mp3quran, openverse, quran_text, radiobrowser, score,
+    surah, surahs, Reciter, Surah, Track, TrackKind,
 };
 use crate::{downloads, library};
 use serde::Serialize;
@@ -345,6 +345,61 @@ pub async fn search(
 }
 
 // ---------------------------------------------------------------------------
+// Creative Commons catalogue
+// ---------------------------------------------------------------------------
+
+/// Cross-provider search for free music (Openverse) and archive.org audio
+/// (anasheed and public-domain recordings). Sections are `all`, `music` or
+/// `anasheed`.
+#[tauri::command]
+pub async fn explore_cc(
+    state: State<'_, AppState>,
+    section: Option<String>,
+    query: Option<String>,
+    limit: Option<u32>,
+) -> Result<Vec<Track>, String> {
+    let section = section.unwrap_or_else(|| "all".into()).to_ascii_lowercase();
+    let q = query.unwrap_or_default().trim().to_string();
+    let limit = limit.unwrap_or(24).clamp(1, 60);
+    let client = &state.http;
+
+    let (music, anasheed) = tokio::join!(
+        async {
+            if section == "anasheed" {
+                return Ok(Vec::new());
+            }
+            let text = if q.is_empty() { "arabic" } else { q.as_str() };
+            let take = if section == "music" { limit.min(20) } else { (limit / 2 + 6).min(20) };
+            openverse::search(client, text, take).await
+        },
+        async {
+            if section == "music" {
+                return Ok(Vec::new());
+            }
+            let text = if q.is_empty() { "" } else { q.as_str() };
+            let items = if section == "anasheed" { 5 } else { 2 };
+            archive::search(client, text, items, TrackKind::Anasheed).await
+        }
+    );
+
+    let mut tracks = Vec::new();
+    let mut failures = Vec::new();
+    match music {
+        Ok(mut list) => tracks.append(&mut list),
+        Err(error) => failures.push(format!("openverse: {error}")),
+    }
+    match anasheed {
+        Ok(mut list) => tracks.append(&mut list),
+        Err(error) => failures.push(format!("archive: {error}")),
+    }
+
+    if tracks.is_empty() && !failures.is_empty() {
+        return Err(failures.join("; "));
+    }
+    Ok(dedupe(tracks))
+}
+
+// ---------------------------------------------------------------------------
 // Library / history
 // ---------------------------------------------------------------------------
 
@@ -596,6 +651,8 @@ pub fn app_info() -> AppInfo {
             "mp3quran-radio",
             radiobrowser::PROVIDER,
             everyayah::PROVIDER,
+            openverse::PROVIDER,
+            archive::PROVIDER,
         ],
         countries: radiobrowser::ARAB_COUNTRIES.to_vec(),
     }

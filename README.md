@@ -25,7 +25,7 @@ Week 1 of the build plan is complete and working:
 | Ayah-by-ayah playback with Uthmani text and translation | ✅ |
 | Hifz loops: repeat an ayah range N times, mark memorised | ✅ |
 | Favorites, playlists, downloads, local folder import | ✅ |
-| Jamendo / archive.org / Creative Commons providers | ⏳ week 4 |
+| Openverse + archive.org catalogue with licence badges | ✅ |
 | Windows SMTC integration, tray, hotkeys | ⏳ week 5 |
 | Installer, auto-update, code signing | ⏳ week 6 |
 
@@ -89,6 +89,8 @@ src-tauri/src/               Rust backend
 │  ├─ mp3quran.rs            reciters, surah servers, Quran radio
 │  ├─ everyayah.rs           per-ayah recitation catalogue and URL builder
 │  ├─ quran_text.rs          Uthmani text + translation from AlQuran Cloud
+│  ├─ openverse.rs           CC audio index (includes Jamendo), no API key
+│  ├─ archive.rs             archive.org audio items expanded into tracks
 │  └─ radiobrowser.rs        live station directory with mirror fallback
 ├─ db/mod.rs                 SQLite schema, migrations, cache, history
 ├─ downloads.rs              streaming downloader with progress events
@@ -166,6 +168,21 @@ read for display but not extracted into the cache.
 
 ---
 
+## Explore — free music and anasheed
+
+The Explore tab searches two openly licensed catalogues at once:
+
+- **Openverse** — a CC audio index that already aggregates Jamendo and Freesound, so the
+  app needs no Jamendo API key.
+- **Internet Archive** — audio items expanded into their individual files, with the item's
+  licence URL mapped to a short label (`CC BY`, `CC BY-SA`, `CC0`, `Public domain`).
+
+Every row shows its licence. Downloads are refused when a music or anasheed track has no
+known licence, and the credits screen lists every source. Searches run in parallel; if one
+provider fails the other's results are still shown.
+
+---
+
 ## Content sources
 
 | Source | Content | License |
@@ -175,6 +192,7 @@ read for display but not extracted into the cache.
 | [AlQuran Cloud](https://alquran.cloud) | Surah names, ayah counts | Open data |
 | [radio-browser.info](https://www.radio-browser.info) | Live radio directory | CC0 metadata |
 | [Jamendo](https://www.jamendo.com) | Creative Commons music | CC — attribution required |
+| [Openverse](https://openverse.org) | CC audio index (includes Jamendo) | CC — per work |
 | [Internet Archive](https://archive.org) | Anasheed, public-domain recordings | Per item |
 
 Dandanah deliberately has **no YouTube or stream-ripping provider**. That keeps the app
@@ -197,7 +215,7 @@ distributable, the installer small, and the project on solid legal ground.
 
 1. ~~**Quran depth**~~ — shipped: ayah mode, repeat ranges, memorisation tracker, Uthmani follow-along.
 2. ~~**Library**~~ — shipped: favorites, playlists, downloads, local folder import.
-3. **Creative Commons catalog** — Jamendo, Openverse, archive.org with license badges.
+3. ~~**Creative Commons catalog**~~ — shipped: Openverse and archive.org with licence badges.
 4. **Windows integration** — SMTC lock-screen controls, tray, global hotkeys.
 5. **Ship** — installer, GitHub Releases auto-update, code signing.
 

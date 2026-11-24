@@ -5,6 +5,7 @@
   import Toast from "$lib/components/Toast.svelte";
   import Home from "$lib/views/Home.svelte";
   import Quran from "$lib/views/Quran.svelte";
+  import Explore from "$lib/views/Explore.svelte";
   import Radio from "$lib/views/Radio.svelte";
   import Search from "$lib/views/Search.svelte";
   import Library from "$lib/views/Library.svelte";
@@ -71,6 +72,8 @@
         <Home />
       {:else if nav.view === "quran"}
         <Quran />
+      {:else if nav.view === "explore"}
+        <Explore />
       {:else if nav.view === "radio"}
         <Radio />
       {:else if nav.view === "search"}

@@ -1302,6 +1302,33 @@ export function mockApi() {
     async position(surahNumber: number, reciterId: string) {
       return positions.get(`${surahNumber}:${reciterId}`) ?? null;
     },
+    async exploreCc(query: string, section: string, limit = 24) {
+      const samples = [
+        { title: "معاينة موسيقى ١", artist: "فنان تجريبي", license: "CC BY" },
+        { title: "معاينة موسيقى ٢", artist: "فنان تجريبي", license: "CC BY-SA" },
+        { title: "معاينة موسيقى ٣", artist: "فنان تجريبي", license: "CC0" },
+        { title: "نشيد تجريبي ١", artist: "منشد تجريبي", license: "CC BY-NC" },
+        { title: "نشيد تجريبي ٢", artist: "منشد تجريبي", license: "Public domain" },
+      ];
+      const q = query.trim();
+      return samples
+        .filter((s) => (section === "all" ? true : section === "music" ? s.title.includes("موسيقى") : s.title.includes("نشيد")))
+        .filter((s) => !q || s.title.includes(q) || s.artist.includes(q))
+        .slice(0, limit)
+        .map((s, i) => ({
+          id: `openverse:preview-${i}`,
+          provider: "openverse",
+          providerId: `preview-${i}`,
+          title: s.title,
+          artist: s.artist,
+          durationS: 6,
+          streamUrl: "https://everyayah.com/data/Alafasy_128kbps/001001.mp3",
+          kind: (s.title.includes("نشيد") ? "anasheed" : "music") as Track["kind"],
+          license: s.license,
+          licenseUrl: "https://creativecommons.org/licenses/",
+          attribution: `${s.artist} — ${s.license} · بيانات تجريبية`,
+        }));
+    },
     async settings() {
       return [] as [string, string][];
     },

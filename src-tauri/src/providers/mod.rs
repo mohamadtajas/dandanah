@@ -2,8 +2,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::OnceLock;
 
+pub mod archive;
 pub mod everyayah;
 pub mod mp3quran;
+pub mod openverse;
 pub mod quran_text;
 pub mod radiobrowser;
 
@@ -211,6 +213,34 @@ pub fn matches(query: &str, candidate: &str) -> bool {
     score(query, candidate) >= 0.55
 }
 
+/// Turns a Creative Commons code or licence URL into a short human label.
+pub fn license_label(value: &str) -> String {
+    let trimmed = value.trim();
+    let v = trimmed.to_ascii_lowercase();
+    if v.is_empty() {
+        return String::new();
+    }
+    if v.contains("publicdomain/zero") || v == "cc0" || v.contains("/cc0/") {
+        return "CC0".into();
+    }
+    if v.contains("publicdomain") || v == "pdm" {
+        return "Public domain".into();
+    }
+    for (needle, label) in [
+        ("by-nc-nd", "CC BY-NC-ND"),
+        ("by-nc-sa", "CC BY-NC-SA"),
+        ("by-nc", "CC BY-NC"),
+        ("by-sa", "CC BY-SA"),
+        ("by-nd", "CC BY-ND"),
+        ("by", "CC BY"),
+    ] {
+        if v == needle || v.contains(&format!("/{needle}/")) || v == format!("cc-{needle}") {
+            return label.into();
+        }
+    }
+    trimmed.to_string()
+}
+
 /// Merges provider results, dropping near-duplicate tracks while keeping the
 /// higher-ranked (earlier) copy.
 pub fn dedupe(mut tracks: Vec<Track>) -> Vec<Track> {
@@ -262,6 +292,20 @@ mod tests {
         assert!(score("الحصري", "محمود خليل الحصري") > 0.75);
         assert!(!matches("الحصري", "الشريم"));
         assert!(matches("مشاري", "مشاري العفاسي"));
+    }
+
+    #[test]
+    fn license_labels_cover_common_codes() {
+        assert_eq!(license_label("by"), "CC BY");
+        assert_eq!(license_label("by-sa"), "CC BY-SA");
+        assert_eq!(
+            license_label("https://creativecommons.org/licenses/by-nc-nd/4.0/"),
+            "CC BY-NC-ND"
+        );
+        assert_eq!(license_label("cc0"), "CC0");
+        assert_eq!(license_label("pdm"), "Public domain");
+        assert_eq!(license_label(""), "");
+        assert_eq!(license_label("All rights reserved"), "All rights reserved");
     }
 
     #[test]

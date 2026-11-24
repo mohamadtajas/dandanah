@@ -29,6 +29,12 @@
       license: { ar: "بيانات مفتوحة (CC0)", en: "Open data (CC0)" },
     },
     {
+      name: "Openverse",
+      url: "https://openverse.org",
+      what: { ar: "فهرس صوتي بتراخيص مفتوحة (يشمل Jamendo)", en: "Openly licensed audio index (includes Jamendo)" },
+      license: { ar: "Creative Commons — حسب كل عمل", en: "Creative Commons — per work" },
+    },
+    {
       name: "Jamendo",
       url: "https://www.jamendo.com",
       what: { ar: "موسيقى بتراخيص Creative Commons", en: "Creative Commons music" },

@@ -146,6 +146,14 @@ class LibraryStore {
       ui.notify(i18n.t("library.downloadUnavailable"));
       return;
     }
+    // Only download when the licence is known — the app must never take a file
+    // offline without a clear right to keep it.
+    const needsLicense =
+      (track.kind === "music" || track.kind === "anasheed") && !track.license;
+    if (needsLicense) {
+      ui.notify(i18n.t("library.licenseUnknown"));
+      return;
+    }
 
     const row: DownloadRow = {
       track,
