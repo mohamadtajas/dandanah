@@ -15,15 +15,15 @@ struct Envelope {
 struct Item {
     id: String,
     #[serde(default)]
-    title: String,
+    title: Option<String>,
     #[serde(default)]
-    creator: String,
+    creator: Option<String>,
     url: String,
     /// Milliseconds in the Openverse schema.
     #[serde(default)]
     duration: Option<u64>,
     #[serde(default)]
-    license: String,
+    license: Option<String>,
     #[serde(default)]
     license_url: Option<String>,
     #[serde(default)]
@@ -60,32 +60,36 @@ pub async fn search(
         .into_iter()
         .filter(|item| !item.url.trim().is_empty())
         .map(|item| {
+            let title = item.title.as_deref().unwrap_or("").trim().to_string();
+            let artist = item.creator.as_deref().unwrap_or("").trim().to_string();
+            let license = item
+                .license
+                .as_deref()
+                .map(license_label)
+                .filter(|label| !label.is_empty());
+
             let mut track = Track::new(
                 PROVIDER,
                 item.id,
-                if item.title.trim().is_empty() {
-                    "Untitled".to_string()
-                } else {
-                    item.title.trim().to_string()
-                },
+                if title.is_empty() { "Untitled".to_string() } else { title },
                 TrackKind::Music,
             );
-            track.artist = if item.creator.trim().is_empty() {
+            track.artist = if artist.is_empty() {
                 "Openverse".into()
             } else {
-                item.creator.trim().to_string()
+                artist
             };
             track.duration_s = item.duration.map(|ms| (ms / 1000).min(u32::MAX as u64) as u32);
             track.stream_url = Some(item.url);
             track.artwork_url = item.thumbnail;
-            track.license = Some(license_label(&item.license));
             track.license_url = item.license_url;
             track.source_page = item.foreign_landing_url;
             track.attribution = Some(format!(
                 "{} — {} · Openverse",
                 track.artist,
-                track.license.clone().unwrap_or_else(|| "CC".into())
+                license.clone().unwrap_or_else(|| "CC".into())
             ));
+            track.license = license;
             track
         })
         .collect())
@@ -113,6 +117,9 @@ mod tests {
         let body: Envelope = serde_json::from_value(payload).unwrap();
         let item = &body.results[0];
         assert_eq!(item.duration, Some(245000));
-        assert_eq!(license_label(&item.license), "CC BY-SA");
+        assert_eq!(
+            license_label(item.license.as_deref().unwrap_or("")),
+            "CC BY-SA"
+        );
     }
 }

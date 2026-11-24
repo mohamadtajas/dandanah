@@ -71,7 +71,7 @@ pub fn run() {
             commands::get_quran_radios,
             commands::get_radios,
             commands::search,
-            commands::explore_cc,
+            commands::explore_cc_stream,
             commands::get_recent,
             commands::record_play,
             commands::get_favorites,

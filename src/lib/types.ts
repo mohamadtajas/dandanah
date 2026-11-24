@@ -32,6 +32,7 @@ export interface Moshaf {
 export interface Reciter {
   id: number;
   name: string;
+  englishName?: string;
   letter: string;
   moshafs: Moshaf[];
 }

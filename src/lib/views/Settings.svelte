@@ -5,6 +5,7 @@
   import { i18n } from "$lib/i18n/index.svelte.ts";
   import { nav } from "$lib/stores/nav.svelte.ts";
   import { player } from "$lib/stores/player.svelte.ts";
+  import { library } from "$lib/stores/library.svelte.ts";
   import { ui } from "$lib/stores/ui.svelte.ts";
   import Icon from "$lib/components/Icon.svelte";
 
@@ -224,6 +225,34 @@
           </button>
         {/each}
       </div>
+    </div>
+  </section>
+
+  <section class="mt-4 rounded-2xl border border-line bg-ink-900/60 p-5">
+    <h2 class="text-sm font-semibold text-cream">{i18n.t("settings.downloads")}</h2>
+    <div class="mt-4 flex items-start justify-between gap-4">
+      <div class="min-w-0">
+        <div class="text-sm text-cream">{i18n.t("settings.allowUnknownLicense")}</div>
+        <p class="mt-1 text-xs leading-relaxed text-muted">
+          {i18n.t("settings.allowUnknownLicenseHint")}
+        </p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={library.allowUnknownLicense}
+        aria-label={i18n.t("settings.allowUnknownLicense")}
+        onclick={() => library.setAllowUnknownLicense(!library.allowUnknownLicense)}
+        class="relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors
+               {library.allowUnknownLicense
+          ? 'border-gold/60 bg-gold/80'
+          : 'border-line bg-ink-800'}"
+      >
+        <span
+          class="absolute top-[3px] size-[18px] rounded-full bg-cream shadow transition-all
+                 {library.allowUnknownLicense ? 'start-[22px]' : 'start-[3px]'}"
+        ></span>
+      </button>
     </div>
   </section>
 

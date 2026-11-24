@@ -14,7 +14,7 @@
   let term = $state(nav.query);
   let results = $state<SearchResults>({ reciters: [], surahs: [], tracks: [] });
   let loading = $state(false);
-  let filter = $state<"all" | "quran" | "radio">("all");
+  let filter = $state<"all" | "quran" | "radio" | "music">("all");
   let inputEl = $state<HTMLInputElement>();
 
   onMount(() => inputEl?.focus());
@@ -82,10 +82,10 @@
   </label>
 
   <div class="mt-3 flex gap-2">
-    {#each [["all", "search.filterAll"], ["quran", "search.filterQuran"], ["radio", "search.filterRadio"]] as [value, key] (value)}
+    {#each [["all", "search.filterAll"], ["quran", "search.filterQuran"], ["radio", "search.filterRadio"], ["music", "search.filterFree"]] as [value, key] (value)}
       <button
         type="button"
-        onclick={() => (filter = value as "all" | "quran" | "radio")}
+        onclick={() => (filter = value as "all" | "quran" | "radio" | "music")}
         class="rounded-full border px-3 py-1 text-[11px] transition-colors
                {filter === value
           ? 'border-gold/50 bg-gold/12 text-gold'

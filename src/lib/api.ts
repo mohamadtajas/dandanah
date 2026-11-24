@@ -99,9 +99,13 @@ export const api = {
     isTauri ? invoke<SearchResults>("search", { query, kinds }) : (await mock()).search(query),
 
   exploreCc: async (query = "", section = "all", limit = 24): Promise<Track[]> =>
-    isTauri
-      ? invoke<Track[]>("explore_cc", { query, section, limit })
-      : (await mock()).exploreCc(query, section, limit),
+    (await mock()).exploreCc(query, section, limit),
+
+  /** Starts a streamed Explore search; batches arrive on the `cc:batch` event. */
+  startExplore: async (query = "", section = "all"): Promise<string> => {
+    if (!isTauri) return "mock";
+    return invoke<string>("explore_cc_stream", { query, section });
+  },
 
   recent: async (limit?: number): Promise<Track[]> =>
     isTauri ? invoke<Track[]>("get_recent", { limit }) : (await mock()).recent(),

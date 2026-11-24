@@ -3,13 +3,15 @@ use std::collections::HashSet;
 use std::sync::OnceLock;
 
 pub mod archive;
+pub mod audius;
 pub mod everyayah;
 pub mod mp3quran;
 pub mod openverse;
 pub mod quran_text;
+pub mod quranicaudio;
 pub mod radiobrowser;
 
-pub use mp3quran::Reciter;
+pub use mp3quran::{Moshaf, Reciter};
 
 /// What kind of audio a track is. Drives UI grouping and licensing rules.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -184,9 +186,8 @@ pub fn similarity(a: &str, b: &str) -> f32 {
     (2 * overlap) as f32 / (ba.len() + bb.len()) as f32
 }
 
-/// Scores a candidate string against a query. Substring and word matches beat
-/// raw bigram similarity, which is noisy for short Arabic names
-/// ("الحصري" vs "الشريم" share 40% of their bigrams).
+/// Scores a candidate string against a query. Exact, prefix and token-prefix
+/// matches beat raw bigram similarity, which is noisy for short Arabic names.
 pub fn score(query: &str, candidate: &str) -> f32 {
     let q = normalize_arabic(query);
     let c = normalize_arabic(candidate);
@@ -199,13 +200,42 @@ pub fn score(query: &str, candidate: &str) -> f32 {
     if c.starts_with(&q) {
         return 0.95;
     }
-    if c.split_whitespace().any(|w| w == q) {
+
+    let q_tokens: Vec<&str> = q.split_whitespace().collect();
+    let c_tokens: Vec<&str> = c.split_whitespace().collect();
+
+    // Every query word prefixes some candidate word, in any order:
+    // "حسن حفا" matches "حفار حسن".
+    if q_tokens.len() > 1 {
+        let matched = q_tokens
+            .iter()
+            .filter(|q_word| c_tokens.iter().any(|c_word| token_matches(c_word, q_word)))
+            .count();
+        if matched == q_tokens.len() {
+            return 0.92;
+        }
+    }
+
+    if c_tokens.iter().any(|word| *word == q) {
         return 0.9;
+    }
+    if c_tokens.iter().any(|word| token_matches(word, &q)) {
+        return 0.82;
     }
     if c.contains(&q) {
         return 0.8;
     }
     similarity(&q, &c)
+}
+
+/// Prefix match that also ignores the Arabic definite article, so "حصري"
+/// matches "الحصري".
+fn token_matches(word: &str, query: &str) -> bool {
+    if word == query || word.starts_with(query) {
+        return true;
+    }
+    word.strip_prefix("ال")
+        .is_some_and(|stripped| stripped == query || stripped.starts_with(query))
 }
 
 /// Whether a candidate is relevant enough to show for a query.
@@ -239,6 +269,27 @@ pub fn license_label(value: &str) -> String {
         }
     }
     trimmed.to_string()
+}
+
+/// Repairs legacy metadata stored as Windows-1256 bytes wrongly decoded as
+/// Latin-1. archive.org has many such titles ("ÇáÍãÏ ááå" → "الحمد لله").
+pub fn repair_mojibake(text: &str) -> String {
+    if text.chars().any(|c| ('\u{0600}'..='\u{06FF}').contains(&c)) {
+        return text.to_string();
+    }
+    let bytes: Option<Vec<u8>> = text
+        .chars()
+        .map(|c| u8::try_from(c as u32).ok())
+        .collect();
+    let Some(bytes) = bytes else {
+        return text.to_string();
+    };
+    let (decoded, _, had_errors) = encoding_rs::WINDOWS_1256.decode(&bytes);
+    if !had_errors && decoded.chars().any(|c| ('\u{0600}'..='\u{06FF}').contains(&c)) {
+        decoded.to_string()
+    } else {
+        text.to_string()
+    }
 }
 
 /// Merges provider results, dropping near-duplicate tracks while keeping the
@@ -292,6 +343,24 @@ mod tests {
         assert!(score("الحصري", "محمود خليل الحصري") > 0.75);
         assert!(!matches("الحصري", "الشريم"));
         assert!(matches("مشاري", "مشاري العفاسي"));
+    }
+
+    #[test]
+    fn partial_names_match_prefixes_and_articles() {
+        assert!(matches("حسن حفا", "حسن حفار"));
+        assert!(matches("حفار حسن", "حسن حفار"));
+        assert!(matches("حصري", "محمود خليل الحصري"));
+        assert!(matches("حفا", "حسن حفار"));
+        assert!(!matches("حفار", "محمود خليل الحصري"));
+        // Half of a two-word query is not enough.
+        assert!(!matches("محمد حسا", "الدوكالي محمد العالم"));
+    }
+
+    #[test]
+    fn repairs_legacy_arabic_metadata() {
+        assert_eq!(repair_mojibake("ÇáÍãÏ ááå"), "الحمد لله");
+        assert_eq!(repair_mojibake("سورة الفاتحة"), "سورة الفاتحة");
+        assert_eq!(repair_mojibake("Hello"), "Hello");
     }
 
     #[test]

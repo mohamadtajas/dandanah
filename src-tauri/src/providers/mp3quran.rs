@@ -21,6 +21,9 @@ pub struct Moshaf {
 pub struct Reciter {
     pub id: i64,
     pub name: String,
+    /// Latin name, when the source provides one. Used for search only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub english_name: Option<String>,
     pub letter: String,
     pub moshafs: Vec<Moshaf>,
 }
@@ -65,6 +68,7 @@ pub async fn fetch_reciters(client: &reqwest::Client, language: &str) -> Result<
         reciters.push(Reciter {
             id,
             name,
+            english_name: None,
             letter: text(raw.get("letter")),
             moshafs,
         });

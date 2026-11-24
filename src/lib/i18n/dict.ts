@@ -24,7 +24,7 @@ const ar = {
   "home.seeAll": "عرض الكل",
 
   "quran.title": "القرآن الكريم",
-  "quran.subtitle": "١١٤ سورة · أكثر من ٢٠٠ قارئ",
+  "quran.subtitle": "١١٤ سورة · أكثر من ٤٠٠ قارئ",
   "quran.searchReciter": "ابحث عن قارئ…",
   "quran.chooseReciter": "اختر قارئًا",
   "quran.rewaya": "الرواية",
@@ -79,6 +79,7 @@ const ar = {
   "search.filterAll": "الكل",
   "search.filterQuran": "قرآن",
   "search.filterRadio": "إذاعة",
+  "search.filterFree": "حرة",
 
   "explore.title": "استكشف",
   "explore.sources": "Openverse · أرشيف الإنترنت",
@@ -91,6 +92,7 @@ const ar = {
   "explore.empty": "لا نتائج — جرّب كلمة أخرى.",
   "explore.error": "تعذّر الوصول إلى المصادر الحرة.",
   "explore.loading": "جارٍ البحث في المصادر الحرة…",
+  "explore.loadingMore": "تظهر النتائج تدريجياً…",
 
   "library.title": "مكتبتي",
   "library.favorites": "المفضلة",
@@ -119,7 +121,7 @@ const ar = {
   "library.retryDownload": "إعادة التنزيل",
   "library.downloadInterrupted": "توقف التنزيل عند إغلاق التطبيق",
   "library.downloadUnavailable": "هذا المصدر لا يوفّر رابطًا قابلًا للتنزيل",
-  "library.licenseUnknown": "لا يمكن تنزيل مقطوعة بلا ترخيص معروف",
+  "library.licenseUnknown": "الترخيص غير معروف — فعّل «السماح بتنزيل ما لا يُعرف ترخيصه» من الإعدادات.",
   "library.deleteDownload": "حذف التنزيل",
   "library.local": "ملفاتي",
   "library.importFolder": "استيراد مجلد",
@@ -160,6 +162,9 @@ const ar = {
   "settings.arabic": "العربية",
   "settings.english": "English",
   "settings.playback": "التشغيل",
+  "settings.downloads": "التنزيلات",
+  "settings.allowUnknownLicense": "السماح بتنزيل ما لا يُعرف ترخيصه",
+  "settings.allowUnknownLicenseHint": "بعض عناصر الأرشيف لا تعلن ترخيصاً. عند التفعيل يمكنك تنزيلها على مسؤوليتك الشخصية.",
   "settings.defaultSpeed": "السرعة الافتراضية",
   "settings.hotkeys": "اختصارات لوحة المفاتيح",
   "settings.hotkeysHint": "تعمل حتى والنافذة غير مركّزة. استخدم Ctrl أو Alt مع المفتاح.",
@@ -200,7 +205,7 @@ const ar = {
   "common.error": "حدث خطأ",
   "common.close": "إغلاق",
   "common.min": "د",
-  "common.offline": "لا يوجد اتصال",
+  "common.offline": "لا يوجد اتصال — إن كنت تستخدم VPN مُدار مثل Cloudflare WARP فتأكد من السماح لدندنة.",
 } as const;
 
 type Dict = typeof ar;
@@ -232,7 +237,7 @@ const en: Record<Key, string> = {
   "home.seeAll": "See all",
 
   "quran.title": "The Holy Quran",
-  "quran.subtitle": "114 surahs · 200+ reciters",
+  "quran.subtitle": "114 surahs · 400+ reciters",
   "quran.searchReciter": "Search a reciter…",
   "quran.chooseReciter": "Choose a reciter",
   "quran.rewaya": "Riwayah",
@@ -287,6 +292,7 @@ const en: Record<Key, string> = {
   "search.filterAll": "All",
   "search.filterQuran": "Quran",
   "search.filterRadio": "Radio",
+  "search.filterFree": "Free",
 
   "explore.title": "Explore",
   "explore.sources": "Openverse · Internet Archive",
@@ -299,6 +305,7 @@ const en: Record<Key, string> = {
   "explore.empty": "No results — try another word.",
   "explore.error": "Could not reach the free sources.",
   "explore.loading": "Searching the free sources…",
+  "explore.loadingMore": "More results are arriving…",
 
   "library.title": "My library",
   "library.favorites": "Favorites",
@@ -327,7 +334,7 @@ const en: Record<Key, string> = {
   "library.retryDownload": "Retry download",
   "library.downloadInterrupted": "Stopped when the app closed",
   "library.downloadUnavailable": "This source has no downloadable stream",
-  "library.licenseUnknown": "A track with no known licence cannot be downloaded",
+  "library.licenseUnknown": "Unknown licence — enable “Allow downloads with unknown licence” in Settings.",
   "library.deleteDownload": "Remove download",
   "library.local": "My files",
   "library.importFolder": "Import folder",
@@ -368,6 +375,9 @@ const en: Record<Key, string> = {
   "settings.arabic": "العربية",
   "settings.english": "English",
   "settings.playback": "Playback",
+  "settings.downloads": "Downloads",
+  "settings.allowUnknownLicense": "Allow downloads with unknown licence",
+  "settings.allowUnknownLicenseHint": "Some archive items do not declare a licence. Enabling this lets you download them at your own risk.",
   "settings.defaultSpeed": "Default speed",
   "settings.hotkeys": "Global shortcuts",
   "settings.hotkeysHint": "They work even when the window is unfocused. Use Ctrl or Alt with the key.",
@@ -408,7 +418,7 @@ const en: Record<Key, string> = {
   "common.error": "Something went wrong",
   "common.close": "Close",
   "common.min": "min",
-  "common.offline": "You are offline",
+  "common.offline": "No connection — if you use a managed VPN such as Cloudflare WARP, allow Dandanah in its policy.",
 };
 
 export const dictionaries = { ar, en } as const;

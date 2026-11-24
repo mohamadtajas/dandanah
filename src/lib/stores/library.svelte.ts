@@ -3,6 +3,8 @@ import { i18n } from "$lib/i18n/index.svelte.ts";
 import { ui } from "$lib/stores/ui.svelte.ts";
 import type { DownloadRow, DownloadStatus, ImportSummary, Playlist, Track } from "$lib/types";
 
+const ALLOW_UNKNOWN_LICENSE_KEY = "dandanah.allowUnknownLicense";
+
 type ProgressEvent = {
   trackId: string;
   status: DownloadStatus;
@@ -23,8 +25,23 @@ class LibraryStore {
   downloads = $state<DownloadRow[]>([]);
   local = $state<Track[]>([]);
   loading = $state(true);
+  /** Opt-in escape hatch for sources that do not publish a licence. */
+  allowUnknownLicense = $state(false);
 
   private listening = false;
+
+  constructor() {
+    if (typeof localStorage !== "undefined") {
+      this.allowUnknownLicense = localStorage.getItem(ALLOW_UNKNOWN_LICENSE_KEY) === "1";
+    }
+  }
+
+  setAllowUnknownLicense(value: boolean) {
+    this.allowUnknownLicense = value;
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(ALLOW_UNKNOWN_LICENSE_KEY, value ? "1" : "0");
+    }
+  }
 
   async load() {
     this.loading = true;
@@ -146,11 +163,10 @@ class LibraryStore {
       ui.notify(i18n.t("library.downloadUnavailable"));
       return;
     }
-    // Only download when the licence is known — the app must never take a file
-    // offline without a clear right to keep it.
+    // Only download when the licence is known, unless the user opted in.
     const needsLicense =
       (track.kind === "music" || track.kind === "anasheed") && !track.license;
-    if (needsLicense) {
+    if (needsLicense && !this.allowUnknownLicense) {
       ui.notify(i18n.t("library.licenseUnknown"));
       return;
     }

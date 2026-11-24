@@ -40,5 +40,5 @@ jobs:
             دندنة v__VERSION__ — Quran, anasheed, radio and free audio.
 
             See the assets below to download the installer.
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false

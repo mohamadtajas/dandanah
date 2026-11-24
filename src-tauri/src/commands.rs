@@ -1,7 +1,7 @@
 use crate::db::{Database, DownloadRow, Memorization, Playlist};
 use crate::providers::{
-    archive, dedupe, everyayah, matches, mp3quran, openverse, quran_text, radiobrowser, score,
-    surah, surahs, Reciter, Surah, Track, TrackKind,
+    archive, audius, dedupe, everyayah, matches, mp3quran, openverse, quran_text, quranicaudio,
+    radiobrowser, score, surah, surahs, Reciter, Surah, Track, TrackKind,
 };
 use crate::{downloads, hotkeys, library, media};
 use parking_lot::Mutex;
@@ -9,7 +9,8 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tauri::{AppHandle, Manager, State};
+use std::time::Duration;
+use tauri::{AppHandle, Emitter, Manager, State};
 
 pub struct AppState {
     pub db: Arc<Database>,
@@ -45,7 +46,8 @@ async fn get_reciters_inner(
     state: &AppState,
     language: &str,
 ) -> anyhow::Result<Vec<Reciter>> {
-    let key = format!("reciters:{language}");
+    // v2: the cache now holds mp3quran + QuranicAudio merged.
+    let key = format!("reciters:v2:{language}");
     if let Some(cached) = state.db.cache_get(&key, RECITERS_TTL)? {
         if let Ok(list) = serde_json::from_str::<Vec<Reciter>>(&cached) {
             if !list.is_empty() {
@@ -53,23 +55,51 @@ async fn get_reciters_inner(
             }
         }
     }
-    match mp3quran::fetch_reciters(&state.http, language).await {
-        Ok(list) => {
+
+    let (mp3quran_result, quranicaudio_result) = tokio::join!(
+        mp3quran::fetch_reciters(&state.http, language),
+        quranicaudio::fetch_reciters(&state.http),
+    );
+
+    let mut list = Vec::new();
+    let mut errors: Vec<String> = Vec::new();
+    match mp3quran_result {
+        Ok(mut reciters) => list.append(&mut reciters),
+        Err(error) => {
+            eprintln!("reciters: mp3quran failed: {error:#}");
+            errors.push(format!("mp3quran: {error:#}"));
+        }
+    }
+    match quranicaudio_result {
+        Ok(mut reciters) => list.append(&mut reciters),
+        Err(error) => {
+            eprintln!("reciters: quranicaudio failed: {error:#}");
+            errors.push(format!("quranicaudio: {error:#}"));
+        }
+    }
+
+    if !list.is_empty() {
+        list.sort_by(|a, b| a.name.cmp(&b.name));
+        // Never cache a partial catalogue for a day: a transient failure would
+        // hide a whole source until the TTL expires.
+        if errors.is_empty() {
             if let Ok(json) = serde_json::to_string(&list) {
                 let _ = state.db.cache_put(&key, &json);
             }
-            Ok(list)
         }
-        Err(e) => {
-            // Offline: serve a stale copy rather than an empty screen.
-            if let Some((payload, _)) = state.db.stale_cache(&key)? {
-                if let Ok(list) = serde_json::from_str::<Vec<Reciter>>(&payload) {
-                    return Ok(list);
-                }
+        return Ok(list);
+    }
+
+    // Offline: serve a stale copy rather than an empty screen.
+    if let Some((payload, _)) = state.db.stale_cache(&key)? {
+        if let Ok(list) = serde_json::from_str::<Vec<Reciter>>(&payload) {
+            if !list.is_empty() {
+                return Ok(list);
             }
-            Err(e)
         }
     }
+
+    Err(anyhow::anyhow!(errors.join("; ")))
 }
 
 #[tauri::command]
@@ -90,7 +120,13 @@ pub async fn get_moshaf_tracks(
         .moshafs
         .iter()
         .filter(|m| moshaf_id.is_none() || Some(m.id) == moshaf_id)
-        .flat_map(|m| mp3quran::moshaf_tracks(&reciter, m))
+        .flat_map(|m| {
+            if reciter.id >= quranicaudio::ID_BASE {
+                quranicaudio::moshaf_tracks(&reciter, m)
+            } else {
+                mp3quran::moshaf_tracks(&reciter, m)
+            }
+        })
         .collect();
     Ok(tracks)
 }
@@ -297,7 +333,7 @@ pub async fn search(
     let kinds = kinds.unwrap_or_default();
     let wants = |k: &str| kinds.is_empty() || kinds.iter().any(|x| x == k);
 
-    let (reciters_res, radio_res) = tokio::join!(
+    let (reciters_res, radio_res, cc_tracks) = tokio::join!(
         async {
             if wants(TrackKind::Quran.as_str()) || wants(TrackKind::Anasheed.as_str()) {
                 get_reciters_inner(&state, "ar").await.ok()
@@ -306,11 +342,43 @@ pub async fn search(
             }
         },
         async {
-            if wants(TrackKind::Radio.as_str()) || wants(TrackKind::Music.as_str()) {
+            if wants(TrackKind::Radio.as_str()) {
                 radiobrowser::search(&state.http, &q, 20, None).await.ok()
             } else {
                 None
             }
+        },
+        async {
+            if !(kinds.is_empty() || wants(TrackKind::Music.as_str())) {
+                return Vec::new();
+            }
+            let cc = async {
+                let (openverse_result, audius_result) = tokio::join!(
+                    openverse::search(&state.http, &q, 10),
+                    audius::search(&state.http, &q, 8),
+                );
+                let mut list = Vec::new();
+                match openverse_result {
+                    Ok(mut tracks) => {
+                        eprintln!("search: openverse returned {}", tracks.len());
+                        list.append(&mut tracks);
+                    }
+                    Err(error) => eprintln!("search: openverse failed: {error}"),
+                }
+                match audius_result {
+                    Ok(mut tracks) => {
+                        eprintln!("search: audius returned {}", tracks.len());
+                        list.append(&mut tracks);
+                    }
+                    Err(error) => eprintln!("search: audius failed: {error}"),
+                }
+                list
+            };
+            // Free sources are slower than radio; never hold the whole search
+            // for more than 1.5s. Whatever arrived is merged in.
+            tokio::time::timeout(Duration::from_millis(1500), cc)
+                .await
+                .unwrap_or_default()
         }
     );
 
@@ -318,7 +386,12 @@ pub async fn search(
         .unwrap_or_default()
         .into_iter()
         .filter_map(|r| {
-            let s = score(&q, &r.name);
+            let latin = r
+                .english_name
+                .as_deref()
+                .map(|name| score(&q, name))
+                .unwrap_or(0.0);
+            let s = score(&q, &r.name).max(latin);
             (s >= 0.55).then_some((s, r))
         })
         .collect::<Vec<_>>();
@@ -340,7 +413,9 @@ pub async fn search(
         .cloned()
         .collect();
 
-    let tracks = dedupe(radio_res.unwrap_or_default());
+    let mut merged = radio_res.unwrap_or_default();
+    merged.extend(cc_tracks);
+    let tracks = dedupe(merged);
 
     Ok(SearchResults {
         reciters,
@@ -353,55 +428,177 @@ pub async fn search(
 // Creative Commons catalogue
 // ---------------------------------------------------------------------------
 
-/// Cross-provider search for free music (Openverse) and archive.org audio
-/// (anasheed and public-domain recordings). Sections are `all`, `music` or
-/// `anasheed`.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CcBatch {
+    request_id: String,
+    source: String,
+    tracks: Vec<Track>,
+    done: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
+
+const ARCHIVE_ITEM_TTL: i64 = 60 * 60 * 12;
+
+fn emit_cc(app: &AppHandle, request_id: &str, source: &str, batch: anyhow::Result<Vec<Track>>) {
+    let (tracks, error) = match batch {
+        Ok(tracks) => (tracks, None),
+        Err(error) => (Vec::new(), Some(error.to_string())),
+    };
+    if tracks.is_empty() && error.is_none() {
+        return;
+    }
+    let _ = app.emit(
+        "cc:batch",
+        CcBatch {
+            request_id: request_id.to_string(),
+            source: source.to_string(),
+            tracks,
+            done: false,
+            error,
+        },
+    );
+}
+
+/// Starts a progressive catalogue search. Results stream back as `cc:batch`
+/// events, one source (or one archive.org item) at a time, so the UI never
+/// waits for the slowest provider.
 #[tauri::command]
-pub async fn explore_cc(
+pub async fn explore_cc_stream(
+    app: AppHandle,
     state: State<'_, AppState>,
     section: Option<String>,
     query: Option<String>,
-    limit: Option<u32>,
-) -> Result<Vec<Track>, String> {
+) -> Result<String, String> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let section = section.unwrap_or_else(|| "all".into()).to_ascii_lowercase();
-    let q = query.unwrap_or_default().trim().to_string();
-    let limit = limit.unwrap_or(24).clamp(1, 60);
-    let client = &state.http;
+    let query = query.unwrap_or_default().trim().to_string();
+    let http = state.http.clone();
+    let db = state.db.clone();
+    let rid = request_id.clone();
 
-    let (music, anasheed) = tokio::join!(
-        async {
-            if section == "anasheed" {
-                return Ok(Vec::new());
-            }
-            let text = if q.is_empty() { "arabic" } else { q.as_str() };
-            let take = if section == "music" { limit.min(20) } else { (limit / 2 + 6).min(20) };
-            openverse::search(client, text, take).await
-        },
-        async {
-            if section == "music" {
-                return Ok(Vec::new());
-            }
-            let text = if q.is_empty() { "" } else { q.as_str() };
-            let items = if section == "anasheed" { 5 } else { 2 };
-            archive::search(client, text, items, TrackKind::Anasheed).await
+    tauri::async_runtime::spawn(async move {
+        let mut tasks = tokio::task::JoinSet::new();
+
+        if section != "anasheed" {
+            let app_music = app.clone();
+            let client = http.clone();
+            let request = rid.clone();
+            let text = if query.is_empty() {
+                "arabic".to_string()
+            } else {
+                query.clone()
+            };
+            tasks.spawn(async move {
+                let result = openverse::search(&client, &text, 16).await;
+                emit_cc(&app_music, &request, "openverse", result);
+            });
+
+            let app_audius = app.clone();
+            let client = http.clone();
+            let request = rid.clone();
+            let text = query.clone();
+            tasks.spawn(async move {
+                let result = audius::search(&client, &text, 10).await;
+                emit_cc(&app_audius, &request, "audius", result);
+            });
         }
-    );
 
-    let mut tracks = Vec::new();
-    let mut failures = Vec::new();
-    match music {
-        Ok(mut list) => tracks.append(&mut list),
-        Err(error) => failures.push(format!("openverse: {error}")),
-    }
-    match anasheed {
-        Ok(mut list) => tracks.append(&mut list),
-        Err(error) => failures.push(format!("archive: {error}")),
-    }
+        let app_archive = app.clone();
+        let client = http.clone();
+        let cache = db.clone();
+        let request = rid.clone();
+        let user_query = query.clone();
+        let archive_section = section.clone();
+        tasks.spawn(async move {
+            let (kind, archive_query, items) = match archive_section.as_str() {
+                "music" => (
+                    TrackKind::Music,
+                    if user_query.is_empty() {
+                        "subject:(music) AND licenseurl:(*)".to_string()
+                    } else {
+                        format!("({user_query}) AND subject:(music) AND licenseurl:(*)")
+                    },
+                    2,
+                ),
+                "anasheed" => (
+                    TrackKind::Anasheed,
+                    if user_query.is_empty() {
+                        "subject:(anasheed)".to_string()
+                    } else {
+                        user_query.clone()
+                    },
+                    6,
+                ),
+                _ => (
+                    TrackKind::Anasheed,
+                    if user_query.is_empty() {
+                        "subject:(anasheed)".to_string()
+                    } else {
+                        user_query.clone()
+                    },
+                    3,
+                ),
+            };
 
-    if tracks.is_empty() && !failures.is_empty() {
-        return Err(failures.join("; "));
-    }
-    Ok(dedupe(tracks))
+            let items = match archive::search_items(&client, &archive_query, items).await {
+                Ok(items) => items,
+                Err(error) => {
+                    emit_cc(&app_archive, &request, "archive", Err(error));
+                    return;
+                }
+            };
+
+            for item in items {
+                let cache_key = format!("archive:item:{}", item.identifier);
+                let cached = cache
+                    .cache_get(&cache_key, ARCHIVE_ITEM_TTL)
+                    .ok()
+                    .flatten()
+                    .and_then(|json| serde_json::from_str::<Vec<Track>>(&json).ok());
+
+                let tracks = match cached {
+                    Some(tracks) => tracks,
+                    None => {
+                        let fetched = tokio::time::timeout(
+                            Duration::from_secs(12),
+                            archive::item_tracks(&client, &item, kind),
+                        )
+                        .await;
+                        match fetched {
+                            Ok(Ok(tracks)) => {
+                                if let Ok(json) = serde_json::to_string(&tracks) {
+                                    let _ = cache.cache_put(&cache_key, &json);
+                                }
+                                tracks
+                            }
+                            Ok(Err(error)) => {
+                                emit_cc(&app_archive, &request, "archive", Err(error));
+                                continue;
+                            }
+                            Err(_) => continue,
+                        }
+                    }
+                };
+                emit_cc(&app_archive, &request, "archive", Ok(tracks));
+            }
+        });
+
+        while tasks.join_next().await.is_some() {}
+        let _ = app.emit(
+            "cc:batch",
+            CcBatch {
+                request_id: rid,
+                source: "done".into(),
+                tracks: Vec::new(),
+                done: true,
+                error: None,
+            },
+        );
+    });
+
+    Ok(request_id)
 }
 
 // ---------------------------------------------------------------------------
@@ -732,7 +929,9 @@ pub fn app_info() -> AppInfo {
             radiobrowser::PROVIDER,
             everyayah::PROVIDER,
             openverse::PROVIDER,
+            audius::PROVIDER,
             archive::PROVIDER,
+            quranicaudio::PROVIDER,
         ],
         countries: radiobrowser::ARAB_COUNTRIES.to_vec(),
     }
