@@ -13,12 +13,16 @@ import type {
   HijriDate,
   HotkeyMap,
   ImportSummary,
+  Juz,
   Memorization,
   Playlist,
   PrayerDay,
   PrayerLog,
   PrayerStreak,
   QiblaInfo,
+  QuranBookmark,
+  QuranPage,
+  ReaderPosition,
   Reciter,
   SearchResults,
   Surah,
@@ -1201,6 +1205,41 @@ const downloadsStore = new Map<string, DownloadRow>();
 const prayerLogStore = new Map<string, PrayerLog>();
 const adhkarProgressStore = new Map<string, Map<string, number>>();
 const adhkarDayStore = new Map<string, AdhkarDay>();
+const quranBookmarkStore = new Map<string, QuranBookmark>();
+let readerPositionStore: ReaderPosition | null = null;
+
+const JUZS: Juz[] = [
+  { number: 1, surah: 1, ayah: 1, ayahs: 148 },
+  { number: 2, surah: 2, ayah: 142, ayahs: 111 },
+  { number: 3, surah: 2, ayah: 253, ayahs: 126 },
+  { number: 4, surah: 3, ayah: 93, ayahs: 131 },
+  { number: 5, surah: 4, ayah: 24, ayahs: 124 },
+  { number: 6, surah: 4, ayah: 148, ayahs: 110 },
+  { number: 7, surah: 5, ayah: 82, ayahs: 149 },
+  { number: 8, surah: 6, ayah: 111, ayahs: 142 },
+  { number: 9, surah: 7, ayah: 88, ayahs: 159 },
+  { number: 10, surah: 8, ayah: 41, ayahs: 127 },
+  { number: 11, surah: 9, ayah: 93, ayahs: 151 },
+  { number: 12, surah: 11, ayah: 6, ayahs: 170 },
+  { number: 13, surah: 12, ayah: 53, ayahs: 154 },
+  { number: 14, surah: 15, ayah: 1, ayahs: 227 },
+  { number: 15, surah: 17, ayah: 1, ayahs: 185 },
+  { number: 16, surah: 18, ayah: 75, ayahs: 269 },
+  { number: 17, surah: 21, ayah: 1, ayahs: 190 },
+  { number: 18, surah: 23, ayah: 1, ayahs: 202 },
+  { number: 19, surah: 25, ayah: 21, ayahs: 339 },
+  { number: 20, surah: 27, ayah: 56, ayahs: 171 },
+  { number: 21, surah: 29, ayah: 46, ayahs: 178 },
+  { number: 22, surah: 33, ayah: 31, ayahs: 169 },
+  { number: 23, surah: 36, ayah: 28, ayahs: 357 },
+  { number: 24, surah: 39, ayah: 32, ayahs: 175 },
+  { number: 25, surah: 41, ayah: 47, ayahs: 246 },
+  { number: 26, surah: 46, ayah: 1, ayahs: 195 },
+  { number: 27, surah: 51, ayah: 31, ayahs: 399 },
+  { number: 28, surah: 58, ayah: 1, ayahs: 137 },
+  { number: 29, surah: 67, ayah: 1, ayahs: 431 },
+  { number: 30, surah: 78, ayah: 1, ayahs: 564 },
+];
 
 function todayKey(): string {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -1431,11 +1470,57 @@ export function mockApi() {
           : Array.from({ length: count }, () => "نص الآية غير متاح في وضع المعاينة داخل المتصفح.");
       return text.map((t, i) => ({
         number: i + 1,
+        surah: surahNumber,
         text: t,
         juz: 1,
         page: 1,
+        bismillah:
+          i === 0 && surahNumber !== 1 && surahNumber !== 9
+            ? "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+            : undefined,
         sajda: false,
       }));
+    },
+    async juzAyahs(juz: number, _translation = false): Promise<Ayah[]> {
+      const entry = JUZS.find((item) => item.number === juz);
+      if (!entry) return [];
+      const ayahs = await this.surahText(entry.surah);
+      return ayahs.filter((ayah) => ayah.number >= entry.ayah);
+    },
+    async juzs(): Promise<Juz[]> {
+      return JUZS;
+    },
+    async quranPages(): Promise<QuranPage[]> {
+      return [
+        { number: 1, surah: 1, ayah: 1 },
+        { number: 2, surah: 2, ayah: 1 },
+        { number: 604, surah: 112, ayah: 1 },
+      ];
+    },
+    async dailyAyah(_date?: string): Promise<Ayah> {
+      const ayahs = await this.surahText(1);
+      return ayahs[0];
+    },
+    async quranBookmarks(): Promise<QuranBookmark[]> {
+      return [...quranBookmarkStore.values()].sort((a, b) => b.createdAt - a.createdAt);
+    },
+    async addQuranBookmark(surah: number, ayah: number): Promise<QuranBookmark> {
+      const key = `${surah}:${ayah}`;
+      const existing = quranBookmarkStore.get(key);
+      if (existing) return existing;
+      const bookmark = { surah, ayah, createdAt: Date.now() };
+      quranBookmarkStore.set(key, bookmark);
+      return bookmark;
+    },
+    async removeQuranBookmark(surah: number, ayah: number) {
+      quranBookmarkStore.delete(`${surah}:${ayah}`);
+    },
+    async readerPosition(): Promise<ReaderPosition | null> {
+      return readerPositionStore;
+    },
+    async saveReaderPosition(surah: number, ayah: number): Promise<ReaderPosition> {
+      readerPositionStore = { surah, ayah, updatedAt: Date.now() };
+      return readerPositionStore;
     },
     async memorized(surahNumber: number) {
       return memorized.get(surahNumber) ?? [];

@@ -6,6 +6,7 @@
   import Home from "$lib/views/Home.svelte";
   import Worship from "$lib/views/Worship.svelte";
   import Adhkar from "$lib/views/Adhkar.svelte";
+  import Reader from "$lib/views/Reader.svelte";
   import Quran from "$lib/views/Quran.svelte";
   import Explore from "$lib/views/Explore.svelte";
   import Radio from "$lib/views/Radio.svelte";
@@ -125,6 +126,8 @@
         <Worship />
       {:else if nav.view === "adhkar"}
         <Adhkar />
+      {:else if nav.view === "reader"}
+        <Reader />
       {:else if nav.view === "quran"}
         <Quran />
       {:else if nav.view === "explore"}

@@ -5,6 +5,18 @@
 
   const sources = [
     {
+      name: "Tanzil Quran Text",
+      url: "https://tanzil.net",
+      what: {
+        ar: "النص القرآني العثماني وبيانات السور والأجزاء",
+        en: "Uthmani Quran text and surah/juz metadata",
+      },
+      license: {
+        ar: "CC BY 3.0 — © Tanzil Project",
+        en: "CC BY 3.0 — © Tanzil Project",
+      },
+    },
+    {
       name: "mp3quran.net",
       url: "https://mp3quran.net",
       what: { ar: "تلاوات القرآن الكريم وأكثر من ٢٠٠ قارئ", en: "Quran recitations from 200+ reciters" },

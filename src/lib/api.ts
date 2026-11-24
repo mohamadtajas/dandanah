@@ -10,10 +10,14 @@ import type {
   HijriDate,
   HotkeyMap,
   ImportSummary,
+  Juz,
   Memorization,
   NowPlaying,
   Playlist,
   PrayerDay,
+  QuranBookmark,
+  QuranPage,
+  ReaderPosition,
   PrayerLog,
   PrayerStreak,
   QiblaInfo,
@@ -65,6 +69,45 @@ export const api = {
     isTauri
       ? invoke<Ayah[]>("get_surah_text", { surahNumber, translation })
       : (await mock()).surahText(surahNumber, translation),
+
+  juzAyahs: async (juz: number, translation = false): Promise<Ayah[]> =>
+    isTauri
+      ? invoke<Ayah[]>("get_juz_ayahs", { juz, translation })
+      : (await mock()).juzAyahs(juz, translation),
+
+  juzs: async (): Promise<Juz[]> =>
+    isTauri ? invoke<Juz[]>("get_juzs") : (await mock()).juzs(),
+
+  quranPages: async (): Promise<QuranPage[]> =>
+    isTauri ? invoke<QuranPage[]>("get_quran_pages") : (await mock()).quranPages(),
+
+  dailyAyah: async (date?: string): Promise<Ayah> =>
+    isTauri ? invoke<Ayah>("get_daily_ayah", { date }) : (await mock()).dailyAyah(date),
+
+  quranBookmarks: async (): Promise<QuranBookmark[]> =>
+    isTauri
+      ? invoke<QuranBookmark[]>("get_quran_bookmarks")
+      : (await mock()).quranBookmarks(),
+
+  addQuranBookmark: async (surah: number, ayah: number): Promise<QuranBookmark> => {
+    if (!isTauri) return (await mock()).addQuranBookmark(surah, ayah);
+    return invoke<QuranBookmark>("add_quran_bookmark", { surah, ayah });
+  },
+
+  removeQuranBookmark: async (surah: number, ayah: number): Promise<void> => {
+    if (!isTauri) return (await mock()).removeQuranBookmark(surah, ayah);
+    await invoke<void>("remove_quran_bookmark", { surah, ayah });
+  },
+
+  readerPosition: async (): Promise<ReaderPosition | null> =>
+    isTauri
+      ? invoke<ReaderPosition | null>("get_reader_position")
+      : (await mock()).readerPosition(),
+
+  saveReaderPosition: async (surah: number, ayah: number): Promise<ReaderPosition> => {
+    if (!isTauri) return (await mock()).saveReaderPosition(surah, ayah);
+    return invoke<ReaderPosition>("save_reader_position", { surah, ayah });
+  },
 
   memorized: async (surahNumber: number): Promise<number[]> =>
     isTauri

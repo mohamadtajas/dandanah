@@ -7,6 +7,7 @@ mod library;
 mod media;
 mod migrate;
 mod providers;
+mod quran;
 mod worship;
 
 use commands::AppState;
@@ -75,6 +76,15 @@ pub fn run() {
             commands::get_ayah_reciters,
             commands::get_ayah_tracks,
             commands::get_surah_text,
+            commands::get_juz_ayahs,
+            commands::get_juzs,
+            commands::get_quran_pages,
+            commands::get_daily_ayah,
+            commands::get_quran_bookmarks,
+            commands::add_quran_bookmark,
+            commands::remove_quran_bookmark,
+            commands::get_reader_position,
+            commands::save_reader_position,
             commands::get_memorized,
             commands::save_memorized,
             commands::get_memorization,

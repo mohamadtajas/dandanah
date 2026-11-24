@@ -4,6 +4,7 @@ use crate::worship::PrayerLog;
 use anyhow::{Context, Result};
 use parking_lot::Mutex;
 use rusqlite::{params, Connection, OptionalExtension};
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 /// Schema migrations, applied in order and tracked with `PRAGMA user_version`.
@@ -138,6 +139,22 @@ const MIGRATIONS: &[&str] = &[
         updated_at INTEGER NOT NULL
     );
     "#,
+    // --- v6 : Quran reader bookmarks and last position ----------------------
+    r#"
+    CREATE TABLE IF NOT EXISTS quran_bookmarks (
+        surah      INTEGER NOT NULL,
+        ayah       INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (surah, ayah)
+    );
+
+    CREATE TABLE IF NOT EXISTS reader_state (
+        id         INTEGER PRIMARY KEY CHECK (id = 1),
+        surah      INTEGER NOT NULL,
+        ayah       INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+    );
+    "#,
 ];
 
 /// Memorisation state for one surah. Ayah numbers are 1-based.
@@ -181,6 +198,22 @@ pub struct DownloadRow {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     pub created_at: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QuranBookmark {
+    pub surah: u16,
+    pub ayah: u16,
+    pub created_at: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReaderPosition {
+    pub surah: u16,
+    pub ayah: u16,
+    pub updated_at: i64,
 }
 
 pub struct Database {
@@ -573,6 +606,99 @@ impl Database {
             )?;
         }
         self.adhkar_day(date)
+    }
+
+    // --- Quran reader bookmarks and position ------------------------------
+
+    pub fn quran_bookmarks(&self) -> Result<Vec<QuranBookmark>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn.prepare(
+            "SELECT surah, ayah, created_at FROM quran_bookmarks
+             ORDER BY created_at DESC, surah, ayah",
+        )?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok(QuranBookmark {
+                    surah: r.get(0)?,
+                    ayah: r.get(1)?,
+                    created_at: r.get(2)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
+    pub fn add_quran_bookmark(&self, surah: u16, ayah: u16) -> Result<QuranBookmark> {
+        {
+            let conn = self.conn.lock();
+            conn.execute(
+                "INSERT INTO quran_bookmarks(surah, ayah, created_at)
+                 VALUES(?1, ?2, ?3)
+                 ON CONFLICT(surah, ayah) DO NOTHING",
+                params![surah, ayah, now()],
+            )?;
+        }
+        let created_at = {
+            let conn = self.conn.lock();
+            conn.query_row(
+                "SELECT created_at FROM quran_bookmarks WHERE surah = ?1 AND ayah = ?2",
+                params![surah, ayah],
+                |r| r.get(0),
+            )?
+        };
+        Ok(QuranBookmark {
+            surah,
+            ayah,
+            created_at,
+        })
+    }
+
+    pub fn remove_quran_bookmark(&self, surah: u16, ayah: u16) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "DELETE FROM quran_bookmarks WHERE surah = ?1 AND ayah = ?2",
+            params![surah, ayah],
+        )?;
+        Ok(())
+    }
+
+    pub fn reader_position(&self) -> Result<Option<ReaderPosition>> {
+        let conn = self.conn.lock();
+        let position = conn
+            .query_row(
+                "SELECT surah, ayah, updated_at FROM reader_state WHERE id = 1",
+                [],
+                |r| {
+                    Ok(ReaderPosition {
+                        surah: r.get(0)?,
+                        ayah: r.get(1)?,
+                        updated_at: r.get(2)?,
+                    })
+                },
+            )
+            .optional()?;
+        Ok(position)
+    }
+
+    pub fn save_reader_position(&self, surah: u16, ayah: u16) -> Result<ReaderPosition> {
+        let updated_at = now();
+        {
+            let conn = self.conn.lock();
+            conn.execute(
+                "INSERT INTO reader_state(id, surah, ayah, updated_at)
+                 VALUES(1, ?1, ?2, ?3)
+                 ON CONFLICT(id) DO UPDATE SET
+                    surah      = excluded.surah,
+                    ayah       = excluded.ayah,
+                    updated_at = excluded.updated_at",
+                params![surah, ayah, updated_at],
+            )?;
+        }
+        Ok(ReaderPosition {
+            surah,
+            ayah,
+            updated_at,
+        })
     }
 
     // --- favourites --------------------------------------------------------
@@ -1304,6 +1430,35 @@ mod tests {
         let reopened = Database::open(&dir.join("test.db")).unwrap();
         let streak = compute_adhkar_streak(&reopened.adhkar_logs().unwrap(), today);
         assert_eq!(streak.current, 3);
+        drop(reopened);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn quran_bookmarks_and_reader_position_round_trip() {
+        let (dir, db) = temp_db();
+        assert!(db.quran_bookmarks().unwrap().is_empty());
+        assert!(db.reader_position().unwrap().is_none());
+
+        let bookmark = db.add_quran_bookmark(2, 255).unwrap();
+        assert_eq!((bookmark.surah, bookmark.ayah), (2, 255));
+        db.add_quran_bookmark(2, 255).unwrap();
+        assert_eq!(db.quran_bookmarks().unwrap().len(), 1, "no duplicates");
+        db.add_quran_bookmark(18, 10).unwrap();
+        assert_eq!(db.quran_bookmarks().unwrap().len(), 2);
+
+        db.remove_quran_bookmark(2, 255).unwrap();
+        assert_eq!(db.quran_bookmarks().unwrap().len(), 1);
+
+        let position = db.save_reader_position(18, 10).unwrap();
+        assert_eq!((position.surah, position.ayah), (18, 10));
+        db.save_reader_position(36, 1).unwrap();
+        assert_eq!(db.reader_position().unwrap().unwrap().surah, 36);
+
+        drop(db);
+        let reopened = Database::open(&dir.join("test.db")).unwrap();
+        assert_eq!(reopened.quran_bookmarks().unwrap()[0].surah, 18);
+        assert_eq!(reopened.reader_position().unwrap().unwrap().ayah, 1);
         drop(reopened);
         let _ = std::fs::remove_dir_all(&dir);
     }

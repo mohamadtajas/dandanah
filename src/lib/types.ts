@@ -63,11 +63,38 @@ export interface AyahReciter {
 
 export interface Ayah {
   number: number;
+  surah?: number;
   text: string;
   translation?: string;
   juz?: number;
   page?: number;
+  bismillah?: string;
   sajda?: boolean;
+}
+
+export interface Juz {
+  number: number;
+  surah: number;
+  ayah: number;
+  ayahs: number;
+}
+
+export interface QuranPage {
+  number: number;
+  surah: number;
+  ayah: number;
+}
+
+export interface QuranBookmark {
+  surah: number;
+  ayah: number;
+  createdAt: number;
+}
+
+export interface ReaderPosition {
+  surah: number;
+  ayah: number;
+  updatedAt: number;
 }
 
 export interface Memorization {
@@ -275,6 +302,7 @@ export type View =
   | "home"
   | "worship"
   | "adhkar"
+  | "reader"
   | "search"
   | "quran"
   | "explore"

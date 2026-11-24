@@ -1,4 +1,7 @@
-use crate::db::{Database, DownloadRow, Memorization, Playlist};
+use crate::db::{
+    Database, DownloadRow, Memorization, Playlist, QuranBookmark, ReaderPosition,
+};
+use crate::quran::{self, Juz, Page};
 use crate::providers::{
     archive, audius, dedupe, everyayah, matches, mp3quran, openverse, quran_text, quranicaudio,
     radiobrowser, score, surah, surahs, Reciter, Surah, Track, TrackKind,
@@ -174,43 +177,169 @@ pub fn get_ayah_tracks(surah_number: u16, reciter_id: String) -> Result<Vec<Trac
     Ok(everyayah::ayah_tracks(surah_number, reciter.id, reciter.name))
 }
 
+/// Sahih International for one surah, cached. `None` keeps the Arabic usable
+/// offline when the translation cannot be fetched.
+async fn translation_for(state: &AppState, surah: u16) -> Option<Vec<String>> {
+    let key = format!("quran-translation:v1:{surah}");
+    if let Ok(Some(cached)) = state.db.cache_get(&key, TEXT_TTL) {
+        if let Ok(list) = serde_json::from_str::<Vec<String>>(&cached) {
+            if !list.is_empty() {
+                return Some(list);
+            }
+        }
+    }
+    match quran_text::fetch_translation(&state.http, surah).await {
+        Ok(list) if !list.is_empty() => {
+            if let Ok(json) = serde_json::to_string(&list) {
+                let _ = state.db.cache_put(&key, &json);
+            }
+            Some(list)
+        }
+        _ => state
+            .db
+            .stale_cache(&key)
+            .ok()
+            .flatten()
+            .and_then(|(payload, _)| serde_json::from_str::<Vec<String>>(&payload).ok()),
+    }
+}
+
+fn merge_translations(ayahs: &mut [quran_text::Ayah], translations: &[String]) {
+    for ayah in ayahs {
+        if let Some(text) = translations.get(ayah.number as usize - 1) {
+            ayah.translation = Some(text.clone());
+        }
+    }
+}
+
 #[tauri::command]
 pub async fn get_surah_text(
     state: State<'_, AppState>,
     surah_number: u16,
     translation: Option<bool>,
 ) -> Result<Vec<quran_text::Ayah>, String> {
-    let translation = translation.unwrap_or(false);
-    let key = format!("text:{surah_number}:{}", if translation { "en" } else { "ar" });
-
-    if let Some(cached) = state
-        .db
-        .cache_get(&key, TEXT_TTL)
-        .map_err(|e| e.to_string())?
-    {
-        if let Ok(ayahs) = serde_json::from_str::<Vec<quran_text::Ayah>>(&cached) {
-            if !ayahs.is_empty() {
-                return Ok(ayahs);
-            }
+    let mut ayahs = quran::surah_ayahs(surah_number);
+    if ayahs.is_empty() {
+        return Err(format!("surah {surah_number} not found"));
+    }
+    if translation.unwrap_or(false) {
+        if let Some(list) = translation_for(&state, surah_number).await {
+            merge_translations(&mut ayahs, &list);
         }
     }
+    Ok(ayahs)
+}
 
-    match quran_text::fetch_surah(&state.http, surah_number, translation).await {
-        Ok(ayahs) => {
-            if let Ok(json) = serde_json::to_string(&ayahs) {
-                let _ = state.db.cache_put(&key, &json);
-            }
-            Ok(ayahs)
-        }
-        Err(e) => {
-            if let Some((payload, _)) = state.db.stale_cache(&key).map_err(|e| e.to_string())? {
-                if let Ok(ayahs) = serde_json::from_str::<Vec<quran_text::Ayah>>(&payload) {
-                    return Ok(ayahs);
+#[tauri::command]
+pub async fn get_juz_ayahs(
+    state: State<'_, AppState>,
+    juz: u16,
+    translation: Option<bool>,
+) -> Result<Vec<quran_text::Ayah>, String> {
+    let mut ayahs = quran::juz_ayahs(juz);
+    if ayahs.is_empty() {
+        return Err(format!("juz {juz} not found"));
+    }
+    if translation.unwrap_or(false) {
+        let mut surahs: Vec<u16> = ayahs.iter().map(|ayah| ayah.surah).collect();
+        surahs.sort_unstable();
+        surahs.dedup();
+        for surah in surahs {
+            if let Some(list) = translation_for(&state, surah).await {
+                for ayah in ayahs.iter_mut().filter(|ayah| ayah.surah == surah) {
+                    if let Some(text) = list.get(ayah.number as usize - 1) {
+                        ayah.translation = Some(text.clone());
+                    }
                 }
             }
-            Err(e.to_string())
         }
     }
+    Ok(ayahs)
+}
+
+#[tauri::command]
+pub fn get_juzs() -> Vec<Juz> {
+    quran::juzs().to_vec()
+}
+
+#[tauri::command]
+pub fn get_quran_pages() -> Vec<Page> {
+    quran::pages().to_vec()
+}
+
+#[tauri::command]
+pub fn get_daily_ayah(
+    state: State<'_, AppState>,
+    date: Option<String>,
+) -> Result<quran_text::Ayah, String> {
+    let date = match date {
+        Some(raw) => chrono::NaiveDate::parse_from_str(&raw, "%Y-%m-%d")
+            .map_err(|error| format!("invalid date {raw}: {error}"))?,
+        None => {
+            let settings = worship::load_settings(&state.db);
+            local_today(&settings)
+        }
+    };
+    quran::daily(date).ok_or_else(|| "no daily ayah available".to_string())
+}
+
+fn validate_ayah_ref(surah: u16, ayah: u16) -> Result<(), String> {
+    let meta = quran::surah_meta(surah)
+        .ok_or_else(|| format!("surah {surah} not found"))?;
+    if ayah == 0 || ayah > meta.ayahs {
+        return Err(format!("ayah {ayah} is outside surah {surah}"));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_quran_bookmarks(state: State<'_, AppState>) -> Result<Vec<QuranBookmark>, String> {
+    state.db.quran_bookmarks().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn add_quran_bookmark(
+    state: State<'_, AppState>,
+    surah: u16,
+    ayah: u16,
+) -> Result<QuranBookmark, String> {
+    validate_ayah_ref(surah, ayah)?;
+    state
+        .db
+        .add_quran_bookmark(surah, ayah)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn remove_quran_bookmark(
+    state: State<'_, AppState>,
+    surah: u16,
+    ayah: u16,
+) -> Result<(), String> {
+    state
+        .db
+        .remove_quran_bookmark(surah, ayah)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_reader_position(
+    state: State<'_, AppState>,
+) -> Result<Option<ReaderPosition>, String> {
+    state.db.reader_position().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn save_reader_position(
+    state: State<'_, AppState>,
+    surah: u16,
+    ayah: u16,
+) -> Result<ReaderPosition, String> {
+    validate_ayah_ref(surah, ayah)?;
+    state
+        .db
+        .save_reader_position(surah, ayah)
+        .map_err(|e| e.to_string())
 }
 
 // ---------------------------------------------------------------------------
