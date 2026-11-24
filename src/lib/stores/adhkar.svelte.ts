@@ -1,5 +1,6 @@
 import { api } from "$lib/api";
 import type { AdhkarCategory, AdhkarData, AdhkarDay, AdhkarStreak } from "$lib/types";
+import { worship } from "$lib/stores/worship.svelte.ts";
 import raw from "$lib/data/adhkar.json";
 
 const data = raw as AdhkarData;
@@ -30,7 +31,6 @@ class AdhkarStore {
   #timer: ReturnType<typeof setInterval> | null = null;
   #advanceTimer: ReturnType<typeof setTimeout> | null = null;
   #loadGeneration = 0;
-  #checking = false;
   #cleanups: (() => void)[] = [];
 
   async load() {
@@ -89,12 +89,13 @@ class AdhkarStore {
 
   start() {
     if (this.#timer !== null) return;
-    // Ask the backend for its current local date every 15s; this avoids
-    // depending on the settings store being loaded and keeps the rollover tight.
-    this.#timer = setInterval(() => void this.#checkRollover(), 15000);
+    // A local 1s check keeps the midnight rollover tight without polling the
+    // database. The initial date still comes from the backend, so this only
+    // detects a change after settings are loaded.
+    this.#timer = setInterval(() => this.#checkRollover(), 1000);
     if (typeof document !== "undefined") {
       const onVisible = () => {
-        if (!document.hidden) void this.#checkRollover();
+        if (!document.hidden) this.#checkRollover();
       };
       document.addEventListener("visibilitychange", onVisible);
       window.addEventListener("focus", onVisible);
@@ -112,17 +113,9 @@ class AdhkarStore {
     for (const cleanup of this.#cleanups.splice(0)) cleanup();
   }
 
-  async #checkRollover() {
-    if (this.#checking || !this.date) return;
-    this.#checking = true;
-    try {
-      const day = await api.adhkarDay();
-      if (day.date !== this.date) await this.load();
-    } catch {
-      // Keep the current day; the next tick retries.
-    } finally {
-      this.#checking = false;
-    }
+  #checkRollover() {
+    if (!this.date || !worship.settings) return;
+    if (worship.localDate() !== this.date) void this.load();
   }
 
   remainingFor(category: AdhkarCategory, itemId: string): number {
@@ -222,6 +215,11 @@ class AdhkarStore {
     const category = this.activeCategory;
     const item = this.activeItem;
     if (!category || !item || !this.date || this.completed) return;
+    // If the local day just rolled over, never credit the tap to yesterday.
+    if (worship.settings && worship.localDate() !== this.date) {
+      void this.load();
+      return;
+    }
 
     const date = this.date;
     this.#clearAdvance();
