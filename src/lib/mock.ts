@@ -1,7 +1,17 @@
-// Generated development fixture — used only when the UI runs in a plain browser.
-// Regenerate with: node scripts/make-mock.mjs
+// Development fixture — used only when the UI runs in a plain browser (`npm run dev`).
+// The desktop app talks to the Rust providers instead. Arabic text here is a
+// sample; only Al-Fatiha is real so the follow-along layout can be previewed.
 
-import type { AppInfo, Reciter, SearchResults, Surah, Track } from "./types";
+import type {
+  AppInfo,
+  Ayah,
+  AyahReciter,
+  Memorization,
+  Reciter,
+  SearchResults,
+  Surah,
+  Track,
+} from "./types";
 
 const SURAHS: Surah[] = [{"number":1,"name":"سُورَةُ ٱلْفَاتِحَةِ","englishName":"Al-Faatiha","meaning":"The Opening","ayahs":7,"revelation":"makkah"},{"number":2,"name":"سُورَةُ البَقَرَةِ","englishName":"Al-Baqara","meaning":"The Cow","ayahs":286,"revelation":"madinah"},{"number":3,"name":"سُورَةُ آلِ عِمۡرَانَ","englishName":"Aal-i-Imraan","meaning":"The Family of Imraan","ayahs":200,"revelation":"madinah"},{"number":4,"name":"سُورَةُ النِّسَاءِ","englishName":"An-Nisaa","meaning":"The Women","ayahs":176,"revelation":"madinah"},{"number":5,"name":"سُورَةُ المَائـِدَةِ","englishName":"Al-Maaida","meaning":"The Table","ayahs":120,"revelation":"madinah"},{"number":6,"name":"سُورَةُ الأَنۡعَامِ","englishName":"Al-An'aam","meaning":"The Cattle","ayahs":165,"revelation":"makkah"},{"number":7,"name":"سُورَةُ الأَعۡرَافِ","englishName":"Al-A'raaf","meaning":"The Heights","ayahs":206,"revelation":"makkah"},{"number":8,"name":"سُورَةُ الأَنفَالِ","englishName":"Al-Anfaal","meaning":"The Spoils of War","ayahs":75,"revelation":"madinah"},{"number":9,"name":"سُورَةُ التَّوۡبَةِ","englishName":"At-Tawba","meaning":"The Repentance","ayahs":129,"revelation":"madinah"},{"number":10,"name":"سُورَةُ يُونُسَ","englishName":"Yunus","meaning":"Jonas","ayahs":109,"revelation":"makkah"},{"number":11,"name":"سُورَةُ هُودٍ","englishName":"Hud","meaning":"Hud","ayahs":123,"revelation":"makkah"},{"number":12,"name":"سُورَةُ يُوسُفَ","englishName":"Yusuf","meaning":"Joseph","ayahs":111,"revelation":"makkah"},{"number":13,"name":"سُورَةُ الرَّعۡدِ","englishName":"Ar-Ra'd","meaning":"The Thunder","ayahs":43,"revelation":"madinah"},{"number":14,"name":"سُورَةُ إِبۡرَاهِيمَ","englishName":"Ibrahim","meaning":"Abraham","ayahs":52,"revelation":"makkah"},{"number":15,"name":"سُورَةُ الحِجۡرِ","englishName":"Al-Hijr","meaning":"The Rock","ayahs":99,"revelation":"makkah"},{"number":16,"name":"سُورَةُ النَّحۡلِ","englishName":"An-Nahl","meaning":"The Bee","ayahs":128,"revelation":"makkah"},{"number":17,"name":"سُورَةُ الإِسۡرَاءِ","englishName":"Al-Israa","meaning":"The Night Journey","ayahs":111,"revelation":"makkah"},{"number":18,"name":"سُورَةُ الكَهۡفِ","englishName":"Al-Kahf","meaning":"The Cave","ayahs":110,"revelation":"makkah"},{"number":19,"name":"سُورَةُ مَرۡيَمَ","englishName":"Maryam","meaning":"Mary","ayahs":98,"revelation":"makkah"},{"number":20,"name":"سُورَةُ طه","englishName":"Taa-Haa","meaning":"Taa-Haa","ayahs":135,"revelation":"makkah"},{"number":21,"name":"سُورَةُ الأَنبِيَاءِ","englishName":"Al-Anbiyaa","meaning":"The Prophets","ayahs":112,"revelation":"makkah"},{"number":22,"name":"سُورَةُ الحَجِّ","englishName":"Al-Hajj","meaning":"The Pilgrimage","ayahs":78,"revelation":"madinah"},{"number":23,"name":"سُورَةُ المُؤۡمِنُونَ","englishName":"Al-Muminoon","meaning":"The Believers","ayahs":118,"revelation":"makkah"},{"number":24,"name":"سُورَةُ النُّورِ","englishName":"An-Noor","meaning":"The Light","ayahs":64,"revelation":"madinah"},{"number":25,"name":"سُورَةُ الفُرۡقَانِ","englishName":"Al-Furqaan","meaning":"The Criterion","ayahs":77,"revelation":"makkah"},{"number":26,"name":"سُورَةُ الشُّعَرَاءِ","englishName":"Ash-Shu'araa","meaning":"The Poets","ayahs":227,"revelation":"makkah"},{"number":27,"name":"سُورَةُ النَّمۡلِ","englishName":"An-Naml","meaning":"The Ant","ayahs":93,"revelation":"makkah"},{"number":28,"name":"سُورَةُ القَصَصِ","englishName":"Al-Qasas","meaning":"The Stories","ayahs":88,"revelation":"makkah"},{"number":29,"name":"سُورَةُ العَنكَبُوتِ","englishName":"Al-Ankaboot","meaning":"The Spider","ayahs":69,"revelation":"makkah"},{"number":30,"name":"سُورَةُ الرُّومِ","englishName":"Ar-Room","meaning":"The Romans","ayahs":60,"revelation":"makkah"},{"number":31,"name":"سُورَةُ لُقۡمَانَ","englishName":"Luqman","meaning":"Luqman","ayahs":34,"revelation":"makkah"},{"number":32,"name":"سُورَةُ السَّجۡدَةِ","englishName":"As-Sajda","meaning":"The Prostration","ayahs":30,"revelation":"makkah"},{"number":33,"name":"سُورَةُ الأَحۡزَابِ","englishName":"Al-Ahzaab","meaning":"The Clans","ayahs":73,"revelation":"madinah"},{"number":34,"name":"سُورَةُ سَبَإٍ","englishName":"Saba","meaning":"Sheba","ayahs":54,"revelation":"makkah"},{"number":35,"name":"سُورَةُ فَاطِرٍ","englishName":"Faatir","meaning":"The Originator","ayahs":45,"revelation":"makkah"},{"number":36,"name":"سُورَةُ يسٓ","englishName":"Yaseen","meaning":"Yaseen","ayahs":83,"revelation":"makkah"},{"number":37,"name":"سُورَةُ الصَّافَّاتِ","englishName":"As-Saaffaat","meaning":"Those drawn up in Ranks","ayahs":182,"revelation":"makkah"},{"number":38,"name":"سُورَةُ صٓ","englishName":"Saad","meaning":"The letter Saad","ayahs":88,"revelation":"makkah"},{"number":39,"name":"سُورَةُ الزُّمَرِ","englishName":"Az-Zumar","meaning":"The Groups","ayahs":75,"revelation":"makkah"},{"number":40,"name":"سُورَةُ غَافِرٍ","englishName":"Ghafir","meaning":"The Forgiver","ayahs":85,"revelation":"makkah"},{"number":41,"name":"سُورَةُ فُصِّلَتۡ","englishName":"Fussilat","meaning":"Explained in detail","ayahs":54,"revelation":"makkah"},{"number":42,"name":"سُورَةُ الشُّورَىٰ","englishName":"Ash-Shura","meaning":"Consultation","ayahs":53,"revelation":"makkah"},{"number":43,"name":"سُورَةُ الزُّخۡرُفِ","englishName":"Az-Zukhruf","meaning":"Ornaments of gold","ayahs":89,"revelation":"makkah"},{"number":44,"name":"سُورَةُ الدُّخَانِ","englishName":"Ad-Dukhaan","meaning":"The Smoke","ayahs":59,"revelation":"makkah"},{"number":45,"name":"سُورَةُ الجَاثِيَةِ","englishName":"Al-Jaathiya","meaning":"Crouching","ayahs":37,"revelation":"makkah"},{"number":46,"name":"سُورَةُ الأَحۡقَافِ","englishName":"Al-Ahqaf","meaning":"The Dunes","ayahs":35,"revelation":"makkah"},{"number":47,"name":"سُورَةُ مُحَمَّدٍ","englishName":"Muhammad","meaning":"Muhammad","ayahs":38,"revelation":"madinah"},{"number":48,"name":"سُورَةُ الفَتۡحِ","englishName":"Al-Fath","meaning":"The Victory","ayahs":29,"revelation":"madinah"},{"number":49,"name":"سُورَةُ الحُجُرَاتِ","englishName":"Al-Hujuraat","meaning":"The Inner Apartments","ayahs":18,"revelation":"madinah"},{"number":50,"name":"سُورَةُ قٓ","englishName":"Qaaf","meaning":"The letter Qaaf","ayahs":45,"revelation":"makkah"},{"number":51,"name":"سُورَةُ الذَّارِيَاتِ","englishName":"Adh-Dhaariyat","meaning":"The Winnowing Winds","ayahs":60,"revelation":"makkah"},{"number":52,"name":"سُورَةُ الطُّورِ","englishName":"At-Tur","meaning":"The Mount","ayahs":49,"revelation":"makkah"},{"number":53,"name":"سُورَةُ النَّجۡمِ","englishName":"An-Najm","meaning":"The Star","ayahs":62,"revelation":"makkah"},{"number":54,"name":"سُورَةُ القَمَرِ","englishName":"Al-Qamar","meaning":"The Moon","ayahs":55,"revelation":"makkah"},{"number":55,"name":"سُورَةُ الرَّحۡمَٰن","englishName":"Ar-Rahmaan","meaning":"The Beneficent","ayahs":78,"revelation":"madinah"},{"number":56,"name":"سُورَةُ الوَاقِعَةِ","englishName":"Al-Waaqia","meaning":"The Inevitable","ayahs":96,"revelation":"makkah"},{"number":57,"name":"سُورَةُ الحَدِيدِ","englishName":"Al-Hadid","meaning":"The Iron","ayahs":29,"revelation":"madinah"},{"number":58,"name":"سُورَةُ المُجَادلَةِ","englishName":"Al-Mujaadila","meaning":"The Pleading Woman","ayahs":22,"revelation":"madinah"},{"number":59,"name":"سُورَةُ الحَشۡرِ","englishName":"Al-Hashr","meaning":"The Exile","ayahs":24,"revelation":"madinah"},{"number":60,"name":"سُورَةُ المُمۡتَحنَةِ","englishName":"Al-Mumtahana","meaning":"She that is to be examined","ayahs":13,"revelation":"madinah"},{"number":61,"name":"سُورَةُ الصَّفِّ","englishName":"As-Saff","meaning":"The Ranks","ayahs":14,"revelation":"madinah"},{"number":62,"name":"سُورَةُ الجُمُعَةِ","englishName":"Al-Jumu'a","meaning":"Friday","ayahs":11,"revelation":"madinah"},{"number":63,"name":"سُورَةُ المُنَافِقُونَ","englishName":"Al-Munaafiqoon","meaning":"The Hypocrites","ayahs":11,"revelation":"madinah"},{"number":64,"name":"سُورَةُ التَّغَابُنِ","englishName":"At-Taghaabun","meaning":"Mutual Disillusion","ayahs":18,"revelation":"madinah"},{"number":65,"name":"سُورَةُ الطَّلَاقِ","englishName":"At-Talaaq","meaning":"Divorce","ayahs":12,"revelation":"madinah"},{"number":66,"name":"سُورَةُ التَّحۡرِيمِ","englishName":"At-Tahrim","meaning":"The Prohibition","ayahs":12,"revelation":"madinah"},{"number":67,"name":"سُورَةُ المُلۡكِ","englishName":"Al-Mulk","meaning":"The Sovereignty","ayahs":30,"revelation":"makkah"},{"number":68,"name":"سُورَةُ القَلَمِ","englishName":"Al-Qalam","meaning":"The Pen","ayahs":52,"revelation":"makkah"},{"number":69,"name":"سُورَةُ الحَاقَّةِ","englishName":"Al-Haaqqa","meaning":"The Reality","ayahs":52,"revelation":"makkah"},{"number":70,"name":"سُورَةُ المَعَارِجِ","englishName":"Al-Ma'aarij","meaning":"The Ascending Stairways","ayahs":44,"revelation":"makkah"},{"number":71,"name":"سُورَةُ نُوحٍ","englishName":"Nooh","meaning":"Noah","ayahs":28,"revelation":"makkah"},{"number":72,"name":"سُورَةُ الجِنِّ","englishName":"Al-Jinn","meaning":"The Jinn","ayahs":28,"revelation":"makkah"},{"number":73,"name":"سُورَةُ المُزَّمِّلِ","englishName":"Al-Muzzammil","meaning":"The Enshrouded One","ayahs":20,"revelation":"makkah"},{"number":74,"name":"سُورَةُ المُدَّثِّرِ","englishName":"Al-Muddaththir","meaning":"The Cloaked One","ayahs":56,"revelation":"makkah"},{"number":75,"name":"سُورَةُ القِيَامَةِ","englishName":"Al-Qiyaama","meaning":"The Resurrection","ayahs":40,"revelation":"makkah"},{"number":76,"name":"سُورَةُ الإِنسَانِ","englishName":"Al-Insaan","meaning":"Man","ayahs":31,"revelation":"madinah"},{"number":77,"name":"سُورَةُ المُرۡسَلَاتِ","englishName":"Al-Mursalaat","meaning":"The Emissaries","ayahs":50,"revelation":"makkah"},{"number":78,"name":"سُورَةُ النَّبَإِ","englishName":"An-Naba","meaning":"The Announcement","ayahs":40,"revelation":"makkah"},{"number":79,"name":"سُورَةُ النَّازِعَاتِ","englishName":"An-Naazi'aat","meaning":"Those who drag forth","ayahs":46,"revelation":"makkah"},{"number":80,"name":"سُورَةُ عَبَسَ","englishName":"Abasa","meaning":"He frowned","ayahs":42,"revelation":"makkah"},{"number":81,"name":"سُورَةُ التَّكۡوِيرِ","englishName":"At-Takwir","meaning":"The Overthrowing","ayahs":29,"revelation":"makkah"},{"number":82,"name":"سُورَةُ الانفِطَارِ","englishName":"Al-Infitaar","meaning":"The Cleaving","ayahs":19,"revelation":"makkah"},{"number":83,"name":"سُورَةُ المُطَفِّفِينَ","englishName":"Al-Mutaffifin","meaning":"Defrauding","ayahs":36,"revelation":"makkah"},{"number":84,"name":"سُورَةُ الانشِقَاقِ","englishName":"Al-Inshiqaaq","meaning":"The Splitting Open","ayahs":25,"revelation":"makkah"},{"number":85,"name":"سُورَةُ البُرُوجِ","englishName":"Al-Burooj","meaning":"The Constellations","ayahs":22,"revelation":"makkah"},{"number":86,"name":"سُورَةُ الطَّارِقِ","englishName":"At-Taariq","meaning":"The Morning Star","ayahs":17,"revelation":"makkah"},{"number":87,"name":"سُورَةُ الأَعۡلَىٰ","englishName":"Al-A'laa","meaning":"The Most High","ayahs":19,"revelation":"makkah"},{"number":88,"name":"سُورَةُ الغَاشِيَةِ","englishName":"Al-Ghaashiya","meaning":"The Overwhelming","ayahs":26,"revelation":"makkah"},{"number":89,"name":"سُورَةُ الفَجۡرِ","englishName":"Al-Fajr","meaning":"The Dawn","ayahs":30,"revelation":"makkah"},{"number":90,"name":"سُورَةُ البَلَدِ","englishName":"Al-Balad","meaning":"The City","ayahs":20,"revelation":"makkah"},{"number":91,"name":"سُورَةُ الشَّمۡسِ","englishName":"Ash-Shams","meaning":"The Sun","ayahs":15,"revelation":"makkah"},{"number":92,"name":"سُورَةُ اللَّيۡلِ","englishName":"Al-Lail","meaning":"The Night","ayahs":21,"revelation":"makkah"},{"number":93,"name":"سُورَةُ الضُّحَىٰ","englishName":"Ad-Dhuhaa","meaning":"The Morning Hours","ayahs":11,"revelation":"makkah"},{"number":94,"name":"سُورَةُ الشَّرۡحِ","englishName":"Ash-Sharh","meaning":"The Consolation","ayahs":8,"revelation":"makkah"},{"number":95,"name":"سُورَةُ التِّينِ","englishName":"At-Tin","meaning":"The Fig","ayahs":8,"revelation":"makkah"},{"number":96,"name":"سُورَةُ العَلَقِ","englishName":"Al-Alaq","meaning":"The Clot","ayahs":19,"revelation":"makkah"},{"number":97,"name":"سُورَةُ القَدۡرِ","englishName":"Al-Qadr","meaning":"The Power, Fate","ayahs":5,"revelation":"makkah"},{"number":98,"name":"سُورَةُ البَيِّنَةِ","englishName":"Al-Bayyina","meaning":"The Evidence","ayahs":8,"revelation":"madinah"},{"number":99,"name":"سُورَةُ الزَّلۡزَلَةِ","englishName":"Az-Zalzala","meaning":"The Earthquake","ayahs":8,"revelation":"madinah"},{"number":100,"name":"سُورَةُ العَادِيَاتِ","englishName":"Al-Aadiyaat","meaning":"The Chargers","ayahs":11,"revelation":"makkah"},{"number":101,"name":"سُورَةُ القَارِعَةِ","englishName":"Al-Qaari'a","meaning":"The Calamity","ayahs":11,"revelation":"makkah"},{"number":102,"name":"سُورَةُ التَّكَاثُرِ","englishName":"At-Takaathur","meaning":"Competition","ayahs":8,"revelation":"makkah"},{"number":103,"name":"سُورَةُ العَصۡرِ","englishName":"Al-Asr","meaning":"The Declining Day, Epoch","ayahs":3,"revelation":"makkah"},{"number":104,"name":"سُورَةُ الهُمَزَةِ","englishName":"Al-Humaza","meaning":"The Traducer","ayahs":9,"revelation":"makkah"},{"number":105,"name":"سُورَةُ الفِيلِ","englishName":"Al-Fil","meaning":"The Elephant","ayahs":5,"revelation":"makkah"},{"number":106,"name":"سُورَةُ قُرَيۡشٍ","englishName":"Quraish","meaning":"Quraysh","ayahs":4,"revelation":"makkah"},{"number":107,"name":"سُورَةُ المَاعُونِ","englishName":"Al-Maa'un","meaning":"Almsgiving","ayahs":7,"revelation":"makkah"},{"number":108,"name":"سُورَةُ الكَوۡثَرِ","englishName":"Al-Kawthar","meaning":"Abundance","ayahs":3,"revelation":"makkah"},{"number":109,"name":"سُورَةُ الكَافِرُونَ","englishName":"Al-Kaafiroon","meaning":"The Disbelievers","ayahs":6,"revelation":"makkah"},{"number":110,"name":"سُورَةُ النَّصۡرِ","englishName":"An-Nasr","meaning":"Divine Support","ayahs":3,"revelation":"madinah"},{"number":111,"name":"سُورَةُ المَسَدِ","englishName":"Al-Masad","meaning":"The Palm Fibre","ayahs":5,"revelation":"makkah"},{"number":112,"name":"سُورَةُ الإِخۡلَاصِ","englishName":"Al-Ikhlaas","meaning":"Sincerity","ayahs":4,"revelation":"makkah"},{"number":113,"name":"سُورَةُ الفَلَقِ","englishName":"Al-Falaq","meaning":"The Dawn","ayahs":5,"revelation":"makkah"},{"number":114,"name":"سُورَةُ النَّاسِ","englishName":"An-Naas","meaning":"Mankind","ayahs":6,"revelation":"makkah"}];
 
@@ -1146,6 +1156,31 @@ const STATIONS: Track[] = [
 
 const pad = (n: number) => String(n).padStart(3, "0");
 
+const FATIHA = [
+  "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+  "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ",
+  "ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+  "مَٰلِكِ يَوْمِ ٱلدِّينِ",
+  "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ",
+  "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ",
+  "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ",
+];
+
+const AYAH_RECITERS: AyahReciter[] = [
+  { id: "Husary_Muallim_128kbps", name: "محمود خليل الحصري (المعلّم)", english: "Al-Husary (teaching)", style: "معلم", bitrate: 128 },
+  { id: "Husary_128kbps", name: "محمود خليل الحصري", english: "Mahmoud Al-Husary", style: "مرتل", bitrate: 128 },
+  { id: "Minshawy_Teacher_128kbps", name: "محمد صديق المنشاوي (المعلّم)", english: "Al-Minshawi (teaching)", style: "معلم", bitrate: 128 },
+  { id: "Minshawy_Murattal_128kbps", name: "محمد صديق المنشاوي", english: "Al-Minshawi", style: "مرتل", bitrate: 128 },
+  { id: "Alafasy_128kbps", name: "مشاري العفاسي", english: "Mishary Alafasy", style: "مرتل", bitrate: 128 },
+  { id: "Abdul_Basit_Murattal_192kbps", name: "عبد الباسط عبد الصمد", english: "Abdul Basit", style: "مرتل", bitrate: 192 },
+  { id: "Abdurrahmaan_As-Sudais_192kbps", name: "عبد الرحمن السديس", english: "Abdurrahman As-Sudais", style: "مرتل", bitrate: 192 },
+  { id: "Ghamadi_40kbps", name: "سعد الغامدي", english: "Saad Al-Ghamdi", style: "مرتل", bitrate: 40 },
+];
+
+/** Browser-mode hifz progress lives in memory; the desktop app uses SQLite. */
+const memorized = new Map<number, number[]>();
+const positions = new Map<string, number>();
+
 export function mockApi() {
   return {
     async surahs() {
@@ -1193,6 +1228,7 @@ export function mockApi() {
       const q = query.trim();
       return {
         reciters: RECITERS.filter((r) => r.name.includes(q)),
+        surahs: SURAHS.filter((s) => s.name.includes(q) || s.englishName.includes(q)),
         tracks: STATIONS.filter((s) => s.title.includes(q)),
       };
     },
@@ -1200,6 +1236,64 @@ export function mockApi() {
       return [] as Track[];
     },
     async recordPlay() {},
+    async ayahReciters() {
+      return AYAH_RECITERS;
+    },
+    async ayahTracks(surahNumber: number, reciterId: string) {
+      const reciter = AYAH_RECITERS.find((r) => r.id === reciterId) ?? AYAH_RECITERS[0];
+      const meta = SURAHS.find((s) => s.number === surahNumber);
+      if (!meta) return [] as Track[];
+      const short = meta.name.replace(/^سُورَةُ\s*/, "");
+      return Array.from({ length: meta.ayahs }, (_, i) => {
+        const digits = `${pad(surahNumber)}${pad(i + 1)}`;
+        return {
+          id: `everyayah:${reciter.id}:${digits}`,
+          provider: "everyayah",
+          providerId: `${reciter.id}:${digits}`,
+          title: meta.name,
+          artist: reciter.name,
+          album: meta.name,
+          subtitle: `${short} · آية ${i + 1}`,
+          streamUrl: `https://everyayah.com/data/${reciter.id}/${digits}.mp3`,
+          kind: "quran" as const,
+          attribution: `تلاوة ${reciter.name} — everyayah.com`,
+        };
+      });
+    },
+    async surahText(surahNumber: number, _translation = false): Promise<Ayah[]> {
+      const meta = SURAHS.find((s) => s.number === surahNumber);
+      const count = meta?.ayahs ?? 0;
+      const text =
+        surahNumber === 1
+          ? FATIHA
+          : Array.from({ length: count }, () => "نص الآية غير متاح في وضع المعاينة داخل المتصفح.");
+      return text.map((t, i) => ({
+        number: i + 1,
+        text: t,
+        juz: 1,
+        page: 1,
+        sajda: false,
+      }));
+    },
+    async memorized(surahNumber: number) {
+      return memorized.get(surahNumber) ?? [];
+    },
+    async saveMemorized(surahNumber: number, marks: number[]) {
+      memorized.set(surahNumber, [...marks]);
+    },
+    async savePosition(surahNumber: number, reciterId: string, lastAyah: number) {
+      positions.set(`${surahNumber}:${reciterId}`, lastAyah);
+    },
+    async memorization(): Promise<Memorization[]> {
+      return [...memorized.entries()].map(([surah, marks]) => ({
+        surah,
+        memorized: marks,
+        updatedAt: Date.now(),
+      }));
+    },
+    async position(surahNumber: number, reciterId: string) {
+      return positions.get(`${surahNumber}:${reciterId}`) ?? null;
+    },
     async settings() {
       return [] as [string, string][];
     },

@@ -1,12 +1,14 @@
 <script lang="ts">
   import { player } from "$lib/stores/player.svelte.ts";
-  import { fmtTime, i18n } from "$lib/i18n/index.svelte.ts";
+  import { ayahOf } from "$lib/stores/hifz.svelte.ts";
+  import { fmtNumber, fmtTime, i18n } from "$lib/i18n/index.svelte.ts";
   import Artwork from "./Artwork.svelte";
   import Icon from "./Icon.svelte";
   import SeekBar from "./SeekBar.svelte";
 
   const track = $derived(player.current);
   const rateLabel = $derived(Number(player.rate.toFixed(2)).toString());
+  const ayah = $derived(ayahOf(track));
 
   function ctrlClass(active = false) {
     return `grid place-items-center rounded-full p-2 transition-colors ${
@@ -45,7 +47,7 @@
                  {player.current?.id === item.id ? 'bg-gold/10 text-gold' : 'hover:bg-ink-800'}"
         >
           <span class="w-5 shrink-0 text-center text-[11px] tabular-nums text-muted">{i + 1}</span>
-          <span class="min-w-0 flex-1 truncate text-sm">{item.title}</span>
+          <span class="min-w-0 flex-1 truncate text-sm">{item.subtitle ?? item.title}</span>
           <span class="shrink-0 text-[11px] text-muted">{item.artist}</span>
         </button>
       {/each}
@@ -66,7 +68,14 @@
           rounded="rounded-xl"
         />
         <div class="min-w-0">
-          <div class="truncate text-sm font-semibold text-cream">{track.title}</div>
+          <div class="flex items-center gap-1.5">
+            <span class="truncate text-sm font-semibold text-cream">{track.title}</span>
+            {#if ayah}
+              <span class="shrink-0 rounded bg-gold/15 px-1.5 py-px text-[9px] font-semibold text-gold">
+                {i18n.t("quran.ayah")} {fmtNumber(ayah)}
+              </span>
+            {/if}
+          </div>
           <div class="truncate text-xs text-muted">
             {track.artist || i18n.t("player.nowPlaying")}
           </div>

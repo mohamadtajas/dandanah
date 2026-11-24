@@ -91,7 +91,33 @@ const MIGRATIONS: &[&str] = &[
         PRIMARY KEY (surah, reciter_id)
     );
     "#,
+    // --- v2 : memorisation is per surah, not per reciter -------------------
+    r#"
+    CREATE TABLE IF NOT EXISTS memorization (
+        surah      INTEGER PRIMARY KEY,
+        memorized  TEXT NOT NULL DEFAULT '[]',
+        updated_at INTEGER NOT NULL
+    );
+    "#,
 ];
+
+/// Memorisation state for one surah. Ayah numbers are 1-based.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Memorization {
+    pub surah: u16,
+    #[serde(default)]
+    pub memorized: Vec<u16>,
+    #[serde(default)]
+    pub updated_at: i64,
+}
+
+impl Memorization {
+    #[allow(dead_code)]
+    pub fn count(&self) -> usize {
+        self.memorized.len()
+    }
+}
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -202,6 +228,84 @@ impl Database {
         Ok(())
     }
 
+    // --- memorisation ------------------------------------------------------
+
+    pub fn get_memorized(&self, surah: u16) -> Result<Vec<u16>> {
+        let conn = self.conn.lock();
+        let raw: Option<String> = conn
+            .query_row(
+                "SELECT memorized FROM memorization WHERE surah = ?1",
+                [surah],
+                |r| r.get(0),
+            )
+            .optional()?;
+        Ok(raw
+            .and_then(|json| serde_json::from_str(&json).ok())
+            .unwrap_or_default())
+    }
+
+    pub fn save_memorized(&self, surah: u16, memorized: &[u16]) -> Result<()> {
+        let mut marks = memorized.to_vec();
+        marks.sort_unstable();
+        marks.dedup();
+        let json = serde_json::to_string(&marks)?;
+        let conn = self.conn.lock();
+        conn.execute(
+            "INSERT INTO memorization(surah, memorized, updated_at) VALUES(?1, ?2, ?3)
+             ON CONFLICT(surah) DO UPDATE SET
+                memorized  = excluded.memorized,
+                updated_at = excluded.updated_at",
+            params![surah, json, now()],
+        )?;
+        Ok(())
+    }
+
+    /// All surahs with memorisation marks, most recently touched first.
+    pub fn all_memorization(&self) -> Result<Vec<Memorization>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn.prepare(
+            "SELECT surah, memorized, updated_at FROM memorization ORDER BY updated_at DESC",
+        )?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok(Memorization {
+                    surah: r.get::<_, u16>(0)?,
+                    memorized: serde_json::from_str(&r.get::<_, String>(1)?).unwrap_or_default(),
+                    updated_at: r.get::<_, i64>(2)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
+    // --- resume position ---------------------------------------------------
+
+    /// Last ayah played for a surah under a given ayah-level reciter.
+    pub fn get_position(&self, surah: u16, reciter_id: &str) -> Result<Option<u16>> {
+        let conn = self.conn.lock();
+        let value = conn
+            .query_row(
+                "SELECT last_ayah FROM surah_progress WHERE surah = ?1 AND reciter_id = ?2",
+                params![surah, reciter_id],
+                |r| r.get(0),
+            )
+            .optional()?;
+        Ok(value)
+    }
+
+    pub fn save_position(&self, surah: u16, reciter_id: &str, last_ayah: u16) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "INSERT INTO surah_progress(surah, reciter_id, last_ayah, updated_at)
+             VALUES(?1, ?2, ?3, ?4)
+             ON CONFLICT(surah, reciter_id) DO UPDATE SET
+                last_ayah  = excluded.last_ayah,
+                updated_at = excluded.updated_at",
+            params![surah, reciter_id, last_ayah, now()],
+        )?;
+        Ok(())
+    }
+
     // --- history ----------------------------------------------------------
 
     pub fn record_play(&self, track: &Track) -> Result<()> {
@@ -240,4 +344,56 @@ impl Database {
 
 pub fn now() -> i64 {
     chrono::Utc::now().timestamp()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_db() -> (std::path::PathBuf, Database) {
+        let dir = std::env::temp_dir().join(format!(
+            "dandanah-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let db = Database::open(&dir.join("test.db")).unwrap();
+        (dir, db)
+    }
+
+    #[test]
+    fn migrations_apply_and_memorisation_round_trips() {
+        let (dir, db) = temp_db();
+        // Deduplicates and sorts on write.
+        db.save_memorized(2, &[5, 1, 5]).unwrap();
+        assert_eq!(db.get_memorized(2).unwrap(), vec![1, 5]);
+        assert_eq!(db.get_memorized(3).unwrap(), Vec::<u16>::new());
+
+        db.save_position(2, "Husary_128kbps", 7).unwrap();
+        assert_eq!(db.get_position(2, "Husary_128kbps").unwrap(), Some(7));
+        assert_eq!(db.get_position(2, "Alafasy_128kbps").unwrap(), None);
+
+        assert_eq!(db.all_memorization().unwrap().len(), 1);
+
+        drop(db);
+        let reopened = Database::open(&dir.join("test.db")).unwrap();
+        assert_eq!(reopened.get_memorized(2).unwrap(), vec![1, 5]);
+        assert_eq!(reopened.get_position(2, "Husary_128kbps").unwrap(), Some(7));
+        drop(reopened);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn stale_cache_ignores_ttl() {
+        let (dir, db) = temp_db();
+        db.cache_put("k", "v").unwrap();
+        assert!(db.cache_get("k", 60).unwrap().is_some());
+        assert!(db.cache_get("k", -1).unwrap().is_none());
+        assert_eq!(db.stale_cache("k").unwrap().map(|(p, _)| p), Some("v".into()));
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

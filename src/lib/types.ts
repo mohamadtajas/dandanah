@@ -45,7 +45,32 @@ export interface Surah {
 
 export interface SearchResults {
   reciters: Reciter[];
+  surahs: Surah[];
   tracks: Track[];
+}
+
+export interface AyahReciter {
+  id: string;
+  name: string;
+  english: string;
+  /** مرتل · مجود · معلم */
+  style: string;
+  bitrate: number;
+}
+
+export interface Ayah {
+  number: number;
+  text: string;
+  translation?: string;
+  juz?: number;
+  page?: number;
+  sajda?: boolean;
+}
+
+export interface Memorization {
+  surah: number;
+  memorized: number[];
+  updatedAt: number;
 }
 
 export interface AppInfo {

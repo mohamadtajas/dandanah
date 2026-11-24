@@ -16,8 +16,14 @@ export const navItems: NavItem[] = [
 
 class NavStore {
   view = $state<View>("home");
-  param = $state<string | null>(null);
+  /** All path segments after the view, e.g. `#/quran/ayah/Husary_128kbps/2`. */
+  params = $state<string[]>([]);
   query = $state("");
+
+  /** First segment — kept for views that only need one argument. */
+  get param(): string | null {
+    return this.params[0] ?? null;
+  }
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -26,12 +32,14 @@ class NavStore {
     }
   }
 
-  go(view: View, param?: string | number) {
-    const p = param === undefined || param === null ? "" : `/${String(param)}`;
-    const next = `#/${view}${p}`;
+  go(view: View, param?: string | number, ...rest: (string | number)[]) {
+    const segments = [param, ...rest]
+      .filter((p) => p !== undefined && p !== null && p !== "")
+      .map((p) => encodeURIComponent(String(p)));
+    const next = `#/${view}${segments.length ? "/" + segments.join("/") : ""}`;
     if (location.hash === next) {
       this.view = view;
-      this.param = param === undefined ? null : String(param);
+      this.params = segments.map((s) => decodeURIComponent(s));
     } else {
       location.hash = next;
     }
@@ -44,7 +52,7 @@ class NavStore {
 
   private readHash() {
     const raw = location.hash.replace(/^#\/?/, "");
-    const [view, param] = raw.split("/");
+    const [view, ...params] = raw.split("/");
     const known: View[] = [
       "home",
       "search",
@@ -55,7 +63,7 @@ class NavStore {
       "credits",
     ];
     this.view = (known.includes(view as View) ? view : "home") as View;
-    this.param = param ? decodeURIComponent(param) : null;
+    this.params = params.filter(Boolean).map((p) => decodeURIComponent(p));
   }
 }
 

@@ -22,7 +22,8 @@ Week 1 of the build plan is complete and working:
 | Unified search with Arabic-aware normalisation and dedupe | ✅ |
 | Player: queue, shuffle, repeat, speed, seek, volume, media keys | ✅ |
 | Recently played (persisted history) | ✅ |
-| Ayah-by-ayah mode, hifz loops | ⏳ week 2 |
+| Ayah-by-ayah playback with Uthmani text and translation | ✅ |
+| Hifz loops: repeat an ayah range N times, mark memorised | ✅ |
 | Playlists, favorites, downloads, local import | ⏳ week 3 |
 | Jamendo / archive.org / Creative Commons providers | ⏳ week 4 |
 | Windows SMTC integration, tray, hotkeys | ⏳ week 5 |
@@ -67,7 +68,7 @@ src/                         Svelte 5 frontend (runes, no router dependency)
 ├─ lib/
 │  ├─ components/            Icon, Artwork, SeekBar, TrackRow, PlayerBar, Sidebar…
 │  ├─ views/                 Home, Quran, Radio, Search, Library, Settings, Credits
-│  ├─ stores/                player, nav, ui — all runes-based, no store library
+│  ├─ stores/                player, hifz, nav, ui — runes-based, no store library
 │  ├─ i18n/                  ar/en dictionaries + locale-aware formatters
 │  ├─ data/                  country list
 │  ├─ api.ts                 typed wrappers over Tauri commands
@@ -78,6 +79,8 @@ src-tauri/src/               Rust backend
 ├─ providers/                one module per content source
 │  ├─ mod.rs                 Track model, metadata, Arabic normalisation, dedupe
 │  ├─ mp3quran.rs            reciters, surah servers, Quran radio
+│  ├─ everyayah.rs           per-ayah recitation catalogue and URL builder
+│  ├─ quran_text.rs          Uthmani text + translation from AlQuran Cloud
 │  └─ radiobrowser.rs        live station directory with mirror fallback
 ├─ db/mod.rs                 SQLite schema, migrations, cache, history
 ├─ commands.rs               the IPC surface
@@ -102,6 +105,31 @@ src-tauri/src/               Rust backend
 `providers::normalize_arabic` strips tashkeel, tatweel and Quranic annotation marks and folds
 alef/ya/ta-marbuta variants, so `الأَنصَار` and `الانصار` match. Search ranking uses a Dice
 coefficient over character bigrams — no search index, no extra dependency.
+
+---
+
+## Quran mode
+
+Two ways to listen, both under the Quran tab.
+
+**Full surah** — 200+ reciters from mp3quran, each with the riwayat they have recorded.
+
+**Ayah by ayah** — 26 curated EveryAyah recitations covering murattal, mujawwad and
+teaching styles. Every ayah is its own track, so next/previous, speed and repeat all work
+at verse level.
+
+The follow-along view shows the Uthmani text, highlights the ayah being played, scrolls it
+into view, and can show the Sahih International translation underneath. Memorisation is
+stored per surah in SQLite:
+
+- choose a start and end ayah, pick 1–10 passes and press **Repeat** — the range loops,
+  then stops and offers to mark it;
+- tap the bookmark under an ayah, or mark the whole range at once;
+- **Library → Memorisation** lists every surah with a progress bar;
+- the last ayah you played is remembered per surah and reciter, and the view reopens there.
+
+The loop is frontend-only: it takes over the `<audio>` `ended` event instead of building a
+second queue, so there is no duplicate playback engine to keep in sync.
 
 ---
 
@@ -134,7 +162,7 @@ distributable, the installer small, and the project on solid legal ground.
 
 ## Roadmap
 
-1. **Quran depth** — ayah mode, repeat ranges, memorisation tracker, Uthmani text follow-along.
+1. ~~**Quran depth**~~ — shipped: ayah mode, repeat ranges, memorisation tracker, Uthmani follow-along.
 2. **Library** — playlists, favorites, offline downloads, local folder import.
 3. **Creative Commons catalog** — Jamendo, Openverse, archive.org with license badges.
 4. **Windows integration** — SMTC lock-screen controls, tray, global hotkeys.

@@ -35,6 +35,10 @@
     mic: '<rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/>',
     disc: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/>',
     sparkle: '<path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5 10.1 12.8 4.4 10.9 10.1 9z"/>',
+    check: '<path d="m4.5 12.5 5 5 10-10"/>',
+    bookmark:
+      '<path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.2L5.5 20.5v-16a1 1 0 0 1 1-1z"/>',
+    "chevron-down": '<path d="m6 9 6 6 6-6"/>',
   } as const;
 
   export type IconName = keyof typeof icons;

@@ -2,16 +2,17 @@
   import { onMount } from "svelte";
   import { api } from "$lib/api";
   import type { SearchResults } from "$lib/types";
-  import { i18n } from "$lib/i18n/index.svelte.ts";
+  import { fmtNumber, i18n } from "$lib/i18n/index.svelte.ts";
   import { nav } from "$lib/stores/nav.svelte.ts";
   import { player } from "$lib/stores/player.svelte.ts";
+  import { DEFAULT_AYAH_RECITER } from "$lib/constants";
   import Artwork from "$lib/components/Artwork.svelte";
   import TrackRow from "$lib/components/TrackRow.svelte";
   import Icon from "$lib/components/Icon.svelte";
   import Section from "$lib/components/Section.svelte";
 
   let term = $state(nav.query);
-  let results = $state<SearchResults>({ reciters: [], tracks: [] });
+  let results = $state<SearchResults>({ reciters: [], surahs: [], tracks: [] });
   let loading = $state(false);
   let filter = $state<"all" | "quran" | "radio">("all");
   let inputEl = $state<HTMLInputElement>();
@@ -22,7 +23,7 @@
     const q = term.trim();
     const f = filter;
     if (!q) {
-      results = { reciters: [], tracks: [] };
+      results = { reciters: [], surahs: [], tracks: [] };
       loading = false;
       return;
     }
@@ -32,7 +33,7 @@
         const kinds = f === "all" ? undefined : [f];
         results = await api.search(q, kinds);
       } catch {
-        results = { reciters: [], tracks: [] };
+        results = { reciters: [], surahs: [], tracks: [] };
       } finally {
         loading = false;
       }
@@ -44,7 +45,13 @@
     if (nav.query) term = nav.query;
   });
 
-  const hasResults = $derived(results.reciters.length > 0 || results.tracks.length > 0);
+  const hasResults = $derived(
+    results.reciters.length > 0 || results.surahs.length > 0 || results.tracks.length > 0,
+  );
+
+  function shortName(name: string) {
+    return name.replace(/^سُورَةُ\s*/, "").replace(/^سورة\s*/, "");
+  }
 </script>
 
 <div class="fade-in">
@@ -109,6 +116,35 @@
       <p class="mt-3 text-sm text-muted">{i18n.t("search.empty")}</p>
     </div>
   {:else}
+    {#if results.surahs.length}
+      <Section title={i18n.t("search.surahs")}>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          {#each results.surahs as surah (surah.number)}
+            <button
+              type="button"
+              onclick={() =>
+                nav.go("quran", "ayah", DEFAULT_AYAH_RECITER, surah.number)}
+              class="group flex items-center gap-3 rounded-xl border border-line/70 bg-ink-850/50 p-2.5 text-start transition-colors hover:border-gold/30 hover:bg-ink-800"
+            >
+              <span
+                class="grid size-11 shrink-0 place-items-center rounded-xl border border-line font-quran text-sm tabular-nums text-gold/80 group-hover:border-gold/40"
+              >
+                {fmtNumber(surah.number)}
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="truncate font-quran text-base text-cream group-hover:text-gold">
+                  {shortName(surah.name)}
+                </div>
+                <div class="truncate text-[11px] text-muted">
+                  {surah.englishName} · {fmtNumber(surah.ayahs)} {i18n.t("quran.ayahs")}
+                </div>
+              </div>
+            </button>
+          {/each}
+        </div>
+      </Section>
+    {/if}
+
     {#if results.reciters.length}
       <Section title={i18n.t("search.reciters")}>
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">

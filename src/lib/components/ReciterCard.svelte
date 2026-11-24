@@ -11,7 +11,7 @@
 <button
   type="button"
   onclick={onselect}
-  class="group w-[124px] text-start"
+  class="group w-[140px] text-start"
 >
   <div class="relative">
     <Artwork

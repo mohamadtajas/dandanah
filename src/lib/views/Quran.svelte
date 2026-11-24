@@ -5,8 +5,10 @@
   import { fmtNumber, i18n } from "$lib/i18n/index.svelte.ts";
   import { nav } from "$lib/stores/nav.svelte.ts";
   import { player } from "$lib/stores/player.svelte.ts";
+  import { normalizeArabic } from "$lib/text";
   import Artwork from "$lib/components/Artwork.svelte";
   import Icon from "$lib/components/Icon.svelte";
+  import AyahMode from "./AyahMode.svelte";
 
   let reciters = $state<Reciter[]>([]);
   let surahs = $state<Surah[]>([]);
@@ -26,7 +28,10 @@
 
   const visibleReciters = $derived(
     filter.trim()
-      ? reciters.filter((r) => r.name.includes(filter.trim()) || r.letter === filter.trim())
+      ? reciters.filter((r) => {
+          const q = normalizeArabic(filter);
+          return normalizeArabic(r.name).includes(q) || normalizeArabic(r.letter) === q;
+        })
       : reciters,
   );
 
@@ -51,6 +56,7 @@
 
   $effect(() => {
     if (!booted) return;
+    if (nav.params[0] === "ayah") return;
     const p = nav.param;
     if (!p) {
       selectedId = null;
@@ -101,7 +107,28 @@
 </script>
 
 <div class="fade-in">
-  {#if selected}
+  <div class="mb-6 inline-flex rounded-xl border border-line bg-ink-900 p-1">
+    <button
+      type="button"
+      onclick={() => nav.go("quran")}
+      class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors
+             {nav.params[0] !== 'ayah' ? 'bg-gold text-ink-950' : 'text-muted hover:text-cream'}"
+    >
+      {i18n.t("quran.fullSurah")}
+    </button>
+    <button
+      type="button"
+      onclick={() => nav.go("quran", "ayah")}
+      class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors
+             {nav.params[0] === 'ayah' ? 'bg-gold text-ink-950' : 'text-muted hover:text-cream'}"
+    >
+      {i18n.t("quran.byAyah")}
+    </button>
+  </div>
+
+  {#if nav.params[0] === "ayah"}
+    <AyahMode />
+  {:else if selected}
     <!-- Reciter header -->
     <button
       type="button"

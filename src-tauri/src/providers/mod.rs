@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::OnceLock;
 
+pub mod everyayah;
 pub mod mp3quran;
+pub mod quran_text;
 pub mod radiobrowser;
 
 pub use mp3quran::Reciter;
@@ -175,6 +177,35 @@ pub fn similarity(a: &str, b: &str) -> f32 {
     (2 * overlap) as f32 / (ba.len() + bb.len()) as f32
 }
 
+/// Scores a candidate string against a query. Substring and word matches beat
+/// raw bigram similarity, which is noisy for short Arabic names
+/// ("الحصري" vs "الشريم" share 40% of their bigrams).
+pub fn score(query: &str, candidate: &str) -> f32 {
+    let q = normalize_arabic(query);
+    let c = normalize_arabic(candidate);
+    if q.is_empty() || c.is_empty() {
+        return 0.0;
+    }
+    if c == q {
+        return 1.0;
+    }
+    if c.starts_with(&q) {
+        return 0.95;
+    }
+    if c.split_whitespace().any(|w| w == q) {
+        return 0.9;
+    }
+    if c.contains(&q) {
+        return 0.8;
+    }
+    similarity(&q, &c)
+}
+
+/// Whether a candidate is relevant enough to show for a query.
+pub fn matches(query: &str, candidate: &str) -> bool {
+    score(query, candidate) >= 0.55
+}
+
 /// Merges provider results, dropping near-duplicate tracks while keeping the
 /// higher-ranked (earlier) copy.
 pub fn dedupe(mut tracks: Vec<Track>) -> Vec<Track> {
@@ -199,4 +230,54 @@ pub fn dedupe(mut tracks: Vec<Track>) -> Vec<Track> {
         }
     }
     kept
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalises_tashkeel_and_alef_variants() {
+        assert_eq!(normalize_arabic("الأَنصَار"), normalize_arabic("الانصار"));
+        assert_eq!(normalize_arabic("مُحَمَّد"), "محمد");
+        assert_eq!(normalize_arabic("عَلِيّ"), normalize_arabic("علي"));
+        assert_eq!(normalize_arabic("سُورَةُ  ٱلْفَاتِحَةِ"), "سوره الفاتحه");
+    }
+
+    #[test]
+    fn similarity_ranks_prefixes_highly() {
+        assert!(similarity("الحصري", "محمود خليل الحصري") > 0.3);
+        assert!(similarity("الحصري", "الحصري") > 0.99);
+        assert!(similarity("الحصري", "الشريم") < 0.55);
+    }
+
+    #[test]
+    fn score_prefers_word_matches_over_bigrams() {
+        assert_eq!(score("الحصري", "الحصري"), 1.0);
+        assert!(score("الحصري", "محمود خليل الحصري") > 0.75);
+        assert!(!matches("الحصري", "الشريم"));
+        assert!(matches("مشاري", "مشاري العفاسي"));
+    }
+
+    #[test]
+    fn dedupe_drops_same_track_from_two_providers() {
+        let mut a = Track::new("mp3quran", "1-1", "سورة الفاتحة", TrackKind::Quran);
+        a.artist = "محمود خليل الحصري".into();
+        a.duration_s = Some(60);
+        let mut b = Track::new("other", "x", "سورة الفاتحه", TrackKind::Quran);
+        b.artist = "محمود خليل الحصري".into();
+        b.duration_s = Some(62);
+        let c = Track::new("other", "y", "سورة البقرة", TrackKind::Quran);
+        let out = dedupe(vec![a, b, c]);
+        assert_eq!(out.len(), 2);
+    }
+
+    #[test]
+    fn surah_table_is_complete() {
+        let all = surahs();
+        assert_eq!(all.len(), 114);
+        assert_eq!(all[0].ayahs, 7);
+        assert_eq!(all[113].number, 114);
+        assert!(surah(2).is_some_and(|s| s.ayahs == 286));
+    }
 }

@@ -1,5 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AppInfo, Reciter, SearchResults, Surah, Track } from "./types";
+import type {
+  AppInfo,
+  Ayah,
+  AyahReciter,
+  Memorization,
+  Reciter,
+  SearchResults,
+  Surah,
+  Track,
+} from "./types";
 
 export const isTauri =
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -29,6 +38,52 @@ export const api = {
 
   quranRadios: async (): Promise<Track[]> =>
     isTauri ? invoke<Track[]>("get_quran_radios") : (await mock()).quranRadios(),
+
+  ayahReciters: async (): Promise<AyahReciter[]> =>
+    isTauri ? invoke<AyahReciter[]>("get_ayah_reciters") : (await mock()).ayahReciters(),
+
+  ayahTracks: async (surahNumber: number, reciterId: string): Promise<Track[]> =>
+    isTauri
+      ? invoke<Track[]>("get_ayah_tracks", { surahNumber, reciterId })
+      : (await mock()).ayahTracks(surahNumber, reciterId),
+
+  surahText: async (surahNumber: number, translation = false): Promise<Ayah[]> =>
+    isTauri
+      ? invoke<Ayah[]>("get_surah_text", { surahNumber, translation })
+      : (await mock()).surahText(surahNumber, translation),
+
+  memorized: async (surahNumber: number): Promise<number[]> =>
+    isTauri
+      ? invoke<number[]>("get_memorized", { surahNumber })
+      : (await mock()).memorized(surahNumber),
+
+  saveMemorized: async (surahNumber: number, memorized: number[]): Promise<void> => {
+    if (!isTauri) {
+      await (await mock()).saveMemorized(surahNumber, memorized);
+      return;
+    }
+    await invoke<void>("save_memorized", { surahNumber, memorized });
+  },
+
+  memorization: async (): Promise<Memorization[]> =>
+    isTauri ? invoke<Memorization[]>("get_memorization") : (await mock()).memorization(),
+
+  position: async (surahNumber: number, reciterId: string): Promise<number | null> =>
+    isTauri
+      ? invoke<number | null>("get_position", { surahNumber, reciterId })
+      : (await mock()).position(surahNumber, reciterId),
+
+  savePosition: async (
+    surahNumber: number,
+    reciterId: string,
+    lastAyah: number,
+  ): Promise<void> => {
+    if (!isTauri) {
+      await (await mock()).savePosition(surahNumber, reciterId, lastAyah);
+      return;
+    }
+    await invoke<void>("save_position", { surahNumber, reciterId, lastAyah });
+  },
 
   radios: async (limit?: number, country?: string, tag?: string): Promise<Track[]> =>
     isTauri

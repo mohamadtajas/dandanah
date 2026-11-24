@@ -23,6 +23,10 @@ class PlayerStore {
   error = $state<string | null>(null);
   queueOpen = $state(false);
 
+  /** Optional hook that can take over when a track finishes (hifz loops). */
+  onEndedHook: (() => Promise<"stop" | "handled" | false> | "stop" | "handled" | false) | null =
+    null;
+
   private audio: HTMLAudioElement | null = null;
 
   constructor() {
@@ -235,7 +239,17 @@ class PlayerStore {
     this.duration = 0;
   }
 
-  private async onEnded() {
+  private onEnded: () => Promise<void> = async () => {
+    if (this.onEndedHook) {
+      const outcome = await this.onEndedHook();
+      if (outcome === "stop") {
+        this.playing = false;
+        this.position = this.duration;
+        this.setMediaPlaybackState("paused");
+        return;
+      }
+      if (outcome === "handled") return;
+    }
     if (this.repeat === "one") {
       const a = this.ensureAudio();
       a.currentTime = 0;
@@ -243,7 +257,7 @@ class PlayerStore {
       return;
     }
     await this.next();
-  }
+  };
 
   private setMediaPlaybackState(state: MediaSessionPlaybackState) {
     if ("mediaSession" in navigator) {

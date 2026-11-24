@@ -1,6 +1,7 @@
-use crate::db::Database;
+use crate::db::{Database, Memorization};
 use crate::providers::{
-    dedupe, mp3quran, radiobrowser, similarity, surahs, Reciter, Surah, Track, TrackKind,
+    dedupe, everyayah, matches, mp3quran, quran_text, radiobrowser, score, surah, surahs, Reciter,
+    Surah, Track, TrackKind,
 };
 use serde::Serialize;
 use std::sync::Arc;
@@ -13,6 +14,7 @@ pub struct AppState {
 
 const RECITERS_TTL: i64 = 60 * 60 * 24; // 24h
 const RADIO_TTL: i64 = 60 * 30; // 30m
+const TEXT_TTL: i64 = 60 * 60 * 24 * 30; // 30d — scripture does not change
 
 // ---------------------------------------------------------------------------
 // Quran
@@ -108,6 +110,123 @@ pub async fn get_quran_radios(state: State<'_, AppState>) -> Result<Vec<Track>, 
 }
 
 // ---------------------------------------------------------------------------
+// Quran — ayah by ayah
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_ayah_reciters() -> Vec<everyayah::AyahReciter> {
+    everyayah::reciters().to_vec()
+}
+
+/// The per-ayah queue for one surah. Text is fetched separately so playback can
+/// start before the (larger) text payload arrives.
+#[tauri::command]
+pub fn get_ayah_tracks(surah_number: u16, reciter_id: String) -> Result<Vec<Track>, String> {
+    let reciter =
+        everyayah::reciter(&reciter_id).ok_or_else(|| format!("unknown reciter: {reciter_id}"))?;
+    if surah(surah_number).is_none() {
+        return Err(format!("unknown surah: {surah_number}"));
+    }
+    Ok(everyayah::ayah_tracks(surah_number, reciter.id, reciter.name))
+}
+
+#[tauri::command]
+pub async fn get_surah_text(
+    state: State<'_, AppState>,
+    surah_number: u16,
+    translation: Option<bool>,
+) -> Result<Vec<quran_text::Ayah>, String> {
+    let translation = translation.unwrap_or(false);
+    let key = format!("text:{surah_number}:{}", if translation { "en" } else { "ar" });
+
+    if let Some(cached) = state
+        .db
+        .cache_get(&key, TEXT_TTL)
+        .map_err(|e| e.to_string())?
+    {
+        if let Ok(ayahs) = serde_json::from_str::<Vec<quran_text::Ayah>>(&cached) {
+            if !ayahs.is_empty() {
+                return Ok(ayahs);
+            }
+        }
+    }
+
+    match quran_text::fetch_surah(&state.http, surah_number, translation).await {
+        Ok(ayahs) => {
+            if let Ok(json) = serde_json::to_string(&ayahs) {
+                let _ = state.db.cache_put(&key, &json);
+            }
+            Ok(ayahs)
+        }
+        Err(e) => {
+            if let Some((payload, _)) = state.db.stale_cache(&key).map_err(|e| e.to_string())? {
+                if let Ok(ayahs) = serde_json::from_str::<Vec<quran_text::Ayah>>(&payload) {
+                    return Ok(ayahs);
+                }
+            }
+            Err(e.to_string())
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Hifz: memorisation marks + resume position
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn get_memorized(
+    state: State<'_, AppState>,
+    surah_number: u16,
+) -> Result<Vec<u16>, String> {
+    state
+        .db
+        .get_memorized(surah_number)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn save_memorized(
+    state: State<'_, AppState>,
+    surah_number: u16,
+    memorized: Vec<u16>,
+) -> Result<(), String> {
+    state
+        .db
+        .save_memorized(surah_number, &memorized)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_memorization(state: State<'_, AppState>) -> Result<Vec<Memorization>, String> {
+    state.db.all_memorization().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_position(
+    state: State<'_, AppState>,
+    surah_number: u16,
+    reciter_id: String,
+) -> Result<Option<u16>, String> {
+    state
+        .db
+        .get_position(surah_number, &reciter_id)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn save_position(
+    state: State<'_, AppState>,
+    surah_number: u16,
+    reciter_id: String,
+    last_ayah: u16,
+) -> Result<(), String> {
+    state
+        .db
+        .save_position(surah_number, &reciter_id, last_ayah)
+        .map_err(|e| e.to_string())
+}
+
+// ---------------------------------------------------------------------------
 // Radio
 // ---------------------------------------------------------------------------
 
@@ -151,6 +270,7 @@ pub async fn get_radios(
 #[serde(rename_all = "camelCase")]
 pub struct SearchResults {
     pub reciters: Vec<Reciter>,
+    pub surahs: Vec<Surah>,
     pub tracks: Vec<Track>,
 }
 
@@ -164,6 +284,7 @@ pub async fn search(
     if q.is_empty() {
         return Ok(SearchResults {
             reciters: vec![],
+            surahs: vec![],
             tracks: vec![],
         });
     }
@@ -187,23 +308,39 @@ pub async fn search(
         }
     );
 
-    let reciters = reciters_res
+    let mut scored = reciters_res
         .unwrap_or_default()
         .into_iter()
         .filter_map(|r| {
-            let score = similarity(&r.name, &q);
-            let contains = crate::providers::normalize_arabic(&r.name)
-                .contains(&crate::providers::normalize_arabic(&q));
-            (score > 0.34 || contains).then_some((score, r))
+            let s = score(&q, &r.name);
+            (s >= 0.55).then_some((s, r))
         })
         .collect::<Vec<_>>();
 
-    let mut reciters: Vec<Reciter> = reciters.into_iter().map(|(_, r)| r).collect();
+    scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+
+    let mut reciters: Vec<Reciter> = scored.into_iter().take(12).map(|(_, r)| r).collect();
     reciters.truncate(12);
+
+    // Surah names are searched too, so "الكهف" lands on the right place.
+    let surah_hits: Vec<Surah> = surahs()
+        .iter()
+        .filter(|s| {
+            matches(&q, &s.name)
+                || matches(&q, &s.english_name)
+                || q == s.number.to_string()
+        })
+        .take(6)
+        .cloned()
+        .collect();
 
     let tracks = dedupe(radio_res.unwrap_or_default());
 
-    Ok(SearchResults { reciters, tracks })
+    Ok(SearchResults {
+        reciters,
+        surahs: surah_hits,
+        tracks,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -253,6 +390,7 @@ pub fn app_info() -> AppInfo {
             mp3quran::PROVIDER,
             "mp3quran-radio",
             radiobrowser::PROVIDER,
+            everyayah::PROVIDER,
         ],
         countries: radiobrowser::ARAB_COUNTRIES.to_vec(),
     }
