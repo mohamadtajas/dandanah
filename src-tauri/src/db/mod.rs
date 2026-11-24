@@ -1,4 +1,5 @@
 use crate::providers::Track;
+use crate::worship::PrayerLog;
 use anyhow::{Context, Result};
 use parking_lot::Mutex;
 use rusqlite::{params, Connection, OptionalExtension};
@@ -104,6 +105,19 @@ const MIGRATIONS: &[&str] = &[
     ALTER TABLE tracks ADD COLUMN payload TEXT;
     CREATE INDEX IF NOT EXISTS idx_tracks_kind ON tracks(kind);
     CREATE INDEX IF NOT EXISTS idx_tracks_added ON tracks(added_at DESC);
+    "#,
+    // --- v4 : daily prayer log ---------------------------------------------
+    r#"
+    CREATE TABLE IF NOT EXISTS prayer_log (
+        date       TEXT PRIMARY KEY,
+        fajr       INTEGER NOT NULL DEFAULT 0,
+        dhuhr      INTEGER NOT NULL DEFAULT 0,
+        asr        INTEGER NOT NULL DEFAULT 0,
+        maghrib    INTEGER NOT NULL DEFAULT 0,
+        isha       INTEGER NOT NULL DEFAULT 0,
+        excused    INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL
+    );
     "#,
 ];
 
@@ -342,6 +356,76 @@ impl Database {
             params![surah, reciter_id, last_ayah, now()],
         )?;
         Ok(())
+    }
+
+    // --- prayer log --------------------------------------------------------
+
+    fn read_prayer_log(conn: &Connection, date: &str) -> Result<PrayerLog> {
+        let row = conn
+            .query_row(
+                "SELECT date, fajr, dhuhr, asr, maghrib, isha, excused
+                 FROM prayer_log WHERE date = ?1",
+                [date],
+                prayer_row,
+            )
+            .optional()?;
+        Ok(row.unwrap_or_else(|| PrayerLog::empty(date)))
+    }
+
+    pub fn prayer_log(&self, date: &str) -> Result<PrayerLog> {
+        let conn = self.conn.lock();
+        Self::read_prayer_log(&conn, date)
+    }
+
+    /// Every logged day, oldest first. At most one row per day.
+    pub fn prayer_logs(&self) -> Result<Vec<PrayerLog>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn.prepare(
+            "SELECT date, fajr, dhuhr, asr, maghrib, isha, excused
+             FROM prayer_log ORDER BY date ASC",
+        )?;
+        let rows = stmt.query_map([], prayer_row)?.collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
+    pub fn set_prayer_done(&self, date: &str, prayer: &str, done: bool) -> Result<PrayerLog> {
+        let column = match prayer {
+            "fajr" => "fajr",
+            "dhuhr" => "dhuhr",
+            "asr" => "asr",
+            "maghrib" => "maghrib",
+            "isha" => "isha",
+            other => anyhow::bail!("unknown prayer: {other}"),
+        };
+        {
+            let conn = self.conn.lock();
+            conn.execute(
+                "INSERT INTO prayer_log(date, updated_at) VALUES(?1, ?2)
+                 ON CONFLICT(date) DO NOTHING",
+                params![date, now()],
+            )?;
+            conn.execute(
+                &format!("UPDATE prayer_log SET {column} = ?1, updated_at = ?2 WHERE date = ?3"),
+                params![done as i32, now(), date],
+            )?;
+        }
+        self.prayer_log(date)
+    }
+
+    pub fn set_prayer_excused(&self, date: &str, excused: bool) -> Result<PrayerLog> {
+        {
+            let conn = self.conn.lock();
+            conn.execute(
+                "INSERT INTO prayer_log(date, updated_at) VALUES(?1, ?2)
+                 ON CONFLICT(date) DO NOTHING",
+                params![date, now()],
+            )?;
+            conn.execute(
+                "UPDATE prayer_log SET excused = ?1, updated_at = ?2 WHERE date = ?3",
+                params![excused as i32, now(), date],
+            )?;
+        }
+        self.prayer_log(date)
     }
 
     // --- favourites --------------------------------------------------------
@@ -758,6 +842,18 @@ pub fn now() -> i64 {
     chrono::Utc::now().timestamp()
 }
 
+fn prayer_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<PrayerLog> {
+    Ok(PrayerLog {
+        date: r.get(0)?,
+        fajr: r.get::<_, i64>(1)? != 0,
+        dhuhr: r.get::<_, i64>(2)? != 0,
+        asr: r.get::<_, i64>(3)? != 0,
+        maghrib: r.get::<_, i64>(4)? != 0,
+        isha: r.get::<_, i64>(5)? != 0,
+        excused: r.get::<_, i64>(6)? != 0,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -926,6 +1022,56 @@ mod tests {
             db.local_tracks().unwrap()[0].artwork_url.as_deref(),
             Some("C:/art/2.png")
         );
+
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn prayer_log_round_trips_and_streak_survives_reopen() {
+        use crate::worship::{compute_streak, PRAYER_KEYS};
+        use chrono::NaiveDate;
+
+        let (dir, db) = temp_db();
+        assert_eq!(db.prayer_log("2026-11-25").unwrap().count(), 0);
+
+        for date in ["2026-11-23", "2026-11-24", "2026-11-25"] {
+            for prayer in PRAYER_KEYS {
+                db.set_prayer_done(date, prayer, true).unwrap();
+            }
+        }
+        let today = db.prayer_log("2026-11-25").unwrap();
+        assert!(today.complete());
+        assert_eq!(today.count(), 5);
+        assert_eq!(db.prayer_logs().unwrap().len(), 3);
+
+        let day = NaiveDate::from_ymd_opt(2026, 11, 25).unwrap();
+        assert_eq!(compute_streak(&db.prayer_logs().unwrap(), day).current, 3);
+
+        drop(db);
+        let reopened = Database::open(&dir.join("test.db")).unwrap();
+        assert!(reopened.prayer_log("2026-11-24").unwrap().complete());
+        let logs = reopened.prayer_logs().unwrap();
+        assert_eq!(compute_streak(&logs, day).current, 3);
+        assert_eq!(logs[0].date, "2026-11-23");
+
+        drop(reopened);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn prayer_log_toggles_excused_and_rejects_unknown_prayers() {
+        let (dir, db) = temp_db();
+        let excused = db.set_prayer_excused("2026-11-20", true).unwrap();
+        assert!(excused.excused);
+        assert_eq!(excused.count(), 0);
+
+        db.set_prayer_done("2026-11-20", "fajr", true).unwrap();
+        let log = db.set_prayer_done("2026-11-20", "fajr", false).unwrap();
+        assert!(!log.fajr);
+        assert_eq!(log.count(), 0);
+
+        assert!(db.set_prayer_done("2026-11-20", "tahajjud", true).is_err());
 
         drop(db);
         let _ = std::fs::remove_dir_all(&dir);

@@ -6,6 +6,7 @@ mod library;
 mod media;
 mod migrate;
 mod providers;
+mod worship;
 
 use commands::AppState;
 use db::Database;
