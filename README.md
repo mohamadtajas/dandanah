@@ -60,6 +60,10 @@ $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
 npm run dist
 ```
 
+If you have no signing key, use `npm run dist:unsigned` — same installer, no update
+signature. Tauri refuses to bundle with a public key configured and no private key, which is
+why the two scripts exist.
+
 Frontend-only checks:
 
 ```bash
