@@ -8,6 +8,7 @@
   import Section from "$lib/components/Section.svelte";
   import ReciterCard from "$lib/components/ReciterCard.svelte";
   import StationCard from "$lib/components/StationCard.svelte";
+  import NextPrayer from "$lib/components/NextPrayer.svelte";
   import Icon from "$lib/components/Icon.svelte";
 
   let reciters = $state<Reciter[]>([]);
@@ -38,8 +39,10 @@
 </script>
 
 <div class="fade-in">
+  <NextPrayer />
+
   <!-- Hero -->
-  <section class="relative overflow-hidden rounded-3xl border border-line bg-ink-900 px-7 py-8">
+  <section class="relative mt-4 overflow-hidden rounded-3xl border border-line bg-ink-900 px-7 py-8">
     <div class="pointer-events-none absolute -end-24 -top-28 size-64 rounded-full bg-gold/[0.07] blur-3xl"></div>
     <div class="pointer-events-none absolute -bottom-28 start-10 size-52 rounded-full bg-teal/[0.05] blur-3xl"></div>
     <div class="relative max-w-xl">

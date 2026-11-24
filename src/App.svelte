@@ -4,6 +4,7 @@
   import PlayerBar from "$lib/components/PlayerBar.svelte";
   import Toast from "$lib/components/Toast.svelte";
   import Home from "$lib/views/Home.svelte";
+  import Worship from "$lib/views/Worship.svelte";
   import Quran from "$lib/views/Quran.svelte";
   import Explore from "$lib/views/Explore.svelte";
   import Radio from "$lib/views/Radio.svelte";
@@ -14,11 +15,14 @@
   import { nav } from "$lib/stores/nav.svelte.ts";
   import { player } from "$lib/stores/player.svelte.ts";
   import { library } from "$lib/stores/library.svelte.ts";
+  import { worship } from "$lib/stores/worship.svelte.ts";
   import { isTauri } from "$lib/api";
   import { i18n } from "$lib/i18n/index.svelte.ts";
 
   onMount(() => {
     void library.load();
+    void worship.load();
+    worship.start();
     const cleanups: (() => void)[] = [];
 
     // Tray menu, global hotkeys and Windows media keys all arrive here.
@@ -113,6 +117,8 @@
     <div class="mx-auto w-full max-w-[1180px] px-7 pb-12 pt-7">
       {#if nav.view === "home"}
         <Home />
+      {:else if nav.view === "worship"}
+        <Worship />
       {:else if nav.view === "quran"}
         <Quran />
       {:else if nav.view === "explore"}

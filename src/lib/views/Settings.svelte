@@ -1,15 +1,47 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api, isTauri } from "$lib/api";
-  import type { AppInfo, HotkeyMap } from "$lib/types";
+  import type { AppInfo, HotkeyMap, PrayerMethod, WorshipSettings } from "$lib/types";
   import { i18n } from "$lib/i18n/index.svelte.ts";
+  import type { TranslationKey } from "$lib/i18n/dict";
   import { nav } from "$lib/stores/nav.svelte.ts";
   import { player } from "$lib/stores/player.svelte.ts";
   import { library } from "$lib/stores/library.svelte.ts";
+  import { worship } from "$lib/stores/worship.svelte.ts";
   import { ui } from "$lib/stores/ui.svelte.ts";
+  import { cities, nearestCity, timezones } from "$lib/data/cities";
   import Icon from "$lib/components/Icon.svelte";
 
   let info = $state<AppInfo | null>(null);
+
+  const PRAYER_METHODS: PrayerMethod[] = [
+    "ummAlQura",
+    "muslimWorldLeague",
+    "egyptian",
+    "karachi",
+    "dubai",
+    "moonsightingCommittee",
+    "northAmerica",
+    "kuwait",
+    "qatar",
+    "singapore",
+    "tehran",
+    "turkey",
+  ];
+
+  const DEFAULT_PRAYER: WorshipSettings = {
+    latitude: 21.4225,
+    longitude: 39.8262,
+    timezone: "Asia/Riyadh",
+    method: "ummAlQura",
+    madhab: "shafi",
+    hijriAdjustment: 0,
+    configured: false,
+  };
+
+  let prayer = $state<WorshipSettings>({ ...DEFAULT_PRAYER });
+  let savingPrayer = $state(false);
+  const matchedCity = $derived(nearestCity(prayer.latitude, prayer.longitude));
 
   type UpdateState = "idle" | "checking" | "available" | "none" | "error";
   let updateState = $state<UpdateState>("idle");
@@ -42,16 +74,44 @@
   let savingHotkeys = $state(false);
 
   onMount(async () => {
-    const [infoResult, hotkeyResult] = await Promise.allSettled([
+    const [infoResult, hotkeyResult, prayerResult] = await Promise.allSettled([
       api.appInfo(),
       api.getHotkeys(),
+      api.worshipSettings(),
     ]);
     info = infoResult.status === "fulfilled" ? infoResult.value : null;
     if (hotkeyResult.status === "fulfilled") {
       hotkeys = hotkeyResult.value;
       hotkeyDraft = { ...hotkeyResult.value };
     }
+    if (prayerResult.status === "fulfilled") {
+      prayer = { ...prayerResult.value };
+    }
   });
+
+  function chooseCity(id: string) {
+    const city = cities.find((item) => item.id === id);
+    if (!city) return;
+    prayer = {
+      ...prayer,
+      latitude: city.latitude,
+      longitude: city.longitude,
+      timezone: city.timezone,
+    };
+  }
+
+  async function savePrayer() {
+    savingPrayer = true;
+    try {
+      prayer = { ...(await worship.saveSettings(prayer)) };
+      ui.notify(i18n.t("settings.prayerSaved"));
+    } catch (error) {
+      const detail = typeof error === "string" ? error : "";
+      ui.notify(`${i18n.t("settings.prayerFailed")} ${detail}`.trim());
+    } finally {
+      savingPrayer = false;
+    }
+  }
 
   function prettyAccelerator(accelerator: string) {
     if (!accelerator) return i18n.t("settings.hotkeyDisabled");
@@ -203,6 +263,141 @@
       >
         {i18n.t("settings.light")}
       </button>
+    </div>
+  </section>
+
+  <section class="mt-4 rounded-2xl border border-line bg-ink-900/60 p-5">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 class="flex items-center gap-2 text-sm font-semibold text-cream">
+        <Icon name="compass" size={15} class="text-gold" />
+        {i18n.t("settings.prayer")}
+      </h2>
+      <span
+        class="rounded-full border px-2.5 py-1 text-[10px] font-medium
+               {prayer.configured
+          ? 'border-teal/40 bg-teal/10 text-teal'
+          : 'border-gold/30 bg-gold/5 text-gold'}"
+      >
+        {prayer.configured ? i18n.t("settings.locationSet") : i18n.t("settings.locationUnset")}
+      </span>
+    </div>
+    <p class="mt-1 text-xs leading-relaxed text-muted">{i18n.t("settings.prayerHint")}</p>
+
+    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+      <label class="block">
+        <span class="text-[11px] text-muted">{i18n.t("settings.city")}</span>
+        <select
+          value={matchedCity?.id ?? ""}
+          onchange={(event) => chooseCity(event.currentTarget.value)}
+          class="mt-1 w-full rounded-xl border border-line bg-ink-850 px-3 py-2 text-sm text-cream focus:border-gold/50 focus:outline-none"
+        >
+          <option value="">{i18n.t("settings.customLocation")}</option>
+          {#each cities as city (city.id)}
+            <option value={city.id}>
+              {i18n.locale === "ar" ? `${city.name} — ${city.country}` : `${city.nameEn} — ${city.country}`}
+            </option>
+          {/each}
+        </select>
+      </label>
+
+      <label class="block">
+        <span class="text-[11px] text-muted">{i18n.t("settings.timezone")}</span>
+        <select
+          bind:value={prayer.timezone}
+          class="mt-1 w-full rounded-xl border border-line bg-ink-850 px-3 py-2 text-sm text-cream focus:border-gold/50 focus:outline-none"
+        >
+          {#if !timezones.includes(prayer.timezone)}
+            <option value={prayer.timezone}>{prayer.timezone}</option>
+          {/if}
+          {#each timezones as zone (zone)}
+            <option value={zone}>{zone}</option>
+          {/each}
+        </select>
+      </label>
+
+      <label class="block">
+        <span class="text-[11px] text-muted">{i18n.t("settings.latitude")}</span>
+        <input
+          type="number"
+          step="0.0001"
+          min="-90"
+          max="90"
+          bind:value={prayer.latitude}
+          class="mt-1 w-full rounded-xl border border-line bg-ink-850 px-3 py-2 text-sm tabular-nums text-cream focus:border-gold/50 focus:outline-none"
+        />
+      </label>
+
+      <label class="block">
+        <span class="text-[11px] text-muted">{i18n.t("settings.longitude")}</span>
+        <input
+          type="number"
+          step="0.0001"
+          min="-180"
+          max="180"
+          bind:value={prayer.longitude}
+          class="mt-1 w-full rounded-xl border border-line bg-ink-850 px-3 py-2 text-sm tabular-nums text-cream focus:border-gold/50 focus:outline-none"
+        />
+      </label>
+
+      <label class="block">
+        <span class="text-[11px] text-muted">{i18n.t("settings.method")}</span>
+        <select
+          value={prayer.method}
+          onchange={(event) =>
+            (prayer = { ...prayer, method: event.currentTarget.value as PrayerMethod })}
+          class="mt-1 w-full rounded-xl border border-line bg-ink-850 px-3 py-2 text-sm text-cream focus:border-gold/50 focus:outline-none"
+        >
+          {#each PRAYER_METHODS as method (method)}
+            <option value={method}>{i18n.t(`method.${method}` as TranslationKey)}</option>
+          {/each}
+        </select>
+      </label>
+
+      <label class="block">
+        <span class="text-[11px] text-muted">{i18n.t("settings.madhab")}</span>
+        <select
+          value={prayer.madhab}
+          onchange={(event) =>
+            (prayer = {
+              ...prayer,
+              madhab: event.currentTarget.value === "hanafi" ? "hanafi" : "shafi",
+            })}
+          class="mt-1 w-full rounded-xl border border-line bg-ink-850 px-3 py-2 text-sm text-cream focus:border-gold/50 focus:outline-none"
+        >
+          <option value="shafi">{i18n.t("settings.shafi")}</option>
+          <option value="hanafi">{i18n.t("settings.hanafi")}</option>
+        </select>
+      </label>
+
+      <label class="block sm:col-span-2">
+        <span class="text-[11px] text-muted">{i18n.t("settings.hijriAdjustment")}</span>
+        <div class="mt-1 flex items-center gap-3">
+          <input
+            type="number"
+            min="-3"
+            max="3"
+            step="1"
+            bind:value={prayer.hijriAdjustment}
+            class="w-24 rounded-xl border border-line bg-ink-850 px-3 py-2 text-sm tabular-nums text-cream focus:border-gold/50 focus:outline-none"
+          />
+          <span class="text-[11px] leading-relaxed text-muted">{i18n.t("settings.hijriHint")}</span>
+        </div>
+      </label>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        onclick={savePrayer}
+        disabled={savingPrayer}
+        class="flex items-center gap-2 rounded-xl bg-gold px-3.5 py-2 text-xs font-semibold text-ink-950 transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+      >
+        <Icon name="check" size={13} />
+        {i18n.t("settings.savePrayer")}
+      </button>
+      <span class="text-[10px] text-muted">
+        {matchedCity ? (i18n.locale === "ar" ? matchedCity.name : matchedCity.nameEn) : ""}
+      </span>
     </div>
   </section>
 
@@ -364,7 +559,7 @@
     <dl class="mt-3 space-y-2 text-sm">
       <div class="flex justify-between">
         <dt class="text-muted">{i18n.t("settings.version")}</dt>
-        <dd class="tabular-nums text-cream">{info?.version ?? "0.1.0"}</dd>
+        <dd class="tabular-nums text-cream">{info?.version ?? "0.2.0"}</dd>
       </div>
       <div class="flex justify-between">
         <dt class="text-muted">{i18n.t("settings.sources")}</dt>
