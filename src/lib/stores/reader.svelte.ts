@@ -1,5 +1,12 @@
 import { api } from "$lib/api";
-import type { Ayah, Juz, QuranBookmark, ReaderPosition, Surah } from "$lib/types";
+import type {
+  Ayah,
+  Juz,
+  JuzTranslation,
+  QuranBookmark,
+  ReaderPosition,
+  Surah,
+} from "$lib/types";
 
 const FONT_KEY = "sakeenah.reader.font";
 const TRANSLATION_KEY = "sakeenah.reader.translation";
@@ -28,30 +35,38 @@ class ReaderStore {
   loading = $state(false);
   loadingIndex = $state(false);
   error = $state<string | null>(null);
+  indexError = $state<string | null>(null);
   daily = $state<Ayah | null>(null);
 
   translation = $state(readTranslation());
+  translationLoading = $state(false);
+  translationFailed = $state(false);
   fontSize = $state(readFont());
   scrollTarget = $state<{ surah: number; ayah: number } | null>(null);
 
+  #requestId = 0;
+  #bookmarkPending = new Set<string>();
+
   async loadIndex() {
     this.loadingIndex = true;
-    try {
-      const [surahs, juzs, bookmarks, position] = await Promise.all([
-        api.surahs(),
-        api.juzs(),
-        api.quranBookmarks(),
-        api.readerPosition(),
-      ]);
-      this.surahs = surahs;
-      this.juzs = juzs;
-      this.bookmarks = bookmarks;
-      this.position = position;
-    } catch (error) {
-      this.error = typeof error === "string" ? error : String(error);
-    } finally {
-      this.loadingIndex = false;
+    this.indexError = null;
+    const [surahs, juzs, bookmarks, position] = await Promise.allSettled([
+      api.surahs(),
+      api.juzs(),
+      api.quranBookmarks(),
+      api.readerPosition(),
+    ]);
+    if (surahs.status === "fulfilled") this.surahs = surahs.value;
+    if (juzs.status === "fulfilled") this.juzs = juzs.value;
+    if (bookmarks.status === "fulfilled") this.bookmarks = bookmarks.value;
+    if (position.status === "fulfilled") this.position = position.value;
+
+    const failed = [bookmarks, position].some((result) => result.status === "rejected");
+    if (failed) this.indexError = "reader.indexError";
+    if (surahs.status === "rejected" && juzs.status === "rejected") {
+      this.indexError = "reader.error";
     }
+    this.loadingIndex = false;
   }
 
   get surahMeta(): Surah | null {
@@ -67,38 +82,86 @@ class ReaderStore {
   }
 
   async openSurah(number: number, ayah?: number) {
+    const requestId = ++this.#requestId;
     this.mode = "surah";
     this.surah = number;
     this.loading = true;
     this.error = null;
     this.scrollTarget = null;
+    this.translationFailed = false;
+    this.translationLoading = false;
     try {
-      this.ayahs = await api.surahText(number, this.translation);
+      const ayahs = await api.surahText(number);
+      if (requestId !== this.#requestId) return;
+      this.ayahs = ayahs;
       if (ayah && ayah > 0) {
         this.scrollTarget = { surah: number, ayah };
-        void this.savePosition(number, ayah);
+        void this.savePosition(number, ayah, "surah", this.juz);
       }
     } catch (error) {
+      if (requestId !== this.#requestId) return;
       this.ayahs = [];
       this.error = typeof error === "string" ? error : String(error);
     } finally {
-      this.loading = false;
+      if (requestId === this.#requestId) this.loading = false;
+    }
+    if (this.translation && requestId === this.#requestId) {
+      void this.#translateCurrent(requestId);
     }
   }
 
-  async openJuz(number: number) {
+  async openJuz(number: number, target?: { surah: number; ayah: number }) {
+    const requestId = ++this.#requestId;
     this.mode = "juz";
     this.juz = number;
     this.loading = true;
     this.error = null;
-    this.scrollTarget = null;
+    this.scrollTarget = target ?? null;
+    this.translationFailed = false;
+    this.translationLoading = false;
     try {
-      this.ayahs = await api.juzAyahs(number, this.translation);
+      const ayahs = await api.juzAyahs(number);
+      if (requestId !== this.#requestId) return;
+      this.ayahs = ayahs;
+      if (target) void this.savePosition(target.surah, target.ayah, "juz", number);
     } catch (error) {
+      if (requestId !== this.#requestId) return;
       this.ayahs = [];
       this.error = typeof error === "string" ? error : String(error);
     } finally {
-      this.loading = false;
+      if (requestId === this.#requestId) this.loading = false;
+    }
+    if (this.translation && requestId === this.#requestId) {
+      void this.#translateCurrent(requestId);
+    }
+  }
+
+  async #translateCurrent(requestId: number) {
+    this.translationLoading = true;
+    this.translationFailed = false;
+    try {
+      if (this.mode === "juz") {
+        const entries = await api.juzTranslation(this.juz);
+        if (requestId !== this.#requestId) return;
+        const bySurah = new Map(entries.map((entry) => [entry.surah, entry.translations]));
+        this.ayahs = this.ayahs.map((ayah) => {
+          const list = ayah.surah ? bySurah.get(ayah.surah) : undefined;
+          return { ...ayah, translation: list?.[ayah.number - 1] || undefined };
+        });
+        this.translationFailed = entries.length === 0;
+      } else {
+        const list = await api.surahTranslation(this.surah);
+        if (requestId !== this.#requestId) return;
+        this.ayahs = this.ayahs.map((ayah) => ({
+          ...ayah,
+          translation: list[ayah.number - 1] || undefined,
+        }));
+        this.translationFailed = list.length === 0;
+      }
+    } catch {
+      if (requestId === this.#requestId) this.translationFailed = true;
+    } finally {
+      if (requestId === this.#requestId) this.translationLoading = false;
     }
   }
 
@@ -110,10 +173,15 @@ class ReaderStore {
     }
   }
 
-  async savePosition(surah: number, ayah: number) {
-    this.position = { surah, ayah, updatedAt: Date.now() };
+  async savePosition(
+    surah: number,
+    ayah: number,
+    mode: "surah" | "juz" = this.mode,
+    juz: number = this.juz,
+  ) {
+    this.position = { mode, juz, surah, ayah, updatedAt: Date.now() };
     try {
-      this.position = await api.saveReaderPosition(surah, ayah);
+      this.position = await api.saveReaderPosition(mode, juz, surah, ayah);
     } catch (error) {
       this.error = typeof error === "string" ? error : String(error);
     }
@@ -124,6 +192,9 @@ class ReaderStore {
   }
 
   async toggleBookmark(surah: number, ayah: number) {
+    const key = `${surah}:${ayah}`;
+    if (this.#bookmarkPending.has(key)) return;
+    this.#bookmarkPending.add(key);
     try {
       if (this.isBookmarked(surah, ayah)) {
         await api.removeQuranBookmark(surah, ayah);
@@ -132,10 +203,17 @@ class ReaderStore {
         );
       } else {
         const bookmark = await api.addQuranBookmark(surah, ayah);
-        this.bookmarks = [bookmark, ...this.bookmarks];
+        this.bookmarks = [
+          bookmark,
+          ...this.bookmarks.filter(
+            (entry) => !(entry.surah === surah && entry.ayah === ayah),
+          ),
+        ];
       }
     } catch (error) {
       this.error = typeof error === "string" ? error : String(error);
+    } finally {
+      this.#bookmarkPending.delete(key);
     }
   }
 
@@ -151,11 +229,16 @@ class ReaderStore {
     if (typeof localStorage !== "undefined") {
       localStorage.setItem(TRANSLATION_KEY, enabled ? "1" : "0");
     }
-    await this.reload();
+    if (!enabled) {
+      this.translationLoading = false;
+      this.translationFailed = false;
+      this.ayahs = this.ayahs.map((ayah) => ({ ...ayah, translation: undefined }));
+      return;
+    }
+    await this.#translateCurrent(this.#requestId);
   }
 
   async loadDaily() {
-    if (this.daily) return;
     try {
       this.daily = await api.dailyAyah();
     } catch {

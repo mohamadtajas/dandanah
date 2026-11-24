@@ -179,24 +179,27 @@ pub fn get_ayah_tracks(surah_number: u16, reciter_id: String) -> Result<Vec<Trac
 
 /// Sahih International for one surah, cached. `None` keeps the Arabic usable
 /// offline when the translation cannot be fetched.
-async fn translation_for(state: &AppState, surah: u16) -> Option<Vec<String>> {
+async fn translation_for(
+    db: &Database,
+    client: &reqwest::Client,
+    surah: u16,
+) -> Option<Vec<String>> {
     let key = format!("quran-translation:v1:{surah}");
-    if let Ok(Some(cached)) = state.db.cache_get(&key, TEXT_TTL) {
+    if let Ok(Some(cached)) = db.cache_get(&key, TEXT_TTL) {
         if let Ok(list) = serde_json::from_str::<Vec<String>>(&cached) {
             if !list.is_empty() {
                 return Some(list);
             }
         }
     }
-    match quran_text::fetch_translation(&state.http, surah).await {
+    match quran_text::fetch_translation(client, surah).await {
         Ok(list) if !list.is_empty() => {
             if let Ok(json) = serde_json::to_string(&list) {
-                let _ = state.db.cache_put(&key, &json);
+                let _ = db.cache_put(&key, &json);
             }
             Some(list)
         }
-        _ => state
-            .db
+        _ => db
             .stale_cache(&key)
             .ok()
             .flatten()
@@ -204,57 +207,85 @@ async fn translation_for(state: &AppState, surah: u16) -> Option<Vec<String>> {
     }
 }
 
-fn merge_translations(ayahs: &mut [quran_text::Ayah], translations: &[String]) {
-    for ayah in ayahs {
-        if let Some(text) = translations.get(ayah.number as usize - 1) {
-            ayah.translation = Some(text.clone());
-        }
-    }
-}
-
 #[tauri::command]
-pub async fn get_surah_text(
-    state: State<'_, AppState>,
-    surah_number: u16,
-    translation: Option<bool>,
-) -> Result<Vec<quran_text::Ayah>, String> {
-    let mut ayahs = quran::surah_ayahs(surah_number);
+pub fn get_surah_text(surah_number: u16) -> Result<Vec<quran_text::Ayah>, String> {
+    let ayahs = quran::surah_ayahs(surah_number);
     if ayahs.is_empty() {
         return Err(format!("surah {surah_number} not found"));
     }
-    if translation.unwrap_or(false) {
-        if let Some(list) = translation_for(&state, surah_number).await {
-            merge_translations(&mut ayahs, &list);
-        }
-    }
     Ok(ayahs)
 }
 
 #[tauri::command]
-pub async fn get_juz_ayahs(
-    state: State<'_, AppState>,
-    juz: u16,
-    translation: Option<bool>,
-) -> Result<Vec<quran_text::Ayah>, String> {
-    let mut ayahs = quran::juz_ayahs(juz);
+pub fn get_juz_ayahs(juz: u16) -> Result<Vec<quran_text::Ayah>, String> {
+    let ayahs = quran::juz_ayahs(juz);
     if ayahs.is_empty() {
         return Err(format!("juz {juz} not found"));
     }
-    if translation.unwrap_or(false) {
-        let mut surahs: Vec<u16> = ayahs.iter().map(|ayah| ayah.surah).collect();
-        surahs.sort_unstable();
-        surahs.dedup();
-        for surah in surahs {
-            if let Some(list) = translation_for(&state, surah).await {
-                for ayah in ayahs.iter_mut().filter(|ayah| ayah.surah == surah) {
-                    if let Some(text) = list.get(ayah.number as usize - 1) {
-                        ayah.translation = Some(text.clone());
-                    }
-                }
+    Ok(ayahs)
+}
+
+/// Translations are a separate request so the bundled Arabic never waits for
+/// the network (or a VPN) when the reader opens a surah offline.
+#[tauri::command]
+pub async fn get_surah_translation(
+    state: State<'_, AppState>,
+    surah_number: u16,
+) -> Result<Vec<String>, String> {
+    let expected = quran::surah_meta(surah_number)
+        .map(|surah| surah.ayahs as usize)
+        .unwrap_or(0);
+    Ok(match translation_for(&state.db, &state.http, surah_number).await {
+        Some(list) if list.len() == expected => list,
+        _ => Vec::new(),
+    })
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JuzTranslation {
+    pub surah: u16,
+    pub translations: Vec<String>,
+}
+
+#[tauri::command]
+pub async fn get_juz_translation(
+    state: State<'_, AppState>,
+    juz: u16,
+) -> Result<Vec<JuzTranslation>, String> {
+    let ayahs = quran::juz_ayahs(juz);
+    let mut surahs: Vec<u16> = ayahs.iter().map(|ayah| ayah.surah).collect();
+    surahs.sort_unstable();
+    surahs.dedup();
+    if surahs.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // A juz can span many surahs; fetch them together so a slow link costs one
+    // timeout in total rather than one per surah.
+    let mut set = tokio::task::JoinSet::new();
+    for surah in surahs {
+        let db = state.db.clone();
+        let client = state.http.clone();
+        set.spawn(async move { (surah, translation_for(&db, &client, surah).await) });
+    }
+
+    let mut out = Vec::new();
+    while let Some(result) = set.join_next().await {
+        if let Ok((surah, Some(list))) = result {
+            let expected = quran::surah_meta(surah)
+                .map(|meta| meta.ayahs as usize)
+                .unwrap_or(0);
+            if list.len() == expected {
+                out.push(JuzTranslation {
+                    surah,
+                    translations: list,
+                });
             }
         }
     }
-    Ok(ayahs)
+    out.sort_by_key(|entry| entry.surah);
+    Ok(out)
 }
 
 #[tauri::command]
@@ -332,13 +363,21 @@ pub fn get_reader_position(
 #[tauri::command]
 pub fn save_reader_position(
     state: State<'_, AppState>,
+    mode: String,
+    juz: u16,
     surah: u16,
     ayah: u16,
 ) -> Result<ReaderPosition, String> {
     validate_ayah_ref(surah, ayah)?;
+    if mode != "surah" && mode != "juz" {
+        return Err(format!("invalid reader mode: {mode}"));
+    }
+    if mode == "juz" && !(1..=30).contains(&juz) {
+        return Err(format!("invalid juz: {juz}"));
+    }
     state
         .db
-        .save_reader_position(surah, ayah)
+        .save_reader_position(&mode, juz, surah, ayah)
         .map_err(|e| e.to_string())
 }
 

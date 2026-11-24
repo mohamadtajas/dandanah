@@ -3,7 +3,13 @@
   import { nav } from "$lib/stores/nav.svelte.ts";
   import Icon from "$lib/components/Icon.svelte";
 
-  const sources = [
+  const sources: {
+    name: string;
+    url: string;
+    what: { ar: string; en: string };
+    license: { ar: string; en: string };
+    notice?: string;
+  }[] = [
     {
       name: "Tanzil Quran Text",
       url: "https://tanzil.net",
@@ -15,6 +21,13 @@
         ar: "CC BY 3.0 — © Tanzil Project",
         en: "CC BY 3.0 — © Tanzil Project",
       },
+      notice: `Tanzil Quran Text (Uthmani, Version 1.1)
+Copyright (C) 2007-2026 Tanzil Project
+License: Creative Commons Attribution 3.0
+
+Permission is granted to copy and distribute verbatim copies of this text, but CHANGING IT IS NOT ALLOWED.
+This Quran text can be used in any website or application, provided that its source (Tanzil Project) is clearly indicated, and a link is made to tanzil.net.
+This copyright notice shall be included in all verbatim copies of the text, and shall be reproduced appropriately in all files derived from or containing a substantial portion of this text.`,
     },
     {
       name: "mp3quran.net",
@@ -31,7 +44,10 @@
     {
       name: "AlQuran Cloud",
       url: "https://alquran.cloud",
-      what: { ar: "أسماء السور وعدد الآيات", en: "Surah names and ayah counts" },
+      what: {
+        ar: "أسماء السور وعدد الآيات، وترجمة Sahih International",
+        en: "Surah names/counts and the Sahih International translation",
+      },
       license: { ar: "بيانات مفتوحة", en: "Open data" },
     },
     {
@@ -98,7 +114,23 @@
             {source.license[i18n.locale]}
           </span>
         </div>
-        <div class="mt-2 truncate text-[11px] text-muted/70" dir="ltr">{source.url}</div>
+        <a
+          href={source.url}
+          target="_blank"
+          rel="noreferrer"
+          class="mt-2 block truncate text-[11px] text-muted/70 transition-colors hover:text-gold"
+          dir="ltr">{source.url}</a
+        >
+        {#if source.notice}
+          <details class="mt-2">
+            <summary class="cursor-pointer text-[10px] text-muted hover:text-gold">
+              {i18n.t("credits.license")}
+            </summary>
+            <pre
+              class="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-line/60 bg-ink-850/60 p-2 text-[9px] leading-relaxed text-muted"
+              dir="ltr">{source.notice}</pre>
+          </details>
+        {/if}
       </div>
     {/each}
   </div>

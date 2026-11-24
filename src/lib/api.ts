@@ -11,6 +11,7 @@ import type {
   HotkeyMap,
   ImportSummary,
   Juz,
+  JuzTranslation,
   Memorization,
   NowPlaying,
   Playlist,
@@ -65,15 +66,25 @@ export const api = {
       ? invoke<Track[]>("get_ayah_tracks", { surahNumber, reciterId })
       : (await mock()).ayahTracks(surahNumber, reciterId),
 
-  surahText: async (surahNumber: number, translation = false): Promise<Ayah[]> =>
+  surahText: async (surahNumber: number): Promise<Ayah[]> =>
     isTauri
-      ? invoke<Ayah[]>("get_surah_text", { surahNumber, translation })
-      : (await mock()).surahText(surahNumber, translation),
+      ? invoke<Ayah[]>("get_surah_text", { surahNumber })
+      : (await mock()).surahText(surahNumber),
 
-  juzAyahs: async (juz: number, translation = false): Promise<Ayah[]> =>
+  surahTranslation: async (surahNumber: number): Promise<string[]> =>
     isTauri
-      ? invoke<Ayah[]>("get_juz_ayahs", { juz, translation })
-      : (await mock()).juzAyahs(juz, translation),
+      ? invoke<string[]>("get_surah_translation", { surahNumber })
+      : (await mock()).surahTranslation(surahNumber),
+
+  juzAyahs: async (juz: number): Promise<Ayah[]> =>
+    isTauri
+      ? invoke<Ayah[]>("get_juz_ayahs", { juz })
+      : (await mock()).juzAyahs(juz),
+
+  juzTranslation: async (juz: number): Promise<JuzTranslation[]> =>
+    isTauri
+      ? invoke<JuzTranslation[]>("get_juz_translation", { juz })
+      : (await mock()).juzTranslation(juz),
 
   juzs: async (): Promise<Juz[]> =>
     isTauri ? invoke<Juz[]>("get_juzs") : (await mock()).juzs(),
@@ -104,9 +115,14 @@ export const api = {
       ? invoke<ReaderPosition | null>("get_reader_position")
       : (await mock()).readerPosition(),
 
-  saveReaderPosition: async (surah: number, ayah: number): Promise<ReaderPosition> => {
-    if (!isTauri) return (await mock()).saveReaderPosition(surah, ayah);
-    return invoke<ReaderPosition>("save_reader_position", { surah, ayah });
+  saveReaderPosition: async (
+    mode: "surah" | "juz",
+    juz: number,
+    surah: number,
+    ayah: number,
+  ): Promise<ReaderPosition> => {
+    if (!isTauri) return (await mock()).saveReaderPosition(mode, juz, surah, ayah);
+    return invoke<ReaderPosition>("save_reader_position", { mode, juz, surah, ayah });
   },
 
   memorized: async (surahNumber: number): Promise<number[]> =>

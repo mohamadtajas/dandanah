@@ -92,9 +92,16 @@ export interface QuranBookmark {
 }
 
 export interface ReaderPosition {
+  mode: "surah" | "juz";
+  juz: number;
   surah: number;
   ayah: number;
   updatedAt: number;
+}
+
+export interface JuzTranslation {
+  surah: number;
+  translations: string[];
 }
 
 export interface Memorization {

@@ -14,6 +14,7 @@ import type {
   HotkeyMap,
   ImportSummary,
   Juz,
+  JuzTranslation,
   Memorization,
   Playlist,
   PrayerDay,
@@ -1461,7 +1462,7 @@ export function mockApi() {
         };
       });
     },
-    async surahText(surahNumber: number, _translation = false): Promise<Ayah[]> {
+    async surahText(surahNumber: number): Promise<Ayah[]> {
       const meta = SURAHS.find((s) => s.number === surahNumber);
       const count = meta?.ayahs ?? 0;
       const text =
@@ -1481,11 +1482,62 @@ export function mockApi() {
         sajda: false,
       }));
     },
-    async juzAyahs(juz: number, _translation = false): Promise<Ayah[]> {
+    async surahTranslation(surahNumber: number): Promise<string[]> {
+      const meta = SURAHS.find((surah) => surah.number === surahNumber);
+      return Array.from(
+        { length: meta?.ayahs ?? 0 },
+        (_, index) => `Translation preview ${surahNumber}:${index + 1} (browser mock).`,
+      );
+    },
+    async juzAyahs(juz: number): Promise<Ayah[]> {
       const entry = JUZS.find((item) => item.number === juz);
       if (!entry) return [];
-      const ayahs = await this.surahText(entry.surah);
-      return ayahs.filter((ayah) => ayah.number >= entry.ayah);
+      const start =
+        SURAHS.slice(0, entry.surah - 1).reduce((sum, surah) => sum + surah.ayahs, 0) +
+        entry.ayah -
+        1;
+      const end = start + entry.ayahs;
+      let global = 0;
+      const out: Ayah[] = [];
+      for (const surah of SURAHS) {
+        for (let ayah = 1; ayah <= surah.ayahs; ayah += 1) {
+          const index = global;
+          global += 1;
+          if (index < start || index >= end) continue;
+          out.push({
+            number: ayah,
+            surah: surah.number,
+            text:
+              surah.number === 1
+                ? FATIHA[ayah - 1]
+                : "نص الآية غير متاح في وضع المعاينة داخل المتصفح.",
+            juz,
+            page: 1,
+            bismillah:
+              ayah === 1 && surah.number !== 1 && surah.number !== 9
+                ? "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+                : undefined,
+            sajda: false,
+          });
+        }
+      }
+      return out;
+    },
+    async juzTranslation(juz: number): Promise<JuzTranslation[]> {
+      const ayahs = await this.juzAyahs(juz);
+      const counts = new Map<number, number>();
+      for (const ayah of ayahs) {
+        if (!ayah.surah) continue;
+        const meta = SURAHS.find((surah) => surah.number === ayah.surah);
+        if (meta) counts.set(ayah.surah, meta.ayahs);
+      }
+      return [...counts.entries()].map(([surah, count]) => ({
+        surah,
+        translations: Array.from(
+          { length: count },
+          (_, index) => `Translation preview ${surah}:${index + 1} (browser mock).`,
+        ),
+      }));
     },
     async juzs(): Promise<Juz[]> {
       return JUZS;
@@ -1518,8 +1570,13 @@ export function mockApi() {
     async readerPosition(): Promise<ReaderPosition | null> {
       return readerPositionStore;
     },
-    async saveReaderPosition(surah: number, ayah: number): Promise<ReaderPosition> {
-      readerPositionStore = { surah, ayah, updatedAt: Date.now() };
+    async saveReaderPosition(
+      mode: "surah" | "juz",
+      juz: number,
+      surah: number,
+      ayah: number,
+    ): Promise<ReaderPosition> {
+      readerPositionStore = { mode, juz, surah, ayah, updatedAt: Date.now() };
       return readerPositionStore;
     },
     async memorized(surahNumber: number) {

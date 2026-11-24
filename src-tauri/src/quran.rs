@@ -11,6 +11,7 @@ use std::sync::OnceLock;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)] // surah metadata is exposed through the existing get_surahs command
 pub struct QuranSurah {
     pub number: u16,
     pub name: String,
@@ -49,6 +50,8 @@ struct RawAyah {
     text: String,
     #[serde(default)]
     bismillah: Option<String>,
+    #[serde(default)]
+    sajda: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -68,10 +71,12 @@ fn data() -> &'static QuranData {
     })
 }
 
+#[cfg(test)]
 pub fn total_surahs() -> usize {
     data().surahs.len()
 }
 
+#[cfg(test)]
 pub fn total_ayahs() -> usize {
     data().ayahs.len()
 }
@@ -97,24 +102,7 @@ fn to_ayah(raw: &RawAyah) -> Ayah {
         } else {
             None
         },
-        sajda: matches!(
-            (raw.surah, raw.ayah),
-            (7, 206)
-                | (13, 15)
-                | (16, 50)
-                | (17, 109)
-                | (19, 58)
-                | (22, 18)
-                | (22, 77)
-                | (25, 60)
-                | (27, 26)
-                | (32, 15)
-                | (38, 24)
-                | (41, 38)
-                | (53, 62)
-                | (84, 21)
-                | (96, 19)
-        ),
+        sajda: raw.sajda,
     }
 }
 

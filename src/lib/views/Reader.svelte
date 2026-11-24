@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { tick } from "svelte";
+  import { onMount, tick } from "svelte";
   import { fmtNumber, i18n } from "$lib/i18n/index.svelte.ts";
+  import type { TranslationKey } from "$lib/i18n/dict";
   import { nav } from "$lib/stores/nav.svelte.ts";
   import { reader } from "$lib/stores/reader.svelte.ts";
   import { normalizeArabic } from "$lib/text";
@@ -11,6 +12,9 @@
   let tab = $state<"surahs" | "juzs" | "bookmarks">("surahs");
   let query = $state("");
   let lastRoute = "";
+  let mainEl: HTMLElement | null = null;
+  let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastVisible = "";
 
   const tabs = [
     { id: "surahs" as const, label: "reader.surahs" as const, icon: "bookOpen" as const },
@@ -67,6 +71,49 @@
     })();
   });
 
+  // Remember the first ayah the reader is looking at, not just explicit clicks.
+  onMount(() => {
+    mainEl = document.querySelector("main");
+    const onScroll = () => {
+      if (scrollTimer) return;
+      scrollTimer = setTimeout(() => {
+        scrollTimer = null;
+        saveVisible();
+      }, 250);
+    };
+    mainEl?.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      mainEl?.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (scrollTimer) clearTimeout(scrollTimer);
+    };
+  });
+
+  $effect(() => {
+    reader.ayahs;
+    reader.mode;
+    reader.juz;
+    void tick().then(() => saveVisible());
+  });
+
+  function saveVisible() {
+    if (!mainEl || reader.loading || !reader.ayahs.length) return;
+    const top = mainEl.getBoundingClientRect().top + 80;
+    for (const element of mainEl.querySelectorAll<HTMLElement>('[id^="ayah-"]')) {
+      const rect = element.getBoundingClientRect();
+      if (rect.bottom <= top) continue;
+      const [, surah, ayah] = element.id.split("-");
+      if (!surah || !ayah) return;
+      const key = `${surah}:${ayah}`;
+      if (key !== lastVisible) {
+        lastVisible = key;
+        void reader.savePosition(Number(surah), Number(ayah));
+      }
+      return;
+    }
+  }
+
   async function boot() {
     if (!reader.surahs.length) await reader.loadIndex();
     if (nav.view !== "reader") return;
@@ -91,17 +138,34 @@
     }
 
     if (reader.position) {
-      await reader.openSurah(reader.position.surah, reader.position.ayah);
+      if (reader.position.mode === "juz" && reader.position.juz) {
+        await reader.openJuz(reader.position.juz, {
+          surah: reader.position.surah,
+          ayah: reader.position.ayah,
+        });
+      } else {
+        await reader.openSurah(reader.position.surah, reader.position.ayah);
+      }
       return;
     }
     await reader.openSurah(1);
   }
 
   function openSurah(number: number) {
+    if (reader.mode === "surah" && reader.surah === number) {
+      mainEl?.scrollTo({ top: 0, behavior: "smooth" });
+      reader.clearScrollTarget();
+      return;
+    }
     nav.go("reader", number);
   }
 
   function openJuz(number: number) {
+    if (reader.mode === "juz" && reader.juz === number) {
+      mainEl?.scrollTo({ top: 0, behavior: "smooth" });
+      reader.clearScrollTarget();
+      return;
+    }
     nav.go("reader", "juz", number);
   }
 
@@ -197,7 +261,13 @@
         {/each}
       </div>
 
-      <div class="mt-3 max-h-[62vh] overflow-y-auto pe-1">
+      {#if reader.indexError}
+        <p class="mt-2 rounded-lg border border-gold/30 bg-gold/[0.05] px-2.5 py-2 text-[10px] leading-relaxed text-gold">
+          {i18n.t(reader.indexError as TranslationKey)}
+        </p>
+      {/if}
+
+      <div class="mt-3 max-h-[42vh] overflow-y-auto pe-1 lg:max-h-[62vh]">
         {#if tab === "surahs"}
           <label class="flex items-center gap-2 rounded-lg border border-line bg-ink-850 px-2.5 py-1.5 focus-within:border-gold/40">
             <Icon name="search" size={13} class="shrink-0 text-muted" />
@@ -302,7 +372,11 @@
         </div>
       {/if}
 
-      {#if reader.translation && reader.ayahs.length && !reader.ayahs.some((ayah) => ayah.translation)}
+      {#if reader.translation && reader.translationLoading}
+        <p class="mb-3 rounded-xl border border-line bg-ink-900/60 px-3 py-2 text-[11px] text-muted">
+          {i18n.t("reader.translationLoading")}
+        </p>
+      {:else if reader.translation && reader.ayahs.length && !reader.ayahs.some((ayah) => ayah.translation)}
         <p class="mb-3 rounded-xl border border-line bg-ink-900/60 px-3 py-2 text-[11px] text-muted">
           {i18n.t("reader.translationUnavailable")}
         </p>

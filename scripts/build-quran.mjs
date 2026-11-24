@@ -4,6 +4,7 @@
 // The Arabic text is never edited. This script only reshapes the XML into JSON
 // and attaches the juz/page numbers from Tanzil's metadata.
 
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,6 +16,7 @@ const outputPath = path.join(root, "src-tauri", "data", "quran.json");
 
 const textXml = fs.readFileSync(textPath, "utf8");
 const metaXml = fs.readFileSync(metaPath, "utf8");
+const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 
 const decode = (value) =>
   value
@@ -53,9 +55,16 @@ for (const match of metaXml.matchAll(/<page\s+([^>]*?)\/>/g)) {
   pageStarts.push({ number: Number(attrs.index), surah: Number(attrs.sura), ayah: Number(attrs.aya) });
 }
 
+const sajdaAt = new Set();
+for (const match of metaXml.matchAll(/<sajda\s+([^>]*?)\/>/g)) {
+  const attrs = attrsOf(match[1]);
+  sajdaAt.add(`${Number(attrs.sura)}:${Number(attrs.aya)}`);
+}
+
 if (metaSurahs.size !== 114) throw new Error(`metadata has ${metaSurahs.size} surahs`);
 if (juzStarts.length !== 30) throw new Error(`metadata has ${juzStarts.length} juz`);
 if (pageStarts.length !== 604) throw new Error(`metadata has ${pageStarts.length} pages`);
+if (sajdaAt.size !== 15) throw new Error(`metadata has ${sajdaAt.size} sajdas`);
 
 // --- Text: verbatim ayahs, basmala kept as Tanzil supplies it -------------
 const surahs = [];
@@ -78,7 +87,10 @@ for (const match of textXml.matchAll(surahRe)) {
     const surahBismillah = ayaMatch[3] ? decode(ayaMatch[3]) : null;
     if (!text) throw new Error(`empty text ${number}:${ayah}`);
     if (surahBismillah) bismillah = surahBismillah;
-    ayahs.push({ surah: number, ayah, text, bismillah: surahBismillah });
+    const row = { surah: number, ayah, text };
+    if (surahBismillah) row.bismillah = surahBismillah;
+    if (sajdaAt.has(`${number}:${ayah}`)) row.sajda = true;
+    ayahs.push(row);
     count += 1;
   }
 
@@ -98,6 +110,17 @@ for (const match of textXml.matchAll(surahRe)) {
 
 if (surahs.length !== 114) throw new Error(`text has ${surahs.length} surahs`);
 if (ayahs.length !== 6236) throw new Error(`text has ${ayahs.length} ayahs`);
+
+for (let i = 1; i < ayahs.length; i += 1) {
+  const previous = ayahs[i - 1];
+  const current = ayahs[i];
+  if (
+    current.surah < previous.surah ||
+    (current.surah === previous.surah && current.ayah <= previous.ayah)
+  ) {
+    throw new Error(`ayah order broke at ${current.surah}:${current.ayah}`);
+  }
+}
 
 // --- Attach juz and page numbers ----------------------------------------
 const juzAt = new Map(juzStarts.map((juz) => [`${juz.surah}:${juz.ayah}`, juz.number]));
@@ -135,11 +158,31 @@ const juzs = juzStarts.map((entry) => ({
 
 const notice = `# PLEASE DO NOT REMOVE OR CHANGE THIS COPYRIGHT BLOCK
 #====================================================================
+#
 #  Tanzil Quran Text (Uthmani, Version 1.1)
 #  Copyright (C) 2007-2026 Tanzil Project
 #  License: Creative Commons Attribution 3.0
-#  Verbatim copies only; changing the text is not allowed.
-#  Source: https://tanzil.net
+#
+#  This copy of the Quran text is carefully produced, highly
+#  verified and continuously monitored by a group of specialists
+#  at Tanzil Project.
+#
+#  TERMS OF USE:
+#
+#  - Permission is granted to copy and distribute verbatim copies
+#    of this text, but CHANGING IT IS NOT ALLOWED.
+#
+#  - This Quran text can be used in any website or application,
+#    provided that its source (Tanzil Project) is clearly indicated,
+#    and a link is made to tanzil.net to enable users to keep
+#    track of changes.
+#
+#  - This copyright notice shall be included in all verbatim copies
+#    of the text, and shall be reproduced appropriately in all files
+#    derived from or containing substantial portion of this text.
+#
+#  Please check updates at: http://tanzil.net/updates/
+#
 #====================================================================`;
 
 const output = {
@@ -151,6 +194,8 @@ const output = {
     licenseUrl: "https://tanzil.net/docs/tanzil_license",
     sourceUrl: "https://tanzil.net",
     downloaded: "2026-11-26",
+    textSha256: sha256(textXml),
+    metadataSha256: sha256(metaXml),
     notice,
   },
   surahs,

@@ -33,6 +33,9 @@ pub async fn fetch_translation(client: &reqwest::Client, surah: u16) -> Result<V
     let url = format!("{API}/surah/{surah}/en.sahih");
     let body: Value = client
         .get(&url)
+        // The Arabic text is bundled, so a slow/blocked translation must not
+        // hold the reader hostage when offline.
+        .timeout(std::time::Duration::from_secs(8))
         .send()
         .await
         .context("requesting surah translation")?
@@ -45,16 +48,33 @@ pub async fn fetch_translation(client: &reqwest::Client, surah: u16) -> Result<V
 }
 
 pub fn parse_translation(body: &Value) -> Option<Vec<String>> {
-    body.pointer("/data/ayahs")
-        .and_then(Value::as_array)
-        .map(|ayahs| {
-            ayahs
-                .iter()
-                .filter_map(|ayah| ayah.get("text").and_then(Value::as_str))
-                .map(|text| text.trim().to_string())
-                .collect()
-        })
-        .filter(|translations: &Vec<String>| !translations.is_empty())
+    let ayahs = body.pointer("/data/ayahs").and_then(Value::as_array)?;
+    if ayahs.is_empty() {
+        return None;
+    }
+    // Preserve positions: a malformed/missing ayah must leave an empty slot
+    // rather than shift every subsequent translation by one.
+    let mut max = ayahs.len();
+    for ayah in ayahs {
+        if let Some(number) = ayah.get("numberInSurah").and_then(Value::as_u64) {
+            max = max.max(number as usize);
+        }
+    }
+    let mut out = vec![String::new(); max];
+    for (index, ayah) in ayahs.iter().enumerate() {
+        let number = ayah
+            .get("numberInSurah")
+            .and_then(Value::as_u64)
+            .map(|value| value as usize)
+            .unwrap_or(index + 1);
+        if number == 0 || number > max {
+            continue;
+        }
+        if let Some(text) = ayah.get("text").and_then(Value::as_str) {
+            out[number - 1] = text.trim().to_string();
+        }
+    }
+    Some(out)
 }
 
 #[cfg(test)]
@@ -81,5 +101,17 @@ mod tests {
     fn rejects_an_empty_translation_payload() {
         assert!(parse_translation(&serde_json::json!({ "data": { "ayahs": [] } })).is_none());
         assert!(parse_translation(&serde_json::json!({})).is_none());
+    }
+
+    #[test]
+    fn missing_translation_entries_keep_their_position() {
+        let payload = serde_json::json!({
+            "data": { "ayahs": [
+                { "numberInSurah": 1, "text": "A" },
+                { "numberInSurah": 3, "text": "C" }
+            ]}
+        });
+        let translations = parse_translation(&payload).unwrap();
+        assert_eq!(translations, vec!["A".to_string(), String::new(), "C".to_string()]);
     }
 }

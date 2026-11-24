@@ -32,3 +32,34 @@ node scripts/build-adhkar.mjs
 
 The generator removes audio links, adds stable IDs, asserts the 126/302 shape,
 and pins the featured repeat counts.
+
+---
+
+# Quran source
+
+- **Text:** Tanzil Quran Text (Uthmani, Version 1.1), downloaded 2026-11-26.
+- **Metadata:** Tanzil Quran Metadata (Version 1.0).
+- **Licence:** Creative Commons Attribution 3.0, Copyright (C) 2007-2026 Tanzil
+  Project. The full notice and terms are in
+  [`QURAN_LICENSE.md`](./QURAN_LICENSE.md) and are embedded in the generated
+  `src-tauri/data/quran.json`.
+- **Source:** <https://tanzil.net> · <https://tanzil.net/docs/tanzil_license>
+
+## Files and generation
+
+- `quran-uthmani.xml` — the verbatim Uthmani text download (basmala is a
+  separate attribute on the first ayah, exactly as Tanzil supplies it).
+- `quran-metadata.xml` — surah counts, juz starts and page starts.
+- `scripts/build-quran.mjs` — reshapes the XML into
+  `src-tauri/data/quran.json`; it never edits the Arabic text.
+- `src-tauri/data/quran.json` — 114 surahs, 6236 ayahs, 30 juz, 604 pages,
+  112 separate basmalas and 15 sajda flags. Embedded in the binary at compile
+  time; parsing happens once at first use.
+
+```bash
+node scripts/build-quran.mjs
+```
+
+The reader (`src-tauri/src/quran.rs`) slices this file by surah and juz; the
+Sahih International translation is fetched at runtime and cached, so the Arabic
+text remains fully offline.

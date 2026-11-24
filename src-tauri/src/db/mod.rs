@@ -155,6 +155,11 @@ const MIGRATIONS: &[&str] = &[
         updated_at INTEGER NOT NULL
     );
     "#,
+    // --- v7 : remember whether the reader was in surah or juz mode ---------
+    r#"
+    ALTER TABLE reader_state ADD COLUMN mode TEXT NOT NULL DEFAULT 'surah';
+    ALTER TABLE reader_state ADD COLUMN juz INTEGER NOT NULL DEFAULT 1;
+    "#,
 ];
 
 /// Memorisation state for one surah. Ayah numbers are 1-based.
@@ -211,6 +216,9 @@ pub struct QuranBookmark {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReaderPosition {
+    /// `surah` or `juz`.
+    pub mode: String,
+    pub juz: u16,
     pub surah: u16,
     pub ayah: u16,
     pub updated_at: i64,
@@ -666,13 +674,15 @@ impl Database {
         let conn = self.conn.lock();
         let position = conn
             .query_row(
-                "SELECT surah, ayah, updated_at FROM reader_state WHERE id = 1",
+                "SELECT mode, juz, surah, ayah, updated_at FROM reader_state WHERE id = 1",
                 [],
                 |r| {
                     Ok(ReaderPosition {
-                        surah: r.get(0)?,
-                        ayah: r.get(1)?,
-                        updated_at: r.get(2)?,
+                        mode: r.get(0)?,
+                        juz: r.get(1)?,
+                        surah: r.get(2)?,
+                        ayah: r.get(3)?,
+                        updated_at: r.get(4)?,
                     })
                 },
             )
@@ -680,21 +690,31 @@ impl Database {
         Ok(position)
     }
 
-    pub fn save_reader_position(&self, surah: u16, ayah: u16) -> Result<ReaderPosition> {
+    pub fn save_reader_position(
+        &self,
+        mode: &str,
+        juz: u16,
+        surah: u16,
+        ayah: u16,
+    ) -> Result<ReaderPosition> {
         let updated_at = now();
         {
             let conn = self.conn.lock();
             conn.execute(
-                "INSERT INTO reader_state(id, surah, ayah, updated_at)
-                 VALUES(1, ?1, ?2, ?3)
+                "INSERT INTO reader_state(id, mode, juz, surah, ayah, updated_at)
+                 VALUES(1, ?1, ?2, ?3, ?4, ?5)
                  ON CONFLICT(id) DO UPDATE SET
+                    mode       = excluded.mode,
+                    juz        = excluded.juz,
                     surah      = excluded.surah,
                     ayah       = excluded.ayah,
                     updated_at = excluded.updated_at",
-                params![surah, ayah, updated_at],
+                params![mode, juz, surah, ayah, updated_at],
             )?;
         }
         Ok(ReaderPosition {
+            mode: mode.to_string(),
+            juz,
             surah,
             ayah,
             updated_at,
@@ -1450,15 +1470,17 @@ mod tests {
         db.remove_quran_bookmark(2, 255).unwrap();
         assert_eq!(db.quran_bookmarks().unwrap().len(), 1);
 
-        let position = db.save_reader_position(18, 10).unwrap();
+        let position = db.save_reader_position("surah", 1, 18, 10).unwrap();
         assert_eq!((position.surah, position.ayah), (18, 10));
-        db.save_reader_position(36, 1).unwrap();
-        assert_eq!(db.reader_position().unwrap().unwrap().surah, 36);
+        db.save_reader_position("juz", 23, 36, 28).unwrap();
+        let saved = db.reader_position().unwrap().unwrap();
+        assert_eq!((saved.mode.as_str(), saved.juz, saved.surah), ("juz", 23, 36));
 
         drop(db);
         let reopened = Database::open(&dir.join("test.db")).unwrap();
         assert_eq!(reopened.quran_bookmarks().unwrap()[0].surah, 18);
-        assert_eq!(reopened.reader_position().unwrap().unwrap().ayah, 1);
+        let saved = reopened.reader_position().unwrap().unwrap();
+        assert_eq!((saved.mode.as_str(), saved.juz, saved.ayah), ("juz", 23, 28));
         drop(reopened);
         let _ = std::fs::remove_dir_all(&dir);
     }

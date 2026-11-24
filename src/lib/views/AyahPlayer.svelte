@@ -16,6 +16,7 @@
   let loading = $state(true);
   let textError = $state(false);
   let showTranslation = $state(false);
+  let translationFailed = $state(false);
   let container = $state<HTMLElement>();
 
   const currentAyah = $derived(
@@ -75,9 +76,15 @@
 
   async function toggleTranslation() {
     showTranslation = !showTranslation;
-    if (showTranslation && !translations) {
-      translations = await api.surahText(surah.number, true).catch(() => null);
-    }
+    if (!showTranslation || translations) return;
+    // Arabic is local; the translation is fetched separately so an offline
+    // toggle never blocks the text.
+    const list = await api.surahTranslation(surah.number).catch(() => [] as string[]);
+    translationFailed = list.length === 0;
+    translations = ayahs.map((ayah, index) => ({
+      ...ayah,
+      translation: list[index] || undefined,
+    }));
   }
 </script>
 
@@ -250,6 +257,10 @@
       {i18n.t("quran.translation")}
     </button>
   </div>
+
+  {#if showTranslation && translationFailed}
+    <p class="mt-2 text-[11px] text-muted">{i18n.t("reader.translationUnavailable")}</p>
+  {/if}
 
   {#if loading}
     <div class="mt-4 space-y-3">

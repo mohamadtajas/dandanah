@@ -8,6 +8,9 @@
   onMount(() => {
     void reader.loadDaily();
     if (!reader.surahs.length) void reader.loadIndex();
+    // The card stays on Home across midnight; revalidate the local day.
+    const timer = setInterval(() => void reader.loadDaily(), 60000);
+    return () => clearInterval(timer);
   });
 
   const ayah = $derived(reader.daily);
