@@ -1,0 +1,21 @@
+# build output
+dist/
+dist-ssr/
+
+# dependencies
+node_modules/
+
+# rust
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# editor / os
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+*.log
+npm-debug.log*

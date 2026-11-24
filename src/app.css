@@ -1,0 +1,159 @@
+@import "tailwindcss";
+@import "./lib/fonts.css";
+
+@theme {
+  --color-ink-950: #07090e;
+  --color-ink-900: #0b0e15;
+  --color-ink-850: #0f1320;
+  --color-ink-800: #141a29;
+  --color-ink-700: #1b2233;
+  --color-line: #232c42;
+  --color-cream: #f3efe5;
+  --color-muted: #8c94a9;
+  --color-gold: #e9b95c;
+  --color-gold-soft: #f5d9a0;
+  --color-teal: #57b8ac;
+
+  --font-sans: "Tajawal", "Segoe UI", system-ui, sans-serif;
+  --font-quran: "Amiri Quran", "Traditional Arabic", serif;
+
+  --radius-card: 1.15rem;
+}
+
+:root[data-theme="light"] {
+  --color-ink-950: #f6f3ec;
+  --color-ink-900: #fdfbf7;
+  --color-ink-850: #f8f5ee;
+  --color-ink-800: #f1ece1;
+  --color-ink-700: #e7e0d2;
+  --color-line: #ddd5c5;
+  --color-cream: #1b1a17;
+  --color-muted: #6f6d66;
+  --color-gold: #a56f1d;
+  --color-gold-soft: #7d5514;
+  --color-teal: #2f7d75;
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-ink-950);
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-gold) 35%, transparent);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-700) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-ink-700);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--color-gold) 45%, var(--color-ink-700));
+    background-clip: content-box;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+  }
+
+  button {
+    font-family: inherit;
+  }
+}
+
+@layer components {
+  .surface {
+    background-color: var(--color-ink-900);
+    border: 1px solid var(--color-line);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scroll-row {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: 0.5rem;
+  }
+
+  .scroll-row > * {
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+  }
+
+  .fade-in {
+    animation: fade-in 220ms ease-out both;
+  }
+
+  .eq {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 14px;
+  }
+
+  .eq > i {
+    display: block;
+    width: 2.5px;
+    border-radius: 2px;
+    background: var(--color-gold);
+    animation: eq 900ms ease-in-out infinite;
+  }
+  .eq > i:nth-child(1) { height: 40%; animation-delay: -200ms; }
+  .eq > i:nth-child(2) { height: 90%; animation-delay: -600ms; }
+  .eq > i:nth-child(3) { height: 60%; animation-delay: -400ms; }
+  .eq > i:nth-child(4) { height: 100%; animation-delay: -750ms; }
+
+  .eq.paused > i {
+    animation-play-state: paused;
+    height: 25%;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes eq {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .eq > i {
+    animation: none;
+  }
+}
