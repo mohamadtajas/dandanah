@@ -1203,6 +1203,7 @@ const MOCK_WORSHIP: WorshipSettings = {
   timezone: "Asia/Riyadh",
   method: "ummAlQura",
   madhab: "shafi",
+  highLatitude: "recommended",
   hijriAdjustment: 0,
   configured: true,
 };

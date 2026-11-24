@@ -145,12 +145,19 @@ export type PrayerMethod =
   | "tehran"
   | "turkey";
 
+export type HighLatitudeRule =
+  | "recommended"
+  | "middleOfTheNight"
+  | "seventhOfTheNight"
+  | "twilightAngle";
+
 export interface WorshipSettings {
   latitude: number;
   longitude: number;
   timezone: string;
   method: PrayerMethod;
   madhab: "shafi" | "hanafi";
+  highLatitude: HighLatitudeRule;
   hijriAdjustment: number;
   configured: boolean;
 }

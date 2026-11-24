@@ -3,6 +3,12 @@
 version = 3
 
 [[package]]
+name = "adhan"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd086fb73f5aadd33dce37d3b8d6f254587e947443a7e5176af0bf3de7805012"
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3707,6 +3713,7 @@ checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 name = "sakeenah"
 version = "0.2.0"
 dependencies = [
+ "adhan",
  "anyhow",
  "chrono",
  "chrono-tz",
@@ -3717,7 +3724,6 @@ dependencies = [
  "parking_lot",
  "reqwest 0.12.28",
  "rusqlite",
- "salah",
  "serde",
  "serde_json",
  "souvlaki",
@@ -3733,15 +3739,6 @@ dependencies = [
  "tokio",
  "urlencoding",
  "uuid",
-]
-
-[[package]]
-name = "salah"
-version = "0.7.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04af71d94fdd3fb168cac15a85b2cc89ef8a3518206294cdb4bb923a885c5738"
-dependencies = [
- "chrono",
 ]
 
 [[package]]

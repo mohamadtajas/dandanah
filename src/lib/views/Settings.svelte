@@ -1,7 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api, isTauri } from "$lib/api";
-  import type { AppInfo, HotkeyMap, PrayerMethod, WorshipSettings } from "$lib/types";
+  import type {
+    AppInfo,
+    HighLatitudeRule,
+    HotkeyMap,
+    PrayerMethod,
+    WorshipSettings,
+  } from "$lib/types";
   import { i18n } from "$lib/i18n/index.svelte.ts";
   import type { TranslationKey } from "$lib/i18n/dict";
   import { nav } from "$lib/stores/nav.svelte.ts";
@@ -29,12 +35,20 @@
     "turkey",
   ];
 
+  const HIGH_LATITUDE_RULES: HighLatitudeRule[] = [
+    "recommended",
+    "middleOfTheNight",
+    "seventhOfTheNight",
+    "twilightAngle",
+  ];
+
   const DEFAULT_PRAYER: WorshipSettings = {
     latitude: 21.4225,
     longitude: 39.8262,
     timezone: "Asia/Riyadh",
     method: "ummAlQura",
     madhab: "shafi",
+    highLatitude: "recommended",
     hijriAdjustment: 0,
     configured: false,
   };
@@ -367,6 +381,26 @@
           <option value="shafi">{i18n.t("settings.shafi")}</option>
           <option value="hanafi">{i18n.t("settings.hanafi")}</option>
         </select>
+      </label>
+
+      <label class="block sm:col-span-2">
+        <span class="text-[11px] text-muted">{i18n.t("settings.highLatitude")}</span>
+        <select
+          value={prayer.highLatitude}
+          onchange={(event) =>
+            (prayer = {
+              ...prayer,
+              highLatitude: event.currentTarget.value as HighLatitudeRule,
+            })}
+          class="mt-1 w-full rounded-xl border border-line bg-ink-850 px-3 py-2 text-sm text-cream focus:border-gold/50 focus:outline-none"
+        >
+          {#each HIGH_LATITUDE_RULES as rule (rule)}
+            <option value={rule}>{i18n.t(`highLat.${rule}` as TranslationKey)}</option>
+          {/each}
+        </select>
+        <span class="mt-1 block text-[10px] leading-relaxed text-muted">
+          {i18n.t("settings.highLatitudeHint")}
+        </span>
       </label>
 
       <label class="block sm:col-span-2">

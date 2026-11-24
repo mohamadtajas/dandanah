@@ -5,10 +5,13 @@
 
 use crate::db::Database;
 use anyhow::Result;
+use adhan::{
+    prayer_times, HighLatitudeRule, Madhab, Method, Parameters, PolarCircleResolution, Prayer,
+    PrayerTimes,
+};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Timelike, Utc};
 use chrono_tz::Tz;
 use hijridate::{Gregorian, Language};
-use salah::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// The five obligatory prayers, in the order they occur.
@@ -43,6 +46,9 @@ pub struct WorshipSettings {
     pub method: String,
     /// `shafi` or `hanafi` (affects Asr only).
     pub madhab: String,
+    /// How Fajr/Isha are bounded when the sun misses the angle above ~48°.
+    #[serde(default = "default_high_latitude")]
+    pub high_latitude: String,
     /// Days added to the Gregorian date before Hijri conversion (-3..=3).
     pub hijri_adjustment: i32,
     /// Whether the user has explicitly picked a location.
@@ -62,10 +68,15 @@ impl Default for WorshipSettings {
             timezone,
             method: "ummAlQura".to_string(),
             madhab: "shafi".to_string(),
+            high_latitude: default_high_latitude(),
             hijri_adjustment: 0,
             configured: false,
         }
     }
+}
+
+fn default_high_latitude() -> String {
+    "recommended".to_string()
 }
 
 impl WorshipSettings {
@@ -98,6 +109,15 @@ impl WorshipSettings {
         }
     }
 
+    pub fn high_latitude_rule(&self) -> HighLatitudeRule {
+        match self.high_latitude.as_str() {
+            "middleOfTheNight" => HighLatitudeRule::MiddleOfTheNight,
+            "seventhOfTheNight" => HighLatitudeRule::SeventhOfTheNight,
+            "twilightAngle" => HighLatitudeRule::TwilightAngle,
+            _ => HighLatitudeRule::recommended(self.latitude),
+        }
+    }
+
     /// Clamp user input into values the calculation can trust.
     pub fn sanitized(mut self) -> Self {
         if !self.latitude.is_finite() {
@@ -116,6 +136,12 @@ impl WorshipSettings {
         }
         if self.madhab != "hanafi" {
             self.madhab = "shafi".to_string();
+        }
+        if !matches!(
+            self.high_latitude.as_str(),
+            "recommended" | "middleOfTheNight" | "seventhOfTheNight" | "twilightAngle"
+        ) {
+            self.high_latitude = default_high_latitude();
         }
         self.hijri_adjustment = self.hijri_adjustment.clamp(-3, 3);
         self
@@ -231,7 +257,7 @@ pub struct Streak {
 
 /// Qibla bearing in degrees clockwise from true north.
 pub fn qibla_bearing(latitude: f64, longitude: f64) -> f64 {
-    Qiblah::new(Coordinates::new(latitude, longitude)).value()
+    adhan::qibla(latitude, longitude)
 }
 
 /// Convert a Gregorian date to the Umm al-Qura Hijri calendar.
@@ -263,7 +289,19 @@ struct RawTime {
     at: DateTime<Tz>,
 }
 
-fn raw_times(schedule: &PrayerTimes, tz: Tz) -> Vec<RawTime> {
+/// Turn `adhan`'s UTC clock reading into an instant on `date`.
+fn instant(date: NaiveDate, (hour, minute, second): (i64, u32, u32)) -> DateTime<Utc> {
+    let midnight = date
+        .and_hms_opt(0, 0, 0)
+        .expect("midnight is always a valid time")
+        .and_utc();
+    midnight
+        + Duration::hours(hour)
+        + Duration::minutes(minute as i64)
+        + Duration::seconds(second as i64)
+}
+
+fn raw_times(schedule: &PrayerTimes, date: NaiveDate, tz: Tz) -> Vec<RawTime> {
     [
         ("fajr", "الفجر", Prayer::Fajr),
         ("sunrise", "الشروق", Prayer::Sunrise),
@@ -273,23 +311,31 @@ fn raw_times(schedule: &PrayerTimes, tz: Tz) -> Vec<RawTime> {
         ("isha", "العشاء", Prayer::Isha),
     ]
     .into_iter()
-    .map(|(key, name, prayer)| RawTime {
-        key,
-        name,
-        at: schedule.time(prayer).with_timezone(&tz),
+    .filter_map(|(key, name, prayer)| {
+        schedule.time_for(prayer).map(|reading| RawTime {
+            key,
+            name,
+            at: instant(date, reading).with_timezone(&tz),
+        })
     })
     .collect()
 }
 
-fn calculate(
-    settings: &WorshipSettings,
-    date: NaiveDate,
-) -> Result<PrayerTimes, String> {
-    PrayerSchedule::new()
-        .on(date)
-        .for_location(Coordinates::new(settings.latitude, settings.longitude))
-        .with_configuration(Configuration::with(settings.method(), settings.madhab()))
-        .calculate()
+fn calculate(settings: &WorshipSettings, date: NaiveDate) -> PrayerTimes {
+    let mut parameters = Parameters::for_method(settings.method())
+        .with_madhab(settings.madhab())
+        .with_high_latitude_rule(settings.high_latitude_rule());
+    // Inside the polar circle, borrow the nearest day on which the sun rose and
+    // set instead of leaving a prayer without a time.
+    parameters.polar_circle_resolution = PolarCircleResolution::AqrabYaum;
+    prayer_times(
+        date.year(),
+        date.month(),
+        date.day(),
+        settings.latitude,
+        settings.longitude,
+        &parameters,
+    )
 }
 
 /// Prayer times for one local date. `now` is passed in so tests are stable.
@@ -299,8 +345,8 @@ pub fn prayer_day(
     now: DateTime<Utc>,
 ) -> Result<PrayerDay, String> {
     let tz = settings.timezone();
-    let schedule = calculate(settings, date)?;
-    let raw = raw_times(&schedule, tz);
+    let schedule = calculate(settings, date);
+    let raw = raw_times(&schedule, date, tz);
 
     let times: Vec<PrayerTime> = raw
         .iter()
@@ -328,9 +374,12 @@ pub fn prayer_day(
     // when the requested day is the current local day; historical rows keep
     // their own day boundaries.
     if next.is_none() && date == now.with_timezone(&tz).date_naive() {
-        if let Ok(tomorrow) = calculate(settings, date + Duration::days(1)) {
-            next = Some(("fajr", "الفجر", tomorrow.time(Prayer::Fajr).with_timezone(&tz)));
-        }
+        let tomorrow_date = date + Duration::days(1);
+        let tomorrow = raw_times(&calculate(settings, tomorrow_date), tomorrow_date, tz);
+        next = tomorrow
+            .iter()
+            .find(|item| item.key == "fajr")
+            .map(|item| (item.key, item.name, item.at));
     }
 
     let next_time = next.map(|(key, name, at)| PrayerTime {
@@ -442,6 +491,7 @@ pub fn save_settings(db: &Database, settings: &WorshipSettings) -> Result<Worshi
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::TimeZone;
 
     fn settings(lat: f64, lon: f64, tz: &str, method: &str) -> WorshipSettings {
         WorshipSettings {
@@ -450,6 +500,7 @@ mod tests {
             timezone: tz.to_string(),
             method: method.to_string(),
             madhab: "shafi".to_string(),
+            high_latitude: "seventhOfTheNight".to_string(),
             hijri_adjustment: 0,
             configured: true,
         }
@@ -533,6 +584,34 @@ mod tests {
         assert_time(&day, "asr", "16:26", 2);
         assert_time(&day, "maghrib", "19:03", 2);
         assert_time(&day, "isha", "20:19", 2);
+    }
+
+    #[test]
+    fn london_high_latitude_rule_matches_reference() {
+        // Reference: Aladhan API, 2024-06-21, MWL, one-seventh of the night.
+        let s = settings(51.5074, -0.1278, "Europe/London", "muslimWorldLeague");
+        let day = prayer_day(
+            &s,
+            NaiveDate::from_ymd_opt(2024, 6, 21).unwrap(),
+            local("Europe/London", 2024, 6, 21, 8, 0),
+        )
+        .unwrap();
+        assert_time(&day, "fajr", "03:40", 2);
+        assert_time(&day, "isha", "22:25", 2);
+
+        // Middle-of-the-night gives a much earlier Fajr; the setting is wired.
+        let mut night = s.clone();
+        night.high_latitude = "middleOfTheNight".to_string();
+        let other = prayer_day(
+            &night,
+            NaiveDate::from_ymd_opt(2024, 6, 21).unwrap(),
+            local("Europe/London", 2024, 6, 21, 8, 0),
+        )
+        .unwrap();
+        assert!(
+            minutes_of(&other, "fajr") < minutes_of(&day, "fajr"),
+            "middle-of-night Fajr should be earlier"
+        );
     }
 
     #[test]
