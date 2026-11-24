@@ -125,6 +125,9 @@ const miscSources = [
 const miscItems = [];
 for (const match of miscSources) {
   const [sourceTitle] = take(match);
+  // The misc section owns these items; keeping the source chapters too would
+  // duplicate the same dhikr with independent counters.
+  usedTitles.add(sourceTitle);
   const items = normalizeItems(sourceTitle, `misc-${String(miscItems.length + 1).padStart(2, "0")}`);
   // Re-number after concatenation so IDs are stable and unique.
   const start = miscItems.length;
@@ -154,6 +157,15 @@ const rest = entries
   });
 
 const categories = [...featured, ...rest];
+const totalItems = categories.reduce((sum, category) => sum + category.items.length, 0);
+
+// Pin the shape so a regeneration cannot silently drop or duplicate content.
+if (categories.length !== 126 || totalItems !== 302) {
+  throw new Error(
+    `unexpected bundle shape: ${categories.length} sections / ${totalItems} items (want 126/302)`,
+  );
+}
+
 const summary = categories
   .filter((category) => category.featured)
   .map((category) => `${category.id}: ${category.items.length}/${itemCount(category)}`)
@@ -166,6 +178,8 @@ const output = {
     repository: "https://github.com/asellam/HisnElMuslim",
     commit: "872764ca013116c905f7fc9c3dc972c27cd37d4a",
     license: "MIT",
+    copyright: "Copyright (c) 2021 Abdellah SELLAM",
+    licenseUrl: "https://github.com/asellam/HisnElMuslim/blob/main/LICENSE.md",
     generated: "2026-11-26",
   },
   categories,

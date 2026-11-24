@@ -9,6 +9,7 @@
 
   let query = $state("");
   let confirmReset = $state(false);
+  let completionHeading = $state<HTMLHeadingElement | null>(null);
 
   onMount(() => {
     void adhkar.load();
@@ -37,10 +38,20 @@
 
   const otherFeatured = $derived(adhkar.featured.filter((category) => !category.streakKey));
   const allCategories = $derived(adhkar.categories.filter((category) => !category.featured));
-  const filtered = $derived.by(() => {
+  const searching = $derived(normalizeArabic(query).length > 0);
+  const list = $derived.by(() => {
     const needle = normalizeArabic(query);
     if (!needle) return allCategories;
-    return allCategories.filter((category) => normalizeArabic(category.title).includes(needle));
+    // Search the whole book, including the featured sets and the dhikr text.
+    return adhkar.categories.filter(
+      (category) =>
+        normalizeArabic(category.title).includes(needle) ||
+        category.items.some((item) => normalizeArabic(item.text).includes(needle)),
+    );
+  });
+
+  $effect(() => {
+    if (adhkar.completed && completionHeading) completionHeading.focus();
   });
 
   const streakLabel = $derived(
@@ -118,19 +129,38 @@
       </div>
     </div>
 
-    {#if adhkar.completed}
+    {#if adhkar.error}
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gold/30 bg-gold/[0.05] px-3 py-2 text-[11px] text-gold">
+        <span>{i18n.t("common.error")}</span>
+        <button type="button" onclick={() => adhkar.load()} class="font-semibold underline">
+          {i18n.t("common.retry")}
+        </button>
+      </div>
+    {/if}
+
+    {#if !adhkar.date}
+      <p class="mt-6 text-sm text-muted">{i18n.t("common.loading")}</p>
+    {:else if adhkar.completed}
       <div class="mt-4 rounded-3xl border border-teal/30 bg-teal/[0.06] p-8 text-center">
         <span class="mx-auto grid size-14 place-items-center rounded-full bg-teal/15 text-teal">
           <Icon name="check" size={28} />
         </span>
-        <h2 class="mt-4 text-xl font-bold text-cream">
+        <h2
+          bind:this={completionHeading}
+          tabindex="-1"
+          class="mt-4 text-xl font-bold text-cream focus:outline-none"
+        >
           {i18n.t("adhkar.completed", { title: active.title })}
         </h2>
-        <p class="mt-1 text-sm text-muted">{i18n.t("adhkar.completedHint")}</p>
-        <p class="mt-4 flex items-center justify-center gap-2 text-sm font-semibold text-gold">
-          <Icon name="flame" size={15} />
-          {streakLabel}
-        </p>
+        {#if active.streakKey}
+          <p class="mt-1 text-sm text-muted">{i18n.t("adhkar.completedHint")}</p>
+          <p class="mt-4 flex items-center justify-center gap-2 text-sm font-semibold text-gold">
+            <Icon name="flame" size={15} />
+            {streakLabel}
+          </p>
+        {:else}
+          <p class="mt-1 text-sm text-muted">{i18n.t("adhkar.completedNoStreak")}</p>
+        {/if}
 
         <div class="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -170,27 +200,30 @@
       <button
         type="button"
         onclick={() => adhkar.tap()}
-        class="group mt-4 w-full rounded-3xl border border-line bg-ink-900 px-6 py-9 text-center transition-colors hover:border-gold/35 active:scale-[0.995] sm:px-10"
-        aria-label={`${i18n.t("adhkar.remaining")} ${remaining}`}
+        class="group mt-4 w-full rounded-3xl border border-line bg-ink-900 px-6 py-7 text-center transition-colors hover:border-gold/35 active:scale-[0.995] sm:px-10"
       >
-        <p class="mx-auto max-w-3xl font-quran text-[1.45rem] leading-[2.15] text-cream sm:text-[1.6rem]">
-          {item.text}
-        </p>
-
-        <span class="mx-auto mt-8 flex w-fit flex-col items-center">
+        <span class="mx-auto flex w-fit flex-col items-center" aria-live="polite">
           <span
             class="text-4xl font-bold tabular-nums text-gold transition-transform group-active:scale-95"
-            aria-live="polite"
           >
             {fmtNumber(remaining)}
           </span>
           <span class="mt-1 text-[11px] text-muted">{i18n.t("adhkar.remaining")}</span>
         </span>
+
+        <p
+          dir="rtl"
+          lang="ar"
+          class="mx-auto mt-6 max-w-3xl font-quran text-[1.45rem] leading-[2.15] text-cream sm:text-[1.6rem]"
+        >
+          {item.text}
+        </p>
+
         <span class="mt-4 block text-[10px] text-muted/70">{i18n.t("adhkar.tapHint")}</span>
       </button>
 
       <div class="mt-3 flex items-start justify-between gap-4 px-1">
-        <p class="max-w-xl text-[10px] leading-relaxed text-muted">
+        <p dir="rtl" lang="ar" class="max-w-xl text-[10px] leading-relaxed text-muted">
           <span class="font-semibold text-muted/80">{i18n.t("adhkar.reference")}:</span>
           {item.reference}
         </p>
@@ -264,7 +297,7 @@
               <span class="text-[10px] tabular-nums text-muted">{fmtNumber(progress)}%</span>
             {/if}
           </div>
-          <p class="mt-2.5 truncate text-sm font-medium text-cream group-hover:text-gold">
+          <p dir="rtl" lang="ar" class="mt-2.5 truncate text-sm font-medium text-cream group-hover:text-gold">
             {category.title}
           </p>
           <p class="mt-0.5 text-[10px] text-muted">
@@ -282,8 +315,10 @@
 
     <section class="mt-8">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <h2 class="text-sm font-semibold text-cream">{i18n.t("adhkar.all")}</h2>
-        <span class="text-[10px] text-muted">{fmtNumber(filtered.length)}</span>
+        <h2 class="text-sm font-semibold text-cream">
+          {searching ? i18n.t("adhkar.results") : i18n.t("adhkar.all")}
+        </h2>
+        <span class="text-[10px] text-muted">{fmtNumber(list.length)}</span>
       </div>
 
       <label class="mt-2.5 flex items-center gap-2 rounded-xl border border-line bg-ink-850 px-3 py-2 focus-within:border-gold/50">
@@ -296,18 +331,20 @@
         />
       </label>
 
-      {#if filtered.length === 0}
+      {#if list.length === 0}
         <p class="mt-6 text-center text-sm text-muted">{i18n.t("adhkar.noResults")}</p>
       {:else}
         <div class="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-          {#each filtered as category (category.id)}
+          {#each list as category (category.id)}
             {@const done = adhkar.isComplete(category)}
             <button
               type="button"
               onclick={() => open(category.id)}
               class="flex items-center gap-3 rounded-xl border border-line/70 bg-ink-850/50 px-3 py-2.5 text-start transition-colors hover:border-gold/30 hover:bg-ink-800"
             >
-              <span class="min-w-0 flex-1 truncate text-[0.83rem] text-cream">{category.title}</span>
+              <span dir="rtl" lang="ar" class="min-w-0 flex-1 truncate text-[0.83rem] text-cream">
+                {category.title}
+              </span>
               <span class="shrink-0 text-[10px] tabular-nums text-muted">
                 {fmtNumber(category.items.length)}
               </span>
@@ -325,12 +362,12 @@
     <footer class="mt-8 flex flex-wrap items-center justify-between gap-2 border-t border-line/60 pt-4 text-[10px] text-muted">
       <span>{i18n.t("adhkar.sourceLine")}</span>
       <a
-        href={adhkar.source.repository}
+        href={adhkar.source.licenseUrl}
         target="_blank"
         rel="noreferrer"
         class="text-muted underline decoration-line underline-offset-2 hover:text-gold"
       >
-        HisnElMuslim (MIT)
+        MIT © 2021 Abdellah SELLAM
       </a>
     </footer>
   {/if}

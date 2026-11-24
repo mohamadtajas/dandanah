@@ -244,6 +244,8 @@ export interface AdhkarData {
     repository: string;
     commit: string;
     license: string;
+    copyright: string;
+    licenseUrl: string;
     generated: string;
   };
   categories: AdhkarCategory[];

@@ -1,6 +1,5 @@
 import { api } from "$lib/api";
 import type { AdhkarCategory, AdhkarData, AdhkarDay, AdhkarStreak } from "$lib/types";
-import { worship } from "$lib/stores/worship.svelte.ts";
 import raw from "$lib/data/adhkar.json";
 
 const data = raw as AdhkarData;
@@ -14,6 +13,7 @@ class AdhkarStore {
   featured = featuredAdhkar;
   source = data.source;
 
+  /** Local date as resolved by the backend in the configured timezone. */
   date = $state("");
   day = $state<AdhkarDay | null>(null);
   streak = $state<AdhkarStreak | null>(null);
@@ -28,19 +28,29 @@ class AdhkarStore {
 
   #queue: Promise<void> = Promise.resolve();
   #timer: ReturnType<typeof setInterval> | null = null;
+  #advanceTimer: ReturnType<typeof setTimeout> | null = null;
+  #loadGeneration = 0;
+  #checking = false;
   #cleanups: (() => void)[] = [];
 
   async load() {
+    const generation = ++this.#loadGeneration;
     this.loading = true;
     this.error = null;
+    this.#clearAdvance();
     try {
-      const date = worship.localDate();
-      const [rows, day, streak] = await Promise.all([
-        api.adhkarProgress(date),
-        api.adhkarDay(date),
+      await this.#queue;
+      // Passing no date lets the backend resolve "today" from the configured
+      // timezone. Its day.date is the only date this store writes to.
+      const day = await api.adhkarDay();
+      if (generation !== this.#loadGeneration) return;
+      const [rows, streak] = await Promise.all([
+        api.adhkarProgress(day.date),
         api.adhkarStreak(),
       ]);
-      this.date = date;
+      if (generation !== this.#loadGeneration) return;
+
+      this.date = day.date;
       this.day = day;
       this.streak = streak;
       this.progress = Object.fromEntries(
@@ -61,6 +71,7 @@ class AdhkarStore {
 
   /** A crash between the last tap and the completion write must not lose the streak. */
   async #reconcile() {
+    if (!this.date) return;
     let changed = false;
     for (const category of this.featured) {
       if (!category.streakKey) continue;
@@ -78,10 +89,12 @@ class AdhkarStore {
 
   start() {
     if (this.#timer !== null) return;
-    this.#timer = setInterval(() => this.tick(), 60000);
+    // Ask the backend for its current local date every 15s; this avoids
+    // depending on the settings store being loaded and keeps the rollover tight.
+    this.#timer = setInterval(() => void this.#checkRollover(), 15000);
     if (typeof document !== "undefined") {
       const onVisible = () => {
-        if (!document.hidden && this.date !== worship.localDate()) void this.load();
+        if (!document.hidden) void this.#checkRollover();
       };
       document.addEventListener("visibilitychange", onVisible);
       window.addEventListener("focus", onVisible);
@@ -95,11 +108,21 @@ class AdhkarStore {
       clearInterval(this.#timer);
       this.#timer = null;
     }
+    this.#clearAdvance();
     for (const cleanup of this.#cleanups.splice(0)) cleanup();
   }
 
-  private tick() {
-    if (worship.localDate() !== this.date) void this.load();
+  async #checkRollover() {
+    if (this.#checking || !this.date) return;
+    this.#checking = true;
+    try {
+      const day = await api.adhkarDay();
+      if (day.date !== this.date) await this.load();
+    } catch {
+      // Keep the current day; the next tick retries.
+    } finally {
+      this.#checking = false;
+    }
   }
 
   remainingFor(category: AdhkarCategory, itemId: string): number {
@@ -166,12 +189,14 @@ class AdhkarStore {
   openCategory(id: string) {
     const category = this.categories.find((entry) => entry.id === id);
     if (!category) return;
+    this.#clearAdvance();
     this.activeCategoryId = id;
     this.completed = this.isComplete(category);
     this.activeIndex = this.completed ? 0 : this.firstIncomplete(category);
   }
 
   closeReader() {
+    this.#clearAdvance();
     this.activeCategoryId = null;
     this.activeIndex = 0;
     this.completed = false;
@@ -180,12 +205,14 @@ class AdhkarStore {
   next() {
     const category = this.activeCategory;
     if (!category) return;
+    this.#clearAdvance();
     this.activeIndex = (this.activeIndex + 1) % category.items.length;
   }
 
   previous() {
     const category = this.activeCategory;
     if (!category) return;
+    this.#clearAdvance();
     this.activeIndex =
       (this.activeIndex - 1 + category.items.length) % category.items.length;
   }
@@ -194,8 +221,10 @@ class AdhkarStore {
   tap() {
     const category = this.activeCategory;
     const item = this.activeItem;
-    if (!category || !item || this.completed) return;
+    if (!category || !item || !this.date || this.completed) return;
 
+    const date = this.date;
+    this.#clearAdvance();
     const remaining = this.activeRemaining;
     if (remaining <= 0) {
       this.advanceFrom(category, item.id);
@@ -207,18 +236,34 @@ class AdhkarStore {
       ...this.progress,
       [key(category.id, item.id)]: next,
     };
-    this.#persist(category.id, item.id, next);
+    this.#persist(date, category.id, item.id, next);
 
     if (next === 0) {
       if (this.isComplete(category)) {
         this.completed = true;
-        void this.#markComplete(category);
+        void this.#markComplete(category, date);
       } else {
-        // Let the zero register before jumping to the next dhikr.
-        setTimeout(() => {
-          if (this.activeCategoryId === category.id) this.advanceFrom(category, item.id);
+        // Let the zero register before jumping to the next dhikr. Remember the
+        // exact item so manual navigation or a reset cancels the move.
+        const index = this.activeIndex;
+        this.#advanceTimer = setTimeout(() => {
+          this.#advanceTimer = null;
+          if (
+            this.activeCategoryId === category.id &&
+            this.activeIndex === index &&
+            this.activeItem?.id === item.id
+          ) {
+            this.advanceFrom(category, item.id);
+          }
         }, 380);
       }
+    }
+  }
+
+  #clearAdvance() {
+    if (this.#advanceTimer !== null) {
+      clearTimeout(this.#advanceTimer);
+      this.#advanceTimer = null;
     }
   }
 
@@ -234,40 +279,46 @@ class AdhkarStore {
     }
   }
 
-  #persist(categoryId: string, itemId: string, remaining: number) {
+  /** Serialize writes and always resolve, so one failure cannot wedge the queue. */
+  #enqueue(operation: () => Promise<void>) {
     this.#queue = this.#queue
-      .then(() =>
-        api.setAdhkarRemaining(this.date, categoryId, itemId, remaining).then(() => undefined),
-      )
+      .then(operation)
+      .then(() => {
+        this.error = null;
+      })
       .catch((error) => {
         this.error = typeof error === "string" ? error : String(error);
       });
   }
 
-  async #markComplete(category: AdhkarCategory) {
+  #persist(date: string, categoryId: string, itemId: string, remaining: number) {
+    this.#enqueue(async () => {
+      await api.setAdhkarRemaining(date, categoryId, itemId, remaining);
+    });
+  }
+
+  async #markComplete(category: AdhkarCategory, date: string) {
     if (!category.streakKey) return;
-    try {
-      this.#queue = this.#queue.then(async () => {
-        this.day = await api.markAdhkarDone(this.date, category.id);
-        this.streak = await api.adhkarStreak();
-      });
-      await this.#queue;
-    } catch (error) {
-      this.error = typeof error === "string" ? error : String(error);
-    }
+    this.#enqueue(async () => {
+      this.day = await api.markAdhkarDone(date, category.id);
+      this.streak = await api.adhkarStreak();
+    });
+    await this.#queue;
   }
 
   resetCategory() {
     const category = this.activeCategory;
-    if (!category) return;
+    if (!category || !this.date) return;
+    const date = this.date;
+    this.#clearAdvance();
     const next = { ...this.progress };
     for (const item of category.items) delete next[key(category.id, item.id)];
     this.progress = next;
     this.activeIndex = 0;
     this.completed = false;
 
-    this.#queue = this.#queue.then(async () => {
-      this.day = await api.clearAdhkarCategory(this.date, category.id);
+    this.#enqueue(async () => {
+      this.day = await api.clearAdhkarCategory(date, category.id);
       this.streak = await api.adhkarStreak();
     });
   }

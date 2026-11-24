@@ -30,8 +30,8 @@
         en: "Adhkar texts, repeat counts and references from Hisn al-Muslim",
       },
       license: {
-        ar: "MIT — نُقلت من النسخة المطبوعة",
-        en: "MIT — transcribed from the printed book",
+        ar: "MIT — © ٢٠٢١ Abdellah SELLAM",
+        en: "MIT — © 2021 Abdellah SELLAM",
       },
     },
     {

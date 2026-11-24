@@ -1607,6 +1607,9 @@ export function mockApi() {
       return { date, categoryId, itemId, remaining: value };
     },
     async markAdhkarDone(date: string, categoryId: string): Promise<AdhkarDay> {
+      if (categoryId !== "morning" && categoryId !== "evening") {
+        return mockAdhkarDay(date);
+      }
       const day = { ...mockAdhkarDay(date) };
       if (categoryId === "morning") day.morning = true;
       if (categoryId === "evening") day.evening = true;

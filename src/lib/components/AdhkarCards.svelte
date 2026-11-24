@@ -67,7 +67,7 @@
           </span>
         </div>
 
-        <p class="mt-3 text-sm font-semibold text-cream group-hover:text-gold">
+        <p dir="rtl" lang="ar" class="mt-3 text-sm font-semibold text-cream group-hover:text-gold">
           {entry.category.title}
         </p>
         <p class="mt-0.5 text-[10px] text-muted">

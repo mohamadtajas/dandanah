@@ -165,21 +165,22 @@ mod tests {
         let categories = data["categories"].as_array().expect("categories");
         let mut category_ids = HashSet::new();
         let mut item_ids = HashSet::new();
+        let mut items_total = 0;
         for category in categories {
             let id = category["id"].as_str().expect("category id");
             assert!(category_ids.insert(id.to_string()), "duplicate category {id}");
             let items = category["items"].as_array().expect("items");
             assert!(!items.is_empty(), "empty category {id}");
             for item in items {
+                items_total += 1;
                 let item_id = item["id"].as_str().expect("item id");
                 assert!(item_ids.insert(item_id.to_string()), "duplicate item {item_id}");
             }
         }
-        assert!(
-            categories.len() > 120,
-            "the full book should be bundled, got {}",
-            categories.len()
-        );
+        // 133 source chapters, with 5 featured and 8 misc sources folded in and
+        // the synthetic misc section added; every source item survives once.
+        assert_eq!(categories.len(), 126, "bundled sections");
+        assert_eq!(items_total, 302, "bundled adhkar");
     }
 
     fn day(base: NaiveDate, offset: i64, morning: bool, evening: bool) -> AdhkarDay {
