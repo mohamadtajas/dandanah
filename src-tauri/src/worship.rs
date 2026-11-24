@@ -534,6 +534,23 @@ mod tests {
     }
 
     #[test]
+    fn settings_written_before_high_latitude_still_load() {
+        // A settings row saved by an earlier D1 build has no highLatitude key.
+        let json = r#"{
+            "latitude": 21.4225,
+            "longitude": 39.8262,
+            "timezone": "Asia/Riyadh",
+            "method": "ummAlQura",
+            "madhab": "shafi",
+            "hijriAdjustment": 0,
+            "configured": true
+        }"#;
+        let settings: WorshipSettings = serde_json::from_str(json).unwrap();
+        assert_eq!(settings.high_latitude, "recommended");
+        assert_eq!(settings.method(), Method::UmmAlQura);
+    }
+
+    #[test]
     fn makkah_times_match_umm_al_qura() {
         // Reference: Aladhan API, 2024-03-01, Umm al-Qura.
         let s = settings(21.4225, 39.8262, "Asia/Riyadh", "ummAlQura");

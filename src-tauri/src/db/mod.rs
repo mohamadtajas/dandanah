@@ -389,6 +389,7 @@ impl Database {
     }
 
     pub fn set_prayer_done(&self, date: &str, prayer: &str, done: bool) -> Result<PrayerLog> {
+        validate_log_date(date)?;
         let column = match prayer {
             "fajr" => "fajr",
             "dhuhr" => "dhuhr",
@@ -413,6 +414,7 @@ impl Database {
     }
 
     pub fn set_prayer_excused(&self, date: &str, excused: bool) -> Result<PrayerLog> {
+        validate_log_date(date)?;
         {
             let conn = self.conn.lock();
             conn.execute(
@@ -842,6 +844,12 @@ pub fn now() -> i64 {
     chrono::Utc::now().timestamp()
 }
 
+fn validate_log_date(date: &str) -> Result<()> {
+    chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .map(|_| ())
+        .map_err(|error| anyhow::anyhow!("invalid prayer-log date {date}: {error}"))
+}
+
 fn prayer_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<PrayerLog> {
     Ok(PrayerLog {
         date: r.get(0)?,
@@ -1072,6 +1080,8 @@ mod tests {
         assert_eq!(log.count(), 0);
 
         assert!(db.set_prayer_done("2026-11-20", "tahajjud", true).is_err());
+        assert!(db.set_prayer_done("2026-13-40", "fajr", true).is_err());
+        assert!(db.set_prayer_excused("not-a-date", true).is_err());
 
         drop(db);
         let _ = std::fs::remove_dir_all(&dir);

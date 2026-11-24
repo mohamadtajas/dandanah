@@ -115,9 +115,28 @@
   }
 
   async function savePrayer() {
+    const latitude = Number(prayer.latitude);
+    const longitude = Number(prayer.longitude);
+    const hijriAdjustment = Math.round(Number(prayer.hijriAdjustment));
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      !Number.isFinite(hijriAdjustment)
+    ) {
+      ui.notify(i18n.t("settings.prayerInvalid"));
+      return;
+    }
+
     savingPrayer = true;
     try {
-      prayer = { ...(await worship.saveSettings(prayer)) };
+      prayer = {
+        ...(await worship.saveSettings({
+          ...prayer,
+          latitude,
+          longitude,
+          hijriAdjustment,
+        })),
+      };
       ui.notify(i18n.t("settings.prayerSaved"));
     } catch (error) {
       const detail = typeof error === "string" ? error : "";

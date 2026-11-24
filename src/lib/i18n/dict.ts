@@ -277,6 +277,7 @@ const ar = {
   "settings.savePrayer": "حفظ إعدادات الصلاة",
   "settings.prayerSaved": "تم حفظ إعدادات الصلاة.",
   "settings.prayerFailed": "تعذّر حفظ إعدادات الصلاة:",
+  "settings.prayerInvalid": "أدخل إحداثيات صحيحة أولًا.",
   "settings.locationSet": "الموقع محدد",
   "settings.locationUnset": "لم يُحدد الموقع بعد",
 
@@ -570,6 +571,7 @@ const en: Record<Key, string> = {
   "settings.savePrayer": "Save prayer settings",
   "settings.prayerSaved": "Prayer settings saved.",
   "settings.prayerFailed": "Could not save prayer settings:",
+  "settings.prayerInvalid": "Enter valid coordinates first.",
   "settings.locationSet": "Location set",
   "settings.locationUnset": "Location not set",
 
