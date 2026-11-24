@@ -1,58 +1,130 @@
+<div dir="rtl" align="right">
+
 # دندنة · Dandanah
 
-**A light Arabic audio app for Windows** — Quran recitations, anasheed, and live Arabic radio.
-Free, ad-free, account-free, and built to stay under 10 MB installed.
+**تطبيق صوتي عربي خفيف لنظام ويندوز** — القرآن الكريم، الأناشيد، الإذاعات العربية، وموسيقى بتراخيص مفتوحة.
+مجاني، بلا إعلانات، بلا حساب، ومصمَّم ليبقى صغير الحجم وسريع الإقلاع.
 
-Dandanah hosts no content. Every stream is played from its original source, and all rights
-belong to their owners.
+دندنة لا تستضيف أي محتوى. كل صوت يُبثّ من مصدره الأصلي، والحقوق لأصحابها.
+
+**[الإصدارات والتحميل](https://github.com/mohamadtajas/dandanah/releases)** · **[المصادر والتراخيص](#المصادر-والتراخيص)** · **[المساهمة](#المساهمة)**
 
 ---
 
-## Status
+## 🤍 رسالة من القلب
 
-Week 1 of the build plan is complete and working:
+وُلد تطبيق **دندنة** من رغبة صادقة في تقديم مساحة عربية هادئة ونقية للاستماع إلى القرآن الكريم، والأناشيد، والإذاعات العربية، بعيداً عن الإعلانات والتعقيد، ليكون رفيقاً خفيفاً يملأ أوقاتكم بالسكينة والجمال.
 
-| Area | State |
+بُني هذا المشروع بالكامل باستخدام **DeepSeek**، وهو **مفتوح المصدر بالكامل** ومتاح للجميع. لأننا نؤمن أن أجمل المشاريع هي تلك التي تكبر بأيدي مجتمعها، فإن الباب مفتوح دائماً لكل من يحب أن يترك بصمته هنا؛ سواء باقتراح تعديل، أو العمل على ميزة جديدة، أو إصلاح مشكلة، أو إرسال **Pull Request (PR)**.
+
+مساهمتك — مهما كانت بسيطة — تصنع فرقاً كبيراً. لنجعل من **دندنة** أثراً طيباً ننتفع به جميعاً.
+
+---
+
+## ما هي دندنة؟
+
+مشغّل صوت عربي بواجهة عربية أولاً (RTL) ووضعين داكن وفاتح، يجمع أربع ركائز:
+
+1. **القرآن الكريم** — تلاوات كاملة، ووضع آية بآية مع النص العثماني وأدوات حفظ.
+2. **الإذاعات** — بث مباشر لمحطات عربية وإذاعات قرآنية.
+3. **مكتبتك** — المفضلة، قوائم التشغيل، التنزيلات، والملفات المحلية.
+4. **استكشف** — موسيقى وأناشيد بتراخيص Creative Commons من Openverse وأرشيف الإنترنت.
+
+كل ذلك دون حساب، ودون إعلانات، ودون يوتيوب أو أدوات سحب البث — التطبيق قابل للتوزيع وعلى أرضية قانونية سليمة.
+
+---
+
+## لقطات من التطبيق
+
+| القرآن الكريم | آية بآية مع أدوات الحفظ |
 |---|---|
-| Tauri v2 + Svelte 5 + Tailwind v4 shell | ✅ |
-| Arabic-first RTL UI, dark & light themes, Arabic/English | ✅ |
-| SQLite library + migration runner | ✅ |
-| mp3quran.net provider (200+ reciters, all 114 surahs) | ✅ |
-| Quran radio + radio-browser.info (live stations, country/tag filters) | ✅ |
-| Unified search with Arabic-aware normalisation and dedupe | ✅ |
-| Player: queue, shuffle, repeat, speed, seek, volume, media keys | ✅ |
-| Recently played (persisted history) | ✅ |
-| Ayah-by-ayah playback with Uthmani text and translation | ✅ |
-| Hifz loops: repeat an ayah range N times, mark memorised | ✅ |
-| Favorites, playlists, downloads, local folder import | ✅ |
-| Openverse + archive.org catalogue with licence badges | ✅ |
-| Windows media session, tray, global hotkeys | ✅ |
-| Installer, auto-update pipeline, GitHub Actions | ✅ |
-| Code signing | ⏳ needs a certificate (see *Shipping*) |
+| ![قائمة السور لدى القارئ](docs/screenshots/quran.png) | ![وضع الآية بآية](docs/screenshots/ayah.png) |
+
+| استكشف المحتوى الحر | الرئيسية |
+|---|---|
+| ![موسيقى وأناشيد بتراخيص مفتوحة](docs/screenshots/explore.png) | ![الصفحة الرئيسية](docs/screenshots/home.png) |
 
 ---
 
-## Requirements
+## المزايا
 
-- **Node.js** 20 or newer
-- **Rust** stable (MSVC toolchain)
-- **Visual Studio Build Tools** with the *Desktop development with C++* workload
-- **WebView2 runtime** (preinstalled on Windows 11 and up-to-date Windows 10)
+### القرآن الكريم
 
-## Run it
+- أكثر من **٢٠٠ قارئ** من mp3quran.net، وكل السور الـ ١١٤، مع اختيار الرواية المتاحة لكل قارئ.
+- **وضع آية بآية**: ٢٦ تلاوة مُنتقاة (مرتل، مجوّد، ومعلّم) من EveryAyah، وكل آية مقطع مستقل.
+- **النص العثماني** مع تمييز الآية التي تُتلى، والتمرير التلقائي إليها، وإمكانية عرض الترجمة الإنجليزية.
+- **أدوات الحفظ**: تحديد نطاق آيات، وتكراره من ١ إلى ١٠ مرات، ثم تعليمه كمحفوظ.
+- تتبّع التقدم لكل سورة في **المكتبة ← الحفظ**، واستئناف من آخر آية لكل قارئ.
+- سرعة التشغيل، والتكرار، والتنقل بين الآيات تعمل جميعها على مستوى الآية.
+
+### الإذاعة والبحث
+
+- محطات مباشرة من radio-browser.info مع فلاتر الدولة والتصنيف، واحتياطي من مرايا متعددة.
+- إذاعات قرآنية من mp3quran.
+- بحث موحّد في القرّاء والسور والمحطات، مع تطبيع عربي للكلمات (تجاهل التشكيل وتوحيد الألف والياء والتاء المربوطة).
+
+### استكشف — محتوى حر
+
+- **Openverse**: فهرس صوتي بتراخيص Creative Commons يشمل Jamendo وFreesound، دون الحاجة إلى مفتاح API.
+- **أرشيف الإنترنت**: عناصر صوتية تُفكَّك إلى مقاطعها الفردية، مع ترخيص كل عنصر.
+- كل نتيجة تعرض ترخيصها، و**التنزيل ممنوع** عند غياب الترخيص.
+- إذا تعذّر أحد المصدرين، تُعرض نتائج الآخر بدلاً من شاشة خطأ.
+
+### مكتبتك
+
+- **المفضلة** بزر القلب في كل صف وفي شريط التشغيل.
+- **قوائم التشغيل**: إنشاء، إعادة تسمية، حذف، إضافة من أي صف، وإزالة من داخل القائمة.
+- **التنزيلات**: تنزيل بثٍّ إلى `%APPDATA%\app.dandanah.desktop\downloads` مع شريط تقدم، ثم تشغيل الملف المحلي تلقائياً بدلاً من الشبكة.
+- **استيراد محلي**: اختر مجلداً واحداً أو أكثر، فيقرأ التطبيق وسوم ID3/FLAC/MP4 ويعود إلى اسم الملف والمجلد عند غيابها. تُشغَّل الملفات عبر بروتوكول asset في Tauri، لذا يعمل التقديم والترجيع.
+
+### ويندوز
+
+- **جلسة وسائط نظامية (SMTC)**: شاشة القفل، وقائمة الصوت، وأزرار الوسائط في لوحة المفاتيح تتحكم في دندنة وتعرض اسم المقطع.
+- **أيقونة في شريط النظام**: إظهار/إخفاء النافذة، تشغيل/إيقاف، السابق، التالي، وخروج. الإخفاء لا يوقف الصوت.
+- **اختصارات عامة** تعمل حتى والنافذة غير مركّزة.
+- **نسخة واحدة فقط**: تشغيل التطبيق مجدداً يعيد النافذة القائمة بدل فتح نسخة ثانية.
+
+### الواجهة
+
+- عربية أولاً (RTL) مع تبديل كامل إلى الإنجليزية.
+- وضعان داكن وفاتح.
+- خطوط عربية مستضافة ذاتياً: Tajawal وAmiri Quran (~١١٣ كيلوبايت).
+- بلا مكتبة توجيه وبلا مكتبة حالة — Svelte 5 runes فقط.
+
+---
+
+## التثبيت
+
+1. حمّل `Dandanah_x.y.z_x64-setup.exe` من [صفحة الإصدارات](https://github.com/mohamadtajas/dandanah/releases).
+2. شغّل المُثبِّت. التثبيت يتم للمستخدم الحالي دون صلاحيات مدير.
+3. المتطلبات: **ويندوز ١٠/١١ (64-bit)** و**WebView2** (مثبَّت مسبقاً على ويندوز ١١ وويندوز ١٠ المحدَّث).
+
+> **ملاحظة صادقة:** المُثبِّت **غير موقَّع رقمياً** حالياً، لذا قد يعرض Windows SmartScreen تحذيراً عند أول تشغيل. التوقيع يحتاج شهادة Authenticode، وتوقيع التحديثات منفصل عنه ومطبَّق بالفعل.
+
+---
+
+## التشغيل من المصدر
+
+المتطلبات:
+
+- **Node.js** 20 أو أحدث
+- **Rust** مستقر مع أداة MSVC
+- **Visual Studio Build Tools** مع حمولة *Desktop development with C++*
+- **WebView2 runtime**
 
 ```bash
-npm install
-npm run app        # tauri dev — opens the desktop window with hot reload
+npm ci
+npm run app        # tauri dev — نافذة سطح المكتب مع إعادة تحميل فورية
 ```
 
-## Build the installer
+بناء المُثبِّت:
 
 ```bash
-npm run dist       # produces an NSIS installer in src-tauri/target/release/bundle/
+npm run dist            # يتطلب مفتاح توقيع التحديثات (انظر أدناه)
+npm run dist:unsigned   # مُثبِّت فقط، بلا حزمة تحديث موقَّعة
 ```
 
-Signed updater artifacts are produced when the key is present:
+بناء التحديثات الموقَّعة محلياً:
 
 ```powershell
 $env:TAURI_SIGNING_PRIVATE_KEY = Get-Content "$env:USERPROFILE\.tauri\dandanah.key" -Raw
@@ -60,19 +132,15 @@ $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
 npm run dist
 ```
 
-If you have no signing key, use `npm run dist:unsigned` — same installer, no update
-signature. Tauri refuses to bundle with a public key configured and no private key, which is
-why the two scripts exist.
-
-Frontend-only checks:
+فحوصات الجودة:
 
 ```bash
-npm run build              # vite production build
+npm run build
 npx svelte-check --tsconfig ./tsconfig.json
-cargo check --manifest-path src-tauri/Cargo.toml
+cargo test --manifest-path src-tauri/Cargo.toml --lib
 ```
 
-Desktop smoke test against the real window (import, favourites, playlists, download):
+اختبار سطح المكتب الحقيقي (يستدعي IPC الفعلي في النافذة):
 
 ```powershell
 $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--remote-debugging-port=9333"
@@ -82,224 +150,192 @@ node scripts\desktop-smoke.mjs "C:\path\to\music"
 
 ---
 
-## Architecture
+## قياسات حقيقية
+
+هذه أرقام مقيسة على نسخة الإصدار 0.1.0، لا وعوداً تسويقية:
+
+| المقياس | القيمة |
+|---|---|
+| حجم المُثبِّت | **2.96 ميجابايت** |
+| حجم الملف التنفيذي بعد التثبيت | 7.45 ميجابايت |
+| زمن الإقلاع حتى جاهزية الواجهة | **776 مللي ثانية** |
+| ذاكرة التطبيق نفسه | 32 ميجابايت |
+| إجمالي الذاكرة الخاصة (التطبيق + WebView2) | **~234 ميجابايت** |
+| إجمالي Working Set | ~404 ميجابايت |
+| حزمة الواجهة | 177 كيلوبايت JS · 44 كيلوبايت CSS |
+| اختبارات Rust | **23 اختباراً** |
+
+**عن الذاكرة بصراحة:** الهدف المعلن كان ~100 ميجابايت، ولم يتحقق. التطبيق نفسه يستهلك 32 ميجابايت فقط، والباقي بنية Chromium/WebView2 (عمليات المتصفح وGPU والشبكة والعرض). خفض الرقم إلى 100 ميجابايت يتطلب واجهة أصلية (native) بدل WebView — أي إعادة كتابة، وليس تحسينا. الحجم وزمن الإقلاع تحققا؛ الذاكرة لا.
+
+---
+
+## البنية
 
 ```
-src/                         Svelte 5 frontend (runes, no router dependency)
+src/                         واجهة Svelte 5 (runes، بلا مكتبة توجيه)
 ├─ lib/
 │  ├─ components/            Icon, Artwork, SeekBar, TrackRow, PlayerBar, Sidebar…
-│  ├─ views/                 Home, Quran, Radio, Search, Library, Settings, Credits
-│  ├─ stores/                player, hifz, library, nav, ui — runes-based, no store library
-│  ├─ i18n/                  ar/en dictionaries + locale-aware formatters
-│  ├─ data/                  country list
-│  ├─ api.ts                 typed wrappers over Tauri commands
-│  └─ fonts.css              self-hosted Tajawal + Amiri Quran (113 KB total)
-└─ app.css                   Tailwind theme tokens, RTL-aware primitives
+│  ├─ views/                 Home, Quran, AyahMode, AyahPlayer, Explore,
+│  │                         Radio, Search, Library, Settings, Credits
+│  ├─ stores/                player, hifz, library, nav, ui — كلها runes
+│  ├─ i18n/                  قواميس ar/en ودوال تنسيق الأرقام والتواريخ
+│  ├─ api.ts                 أغلفة مطبوعة حول أوامر Tauri
+│  └─ fonts.css              خطوط عربية مستضافة ذاتياً
+└─ app.css                   رموز Tailwind v4 وأساسيات RTL
 
-src-tauri/src/               Rust backend
-├─ providers/                one module per content source
-│  ├─ mod.rs                 Track model, metadata, Arabic normalisation, dedupe
-│  ├─ mp3quran.rs            reciters, surah servers, Quran radio
-│  ├─ everyayah.rs           per-ayah recitation catalogue and URL builder
-│  ├─ quran_text.rs          Uthmani text + translation from AlQuran Cloud
-│  ├─ openverse.rs           CC audio index (includes Jamendo), no API key
-│  ├─ archive.rs             archive.org audio items expanded into tracks
-│  └─ radiobrowser.rs        live station directory with mirror fallback
-├─ db/mod.rs                 SQLite schema, migrations, cache, history
-├─ downloads.rs              streaming downloader with progress events
-├─ library.rs                folder scan + tag reading for local files
-├─ media.rs                  Windows SMTC session (metadata, transport buttons)
-├─ commands.rs               the IPC surface
-└─ lib.rs                    app wiring
+src-tauri/src/               الخلفية بلغة Rust
+├─ providers/                مصدر واحد لكل ملف
+│  ├─ mod.rs                 نموذج Track، تطبيع العربية، إزالة التكرار، التراخيص
+│  ├─ mp3quran.rs            القرّاء، سيرفرات السور، إذاعات القرآن
+│  ├─ everyayah.rs           كتالوج التلاوات الآية بآية وبناء الروابط
+│  ├─ quran_text.rs          النص العثماني والترجمة من AlQuran Cloud
+│  ├─ openverse.rs           فهرس الصوت الحر (يشمل Jamendo)
+│  ├─ archive.rs             أرشيف الإنترنت: عناصر تتحول إلى مقاطع
+│  └─ radiobrowser.rs        دليل المحطات المباشرة مع مرايا احتياطية
+├─ db/mod.rs                 مخطط SQLite، الترحيلات، التخزين المؤقت، السجل
+├─ downloads.rs              تنزيل متدفق مع أحداث تقدم
+├─ library.rs                مسح المجلدات وقراءة الوسوم للملفات المحلية
+├─ media.rs                  جلسة وسائط ويندوز (SMTC)
+├─ commands.rs               سطح IPC
+└─ lib.rs                    ربط التطبيق، الأيقونة، الاختصارات
 ```
 
-### Design decisions
+### قرارات التصميم
 
-- **No audio engine in Rust.** WebView2 is Chromium: `<audio>` plays MP3/AAC/FLAC/Opus natively
-  and gives us the Media Session API for free. Wins ~1 s of startup and a lot of code.
-- **Providers are pure functions**, not a trait object registry. Each returns `Vec<Track>`;
-  the command layer merges, dedupes and caches. Adding a source is one file plus one match arm.
-- **Stream URLs are resolved at play time**, never stored — providers like Jamendo issue
-  short-lived URLs.
-- **Offline-first metadata.** Reciter lists and station lists are cached in SQLite with a TTL,
-  and stale copies are served when the network is down.
-- **Attribution is a data field, not a footer.** Every `Track` carries `license`,
-  `licenseUrl` and `attribution` so the UI can never display CC content without credit.
+- **بلا محرك صوت في Rust.** WebView2 هو Chromium: وسم `<audio>` يشغّل MP3/AAC/FLAC/Opus أصلاً، ويمنحنا Media Session بلا كود إضافي.
+- **المزوّدون دوال نقية**، لا سجل trait objects. كل مزوّد يعيد `Vec<Track>`، وطبقة الأوامر تدمج وتزيل التكرار وتخزّن مؤقتاً. إضافة مصدر = ملف واحد وسطر في الأمر.
+- **روابط البث تُحلّ عند التشغيل** ولا تُخزَّن، لأن بعض المصادر تصدر روابط قصيرة العمر.
+- **بيانات وصفية تعمل دون اتصال.** قوائم القرّاء والمحطات تُخزَّن في SQLite مع صلاحية، وتُقدَّم نسخة قديمة عند انقطاع الشبكة.
+- **الترخيص حقل بيانات، لا تذييل.** كل `Track` يحمل `license` و`licenseUrl` و`attribution`، فلا يمكن للواجهة عرض محتوى CC بلا ذكر صاحبه.
 
-### Arabic text handling
+### معالجة النص العربي
 
-`providers::normalize_arabic` strips tashkeel, tatweel and Quranic annotation marks and folds
-alef/ya/ta-marbuta variants, so `الأَنصَار` and `الانصار` match. Search ranking uses a Dice
-coefficient over character bigrams — no search index, no extra dependency.
+`normalize_arabic` تحذف التشكيل والتطويل وعلامات الضبط القرآنية، وتوحّد الألف والياء والتاء المربوطة، فيتساوى «الأَنصَار» و«الانصار». ترتيب البحث يعتمد معاملاً يفضّل التطابق الكامل والكلمة الكاملة على تشابه المقاطع الثنائية، بعد أن أثبتت الاختبارات أن التشابه وحده يخلط بين أسماء قصيرة مثل «الحصري» و«الشريم».
 
 ---
 
-## Quran mode
+## المصادر والتراخيص
 
-Two ways to listen, both under the Quran tab.
+| المصدر | المحتوى | الترخيص |
+|---|---|---|
+| [mp3quran.net](https://mp3quran.net) | تلاوات القرآن، أكثر من ٢٠٠ قارئ، وإذاعات | متاح مجاناً |
+| [EveryAyah](https://everyayah.com) | تلاوة آية بآية | متاح مجاناً |
+| [AlQuran Cloud](https://alquran.cloud) | أسماء السور والنص العثماني والترجمة | بيانات مفتوحة |
+| [radio-browser.info](https://www.radio-browser.info) | دليل محطات البث المباشر | بيانات مفتوحة (CC0) |
+| [Openverse](https://openverse.org) | فهرس صوتي بتراخيص مفتوحة (يشمل Jamendo) | CC — حسب كل عمل |
+| [Jamendo](https://www.jamendo.com) | موسيقى Creative Commons | CC — يتطلب ذكر المصدر |
+| [Internet Archive](https://archive.org) | أناشيد وتسجيلات في الملك العام | حسب كل عنصر |
 
-**Full surah** — 200+ reciters from mp3quran, each with the riwayat they have recorded.
-
-**Ayah by ayah** — 26 curated EveryAyah recitations covering murattal, mujawwad and
-teaching styles. Every ayah is its own track, so next/previous, speed and repeat all work
-at verse level.
-
-The follow-along view shows the Uthmani text, highlights the ayah being played, scrolls it
-into view, and can show the Sahih International translation underneath. Memorisation is
-stored per surah in SQLite:
-
-- choose a start and end ayah, pick 1–10 passes and press **Repeat** — the range loops,
-  then stops and offers to mark it;
-- tap the bookmark under an ayah, or mark the whole range at once;
-- **Library → Memorisation** lists every surah with a progress bar;
-- the last ayah you played is remembered per surah and reciter, and the view reopens there.
-
-The loop is frontend-only: it takes over the `<audio>` `ended` event instead of building a
-second queue, so there is no duplicate playback engine to keep in sync.
+دندنة **لا تحتوي مزوّد يوتيوب ولا أي أداة لسحب البث**. هذا يحافظ على قابلية التوزيع، ويصغّر المُثبِّت، ويُبقي المشروع على أرضية قانونية واضحة.
 
 ---
 
-## Library
+## اختصارات لوحة المفاتيح
 
-**Favorites** — the heart on any row or in the player bar. Stored in SQLite with the whole
-track payload, so a favorite survives provider outages.
+داخل التطبيق:
 
-**Playlists** — create, rename, delete, add from the `+` action on any row, remove in the
-playlist view. Ordering is insertion order.
+| المفتاح | الإجراء |
+|---|---|
+| `Space` | تشغيل / إيقاف مؤقت |
+| `→` / `←` | التالي / السابق |
+| `↑` / `↓` | الصوت |
+| `M` | كتم |
 
-**Downloads** — one click on a surah row (or any non-live track) streams the file into
-`%APPDATA%\app.dandanah.desktop\downloads`, emitting progress events that drive the
-downloads tab. Playback prefers the downloaded file over the network, so a downloaded
-track works offline.
+عامة (تعمل والنافذة غير مركّزة):
 
-**Local import** — pick one or more folders; Dandanah walks them (8 levels deep, 5000 files
-per import), reads ID3/FLAC/MP4 tags with `lofty`, and falls back to filename + folder name
-when tags are missing. Imported files are played through Tauri's asset protocol, which
-supports range requests, so seeking works.
+| المفتاح | الإجراء |
+|---|---|
+| `Ctrl+Alt+Space` | تشغيل / إيقاف مؤقت |
+| `Ctrl+Alt+→` / `Ctrl+Alt+←` | التالي / السابق |
+| أزرار الوسائط | تُوجَّه عبر جلسة وسائط ويندوز |
 
-Downloads are a single track at a time and cannot be cancelled yet. Embedded artwork is
-read for display but not extracted into the cache.
-
----
-
-## Explore — free music and anasheed
-
-The Explore tab searches two openly licensed catalogues at once:
-
-- **Openverse** — a CC audio index that already aggregates Jamendo and Freesound, so the
-  app needs no Jamendo API key.
-- **Internet Archive** — audio items expanded into their individual files, with the item's
-  licence URL mapped to a short label (`CC BY`, `CC BY-SA`, `CC0`, `Public domain`).
-
-Every row shows its licence. Downloads are refused when a music or anasheed track has no
-known licence, and the credits screen lists every source. Searches run in parallel; if one
-provider fails the other's results are still shown.
+الاختصارات العامة ثابتة حالياً وغير قابلة للتخصيص، وقوائم شريط النظام بالعربية فقط.
 
 ---
 
-## Windows integration
+## التحديثات والإصدارات
 
-- **System Media Transport Controls** — the lock screen, volume flyout and hardware media
-  keys show Dandanah's current track and control play/pause, previous and next. Implemented
-  with `souvlaki` against the window's HWND; playback position is mirrored every few seconds
-  so seeking from the OS works.
-- **Tray icon** — left click restores the window; the menu offers show/hide, play/pause,
-  previous, next and quit. Hiding the window keeps playback running.
-- **Global hotkeys** — `Ctrl+Alt+Space` toggles playback, `Ctrl+Alt+→` / `Ctrl+Alt+←` skip.
-  Tray menu labels are Arabic-first; hotkeys are fixed (not configurable yet).
-- **Second launch** — starting the app again focuses the existing instance instead of
-  opening a second copy.
+1. من **الإعدادات ← التحديثات** يتحقق التطبيق من ملف `latest.json` في آخر إصدار على GitHub.
+2. إذا وُجد إصدار أحدث، ينزّل الحزمة الموقَّعة، ويتحقق من توقيعها بالمفتاح العام داخل `src-tauri/tauri.conf.json`، ثم يثبّتها ويعيد التشغيل.
 
----
-
-## Shipping
-
-**How an update reaches users**
-
-1. Settings → Updates calls the updater plugin, which fetches
-   `latest.json` from the GitHub release endpoint in `src-tauri/tauri.conf.json`.
-2. If the version is newer, the app downloads the signed `.nsis.zip`, verifies the signature
-   against the public key in the config, installs it, and relaunches.
-
-**Publish a release**
+نشر إصدار جديد:
 
 ```bash
 git tag v0.1.1
 git push origin v0.1.1
 ```
 
-`.github/workflows/release.yml` builds on a Windows runner, signs the updater artifacts and
-opens a **draft** GitHub release. Review it, then publish — publishing is what makes the
-update visible to installed copies.
+سير العمل `.github/workflows/release.yml` يبني على ويندوز، ويوقّع حزم التحديث، ويفتح **مسودة إصدار** على GitHub. راجعها ثم انشرها — النشر هو ما يجعل التحديث مرئياً للنسخ المثبَّتة.
 
-Required repository secrets:
+الأسرار المطلوبة في المستودع:
 
-| Secret | Value |
+| السر | القيمة |
 |---|---|
-| `TAURI_SIGNING_PRIVATE_KEY` | contents of `~/.tauri/dandanah.key` |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | the key password (empty here) |
+| `TAURI_SIGNING_PRIVATE_KEY` | محتوى `~/.tauri/dandanah.key` |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | كلمة مرور المفتاح (فارغة هنا) |
 
-The endpoint currently points at `github.com/mohamadtajas/dandanah`. If the repository lives
-elsewhere, change the URL in `src-tauri/tauri.conf.json` — it must serve `latest.json` from
-the latest release.
+عنوان التحديثات مضبوط على `github.com/mohamadtajas/dandanah`. إن نُقل المستودع، غيّر الرابط في `src-tauri/tauri.conf.json`؛ يجب أن يقدّم `latest.json` من آخر إصدار.
 
-**Code signing** is not configured. The installer is unsigned, so Windows SmartScreen will
-warn on first run. Removing that requires an Authenticode certificate; Azure Trusted Signing
-(~$10/month) is the cheapest realistic option for an open-source project. The updater
-signature is separate and already in place — it protects update integrity, not the first
-download.
+> احتفظ بنسخة احتياطية من المفتاح الخاص. فقده يعني تعذّر توقيع التحديثات مستقبلاً.
 
-**Verified locally:** the installer is 2.96 MiB, the app starts, fetches live data, migrates
-its database, and responds to Windows media keys. The release workflow has not been executed
-on GitHub yet because the repository has no remote.
+**مفتاح التوقيع الخاص لا يُرفع إلى المستودع أبداً** (مستثنى في `.gitignore`).
 
 ---
 
-## Content sources
+## القيود الحالية
 
-| Source | Content | License |
-|---|---|---|
-| [mp3quran.net](https://mp3quran.net) | Quran recitations, 200+ reciters, radio | Freely available |
-| [EveryAyah](https://everyayah.com) | Ayah-by-ayah recitation audio | Freely available |
-| [AlQuran Cloud](https://alquran.cloud) | Surah names, ayah counts | Open data |
-| [radio-browser.info](https://www.radio-browser.info) | Live radio directory | CC0 metadata |
-| [Jamendo](https://www.jamendo.com) | Creative Commons music | CC — attribution required |
-| [Openverse](https://openverse.org) | CC audio index (includes Jamendo) | CC — per work |
-| [Internet Archive](https://archive.org) | Anasheed, public-domain recordings | Per item |
+نفضّل قولها صراحةً بدل تركها تُكتشف لاحقاً:
 
-Dandanah deliberately has **no YouTube or stream-ripping provider**. That keeps the app
-distributable, the installer small, and the project on solid legal ground.
+- **الذاكرة تتجاوز الهدف** (~234 ميجابايت خاصة بدل ~100). السبب WebView2، والحل إعادة كتابة بواجهة أصلية.
+- **المُثبِّت غير موقَّع**، فيظهر تحذير SmartScreen حتى تُضاف شهادة.
+- **التنزيلات مقطع واحد في المرة، وبلا إلغاء**، ولا يوجد تنزيل دفعة كاملة لسورة آية بآية.
+- **أغلفة الملفات المحلية لا تُستخرج** من الوسوم؛ تعرض الواجهة تدرجاً لونياً بديلاً.
+- **لا توجد تصفية صوتية (EQ)** ولا تشغيل بلا فجوات (gapless).
+- **النص العثماني يعمل دون اتصال فقط من التخزين المؤقت**؛ الترجمة تحتاج شبكة في أول مرة.
+- **الكاتالوج العربي الحر رفيع**، لأن هذا هو المتاح فعلاً بتراخيص مفتوحة.
+- **لم يُنشر أي إصدار بعد**؛ المستودع منشور، لكن وسم `v0.1.0` وحزمة التحديث لم يُنشرا بعد.
 
 ---
 
-## Keyboard shortcuts
+## المساهمة
 
-| Key | Action |
-|---|---|
-| `Space` | Play / pause |
-| `→` / `←` | Next / previous |
-| `↑` / `↓` | Volume |
-| `M` | Mute |
+المساهمات مرحّب بها، سواء كانت إصلاح خطأ، أو تحسين ترجمة، أو مزوّد محتوى جديد، أو تحسين أداء.
 
-Global (work when the window is unfocused):
+1. افتح Issue للنقاش قبل التغييرات الكبيرة.
+2. أنشئ فرعاً من `master`.
+3. ثبّت الاعتماديات: `npm ci`.
+4. نفّذ الفحوصات قبل الإرسال:
 
-| Key | Action |
-|---|---|
-| `Ctrl+Alt+Space` | Play / pause |
-| `Ctrl+Alt+→` / `Ctrl+Alt+←` | Next / previous |
-| Media keys | Routed through the Windows media session |
+```bash
+npm run build
+npx svelte-check --tsconfig ./tsconfig.json
+cargo test --manifest-path src-tauri/Cargo.toml --lib
+```
+
+5. أرسل Pull Request، واشرح **ماذا** تغيّر و**لماذا**، وأرفق لقطات شاشة لتغييرات الواجهة.
+
+ملاحظات للمساهمين:
+
+- اتبع نمط الكود المحيط، وأبقِ التعليقات موجزة وتشرح السبب لا الوصف.
+- أي نص جديد في الواجهة يحتاج مفتاحاً في `src/lib/i18n/dict.ts` بالعربية والإنجليزية معاً.
+- أي مصدر محتوى جديد يجب أن يعيد `Track` كاملاً بحقول الترخيص، وألا يخزّن روابط البث.
+- أضف اختباراً لكل منطق قابل للاختبار (تطبيع، ترتيب، بناء روابط، قاعدة بيانات).
+
+أفكار مناسبة كبداية: إلغاء التنزيلات، استخراج أغلفة الملفات المحلية، دعم أزرار وسائط إضافية، تحسين واجهة الحفظ، وإضافة مزوّد محتوى عربي حر.
 
 ---
 
-## Roadmap
+## الترخيص
 
-1. ~~**Quran depth**~~ — shipped: ayah mode, repeat ranges, memorisation tracker, Uthmani follow-along.
-2. ~~**Library**~~ — shipped: favorites, playlists, downloads, local folder import.
-3. ~~**Creative Commons catalog**~~ — shipped: Openverse and archive.org with licence badges.
-4. ~~**Windows integration**~~ — shipped: SMTC, tray and global hotkeys.
-5. ~~**Ship**~~ — shipped: NSIS installer, signed updater pipeline, GitHub Actions, CI.
-6. **Sign** — Authenticode certificate to clear SmartScreen.
+- **الكود:** MIT — انظر [LICENSE](LICENSE).
+- **المحتوى:** ملك لأصحابه، وكل مصدر مذكور أعلاه بترخيصه.
 
-## License
+---
 
-Code: MIT. Content: see each source above.
+## شكر وتقدير
+
+إلى كل من سجّل تلاوة، أو أرشف تسجيلاً، أو نشر عملاً بترخيص مفتوح، أو كتب سطراً في مكتبة مفتوحة المصدر: هذا التطبيق قائم على عملكم.
+
+وبُني هذا المشروع بالكامل باستخدام **DeepSeek** — ومفتوح للجميع ليَكبُر بأيدي مجتمعه.
+
+</div>
