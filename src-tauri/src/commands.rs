@@ -1392,11 +1392,6 @@ pub fn get_adhkar_day(
 }
 
 #[tauri::command]
-pub fn get_adhkar_logs(state: State<'_, AppState>) -> Result<Vec<AdhkarDay>, String> {
-    state.db.adhkar_logs().map_err(|e| e.to_string())
-}
-
-#[tauri::command]
 pub fn set_adhkar_remaining(
     state: State<'_, AppState>,
     date: String,

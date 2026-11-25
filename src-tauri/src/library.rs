@@ -130,7 +130,8 @@ fn track_from_file(path: &Path, artwork_dir: Option<&Path>) -> Option<Track> {
     }
 
     if track.artist.is_empty() {
-        track.artist = "مكتبتي".to_string();
+        // UI supplies the localized "My files" label when this is empty.
+        track.artist = String::new();
     }
 
     if let Some(dir) = artwork_dir {

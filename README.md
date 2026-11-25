@@ -177,7 +177,7 @@ npm run dist:unsigned   # مُثبِّت فقط، بلا حزمة تحديث م�
 بناء التحديثات الموقَّعة محلياً:
 
 ```powershell
-$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content "$env:USERPROFILE\.tauri\Sakeenah.key" -Raw
+$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content "$env:USERPROFILE\.tauri\dandanah.key" -Raw
 $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
 npm run dist
 ```
@@ -340,7 +340,7 @@ git push origin v0.1.1
 
 | السر | القيمة |
 |---|---|
-| `TAURI_SIGNING_PRIVATE_KEY` | محتوى `~/.tauri/Sakeenah.key` |
+| `TAURI_SIGNING_PRIVATE_KEY` | محتوى `~/.tauri/dandanah.key` |
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | كلمة مرور المفتاح (فارغة هنا) |
 
 عنوان التحديثات مضبوط على `github.com/mohamadtajas/sakeenah`. إن نُقل المستودع، غيّر الرابط في `src-tauri/tauri.conf.json`؛ يجب أن يقدّم `latest.json` من آخر إصدار.

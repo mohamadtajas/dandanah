@@ -3,6 +3,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { i18n } from "$lib/i18n/index.svelte.ts";
 import type { Track } from "$lib/types";
 import { library } from "$lib/stores/library.svelte.ts";
+import { ui } from "$lib/stores/ui.svelte.ts";
 
 type RepeatMode = "off" | "all" | "one";
 
@@ -91,7 +92,7 @@ class PlayerStore {
     a.addEventListener("error", () => {
       this.loading = false;
       this.playing = false;
-      this.error = "stream-error";
+      this.fail();
     });
     a.addEventListener("ended", () => this.onEnded());
 
@@ -158,7 +159,7 @@ class PlayerStore {
     } catch (e) {
       this.loading = false;
       this.playing = false;
-      this.error = e instanceof Error ? e.message : String(e);
+      this.fail(e);
     }
 
     this.updateMediaSession(track);
@@ -180,7 +181,7 @@ class PlayerStore {
         this.playing = true;
         this.setMediaPlaybackState("playing");
       } catch (e) {
-        this.error = e instanceof Error ? e.message : String(e);
+        this.fail(e);
       }
     } else {
       a.pause();
@@ -304,6 +305,11 @@ class PlayerStore {
         /* ignore */
       }
     }
+  }
+
+  private fail(error: unknown = null) {
+    this.error = error instanceof Error ? error.message : String(error ?? "stream-error");
+    ui.notify(i18n.t("player.streamError"));
   }
 
   private updateMediaSession(track: Track) {

@@ -89,6 +89,7 @@
     <input
       bind:this={input}
       bind:value={name}
+      aria-label={i18n.t("library.playlistName")}
       placeholder={i18n.t("library.playlistName")}
       class="min-w-0 flex-1 bg-transparent px-1 text-xs text-cream placeholder:text-muted/70 focus:outline-none"
     />

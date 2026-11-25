@@ -18,6 +18,7 @@
   import { worship } from "$lib/stores/worship.svelte.ts";
   import { ui } from "$lib/stores/ui.svelte.ts";
   import { cities, nearestCity, timezoneChoices } from "$lib/data/cities";
+  import { countries } from "$lib/data/countries";
   import Icon from "$lib/components/Icon.svelte";
 
   let info = $state<AppInfo | null>(null);
@@ -279,6 +280,11 @@
     return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
   }
 
+  function countryLabel(arabic: string): string {
+    if (i18n.locale === "ar") return arabic;
+    return countries.find((country) => country.ar === arabic)?.en ?? arabic;
+  }
+
   function saveAdhan(patch: Partial<AdhanSettings>) {
     if (!adhan.settings) return;
     void adhan.save({ ...adhan.settings, ...patch });
@@ -395,7 +401,9 @@
           <option value="">{i18n.t("settings.customLocation")}</option>
           {#each cities as city (city.id)}
             <option value={city.id}>
-              {i18n.locale === "ar" ? `${city.name} — ${city.country}` : `${city.nameEn} — ${city.country}`}
+              {i18n.locale === "ar"
+              ? `${city.name} - ${city.country}`
+              : `${city.nameEn} - ${countryLabel(city.country)}`}
             </option>
           {/each}
         </select>

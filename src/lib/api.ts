@@ -428,4 +428,9 @@ export const api = {
     if (!isTauri) return locale;
     return invoke<string>("set_ui_locale", { locale });
   },
+
+  uiLocale: async (): Promise<string | null> => {
+    if (!isTauri) return null;
+    return invoke<string | null>("get_ui_locale");
+  },
 };

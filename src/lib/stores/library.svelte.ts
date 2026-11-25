@@ -34,6 +34,7 @@ class LibraryStore {
   storage = $state<StorageTotals | null>(null);
   local = $state<Track[]>([]);
   loading = $state(true);
+  error = $state(false);
   /** Opt-in escape hatch for sources that do not publish a licence. */
   allowUnknownLicense = $state(false);
 
@@ -70,6 +71,9 @@ class LibraryStore {
     if (downloads.status === "fulfilled") this.downloads = downloads.value;
     if (local.status === "fulfilled") this.local = local.value;
     if (storage.status === "fulfilled") this.storage = storage.value;
+    this.error = [ids, favs, lists, downloads, local, storage].every(
+      (result) => result.status === "rejected",
+    );
     this.loading = false;
     this.ensurePolling();
     void this.listen();

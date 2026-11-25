@@ -219,7 +219,7 @@
           {item.text}
         </p>
 
-        <span class="mt-4 block text-[10px] text-muted/70">{i18n.t("adhkar.tapHint")}</span>
+        <span class="mt-4 block text-[10px] text-muted">{i18n.t("adhkar.tapHint")}</span>
       </button>
 
       <div class="mt-3 flex items-start justify-between gap-4 px-1">

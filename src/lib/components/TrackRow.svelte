@@ -81,7 +81,7 @@
         {track.title}
       </div>
       <div class="flex items-center gap-1.5 text-xs text-muted">
-        <span class="truncate">{track.artist}</span>
+        <span class="truncate">{track.artist || (track.kind === "local" ? i18n.t("library.local") : "")}</span>
         {#if track.live}
           <span
             class="flex shrink-0 items-center gap-1 rounded-md border border-teal/30 bg-teal/10 px-1.5 py-px text-[9px] font-semibold tracking-wide text-teal"

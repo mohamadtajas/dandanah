@@ -280,64 +280,58 @@
         {@const memorised = hifz.has(ayah.number)}
         <div
           data-ayah={ayah.number}
-          role="button"
-          tabindex="0"
-          onclick={() => playAyah(ayah.number)}
-          onkeydown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              playAyah(ayah.number);
-            }
-          }}
-          class="group flex w-full cursor-pointer gap-3 rounded-xl px-3 py-3 text-start transition-colors
+          class="group flex w-full items-start gap-2 rounded-xl px-3 py-3 transition-colors
                  {active ? 'bg-gold/10 ring-1 ring-gold/30' : 'hover:bg-ink-800/70'}"
         >
-          <div class="flex w-9 shrink-0 flex-col items-center gap-1 pt-1">
+          <button
+            type="button"
+            onclick={() => playAyah(ayah.number)}
+            aria-label={i18n.t("quran.playAyah")}
+            class="flex min-w-0 flex-1 gap-3 rounded-lg text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70"
+          >
             <span
-              class="grid size-8 place-items-center rounded-lg border text-[10px] tabular-nums transition-colors
+              class="grid size-8 shrink-0 place-items-center rounded-lg border text-[10px] tabular-nums transition-colors
                      {active
                 ? 'border-gold/50 bg-gold/15 text-gold'
                 : 'border-line text-muted group-hover:border-gold/30 group-hover:text-gold'}"
             >
               {#if active && player.playing}
-                <div class="eq"><i></i><i></i><i></i><i></i></div>
+                <span class="eq"><i></i><i></i><i></i><i></i></span>
               {:else}
                 {fmtNumber(ayah.number)}
               {/if}
             </span>
-            <button
-              type="button"
-              onclick={(e) => {
-                e.stopPropagation();
-                hifz.toggleMemorized(ayah.number);
-              }}
-              aria-label={i18n.t("quran.memorized")}
-              class="rounded-full p-0.5 transition-colors
-                     {memorised ? 'text-teal' : 'text-muted/40 hover:text-muted'}"
-            >
-              <Icon name={memorised ? "check" : "bookmark"} size={11} />
-            </button>
-          </div>
 
-          <div class="min-w-0 flex-1">
-            <p
-              class="font-quran text-[1.35rem] leading-[2.1] {active
-                ? 'text-cream'
-                : 'text-cream/85'}"
-            >
-              {ayah.text}
-            </p>
-            {#if showTranslation && translations?.[ayah.number - 1]?.translation}
-              <p class="mt-1 text-[12px] leading-relaxed text-muted" dir="ltr" style="text-align: start">
-                {translations[ayah.number - 1].translation}
-              </p>
-            {/if}
-            {#if ayah.sajda}
-              <span class="mt-1 inline-block rounded border border-teal/30 px-1.5 py-px text-[9px] text-teal">
-                {i18n.t("quran.sajda")}
+            <span class="min-w-0 flex-1">
+              <span
+                class="block font-quran text-[1.35rem] leading-[2.1] {active
+                  ? 'text-cream'
+                  : 'text-cream/85'}"
+              >
+                {ayah.text}
               </span>
-            {/if}
-          </div>
+              {#if showTranslation && translations?.[ayah.number - 1]?.translation}
+                <span class="mt-1 block text-[12px] leading-relaxed text-muted" dir="ltr" style="text-align: start">
+                  {translations[ayah.number - 1].translation}
+                </span>
+              {/if}
+              {#if ayah.sajda}
+                <span class="mt-1 inline-block rounded border border-teal/30 px-1.5 py-px text-[9px] text-teal">
+                  {i18n.t("quran.sajda")}
+                </span>
+              {/if}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onclick={() => hifz.toggleMemorized(ayah.number)}
+            aria-label={i18n.t("quran.memorized")}
+            class="mt-1 shrink-0 rounded-full p-1 transition-colors
+                   {memorised ? 'text-teal' : 'text-muted/40 hover:text-muted'}"
+          >
+            <Icon name={memorised ? "check" : "bookmark"} size={11} />
+          </button>
         </div>
       {/each}
     </div>

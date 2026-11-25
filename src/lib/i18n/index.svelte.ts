@@ -38,6 +38,21 @@ class I18nStore {
     void api.setUiLocale(this.locale).catch(() => {});
   }
 
+  /**
+   * The database is authoritative once it has a value; localStorage is the
+   * first-run hint and remains a synchronous mirror for the initial paint.
+   */
+  async hydrate() {
+    const backend = await api.uiLocale().catch(() => null);
+    if (backend === "ar" || backend === "en") {
+      this.locale = backend;
+      if (typeof localStorage !== "undefined") localStorage.setItem(STORAGE_KEY, backend);
+      this.applyDocument();
+    } else {
+      this.syncBackend();
+    }
+  }
+
   toggle() {
     this.set(this.locale === "ar" ? "en" : "ar");
   }

@@ -294,7 +294,7 @@
                 <span dir="rtl" lang="ar" class="min-w-0 flex-1 truncate text-[12px]">
                   {surah.name}
                 </span>
-                <span class="shrink-0 text-[9px] tabular-nums opacity-60">
+                <span class="shrink-0 text-[10px] tabular-nums text-muted">
                   {fmtNumber(surah.ayahs)}
                 </span>
               </button>
@@ -315,14 +315,14 @@
                 </span>
                 <span class="min-w-0 flex-1">
                   <span class="block truncate text-[12px]">{surahName(juz.surah)}</span>
-                  <span class="block text-[9px] opacity-60">
+                  <span class="block text-[10px] text-muted">
                     {i18n.t("reader.juzStart", {
                       surah: surahName(juz.surah),
                       ayah: fmtNumber(juz.ayah),
                     })}
                   </span>
                 </span>
-                <span class="shrink-0 text-[9px] tabular-nums opacity-60">
+                <span class="shrink-0 text-[10px] tabular-nums text-muted">
                   {fmtNumber(juz.ayahs)}
                 </span>
               </button>
@@ -343,7 +343,7 @@
                   <span class="min-w-0 flex-1 truncate text-[12px]">
                     {surahName(bookmark.surah)}
                   </span>
-                  <span class="shrink-0 text-[9px] tabular-nums opacity-60">
+                  <span class="shrink-0 text-[10px] tabular-nums text-muted">
                     {fmtNumber(bookmark.ayah)}
                   </span>
                 </button>

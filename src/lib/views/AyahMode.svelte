@@ -125,6 +125,7 @@
       <Icon name="search" size={15} class="text-muted" />
       <input
         bind:value={filter}
+        aria-label={i18n.t("quran.searchReciter")}
         placeholder={i18n.t("quran.searchReciter")}
         class="w-full bg-transparent text-sm text-cream placeholder:text-muted/70 focus:outline-none"
       />
@@ -194,6 +195,7 @@
         <Icon name="search" size={15} class="text-muted" />
         <input
           bind:value={filter}
+          aria-label={i18n.t("quran.searchReciter")}
           placeholder={i18n.t("quran.searchReciter")}
           class="w-full bg-transparent text-sm text-cream placeholder:text-muted/70 focus:outline-none"
         />

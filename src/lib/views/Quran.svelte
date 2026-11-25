@@ -15,6 +15,7 @@
   let surahs = $state<Surah[]>([]);
   let tracks = $state<Track[]>([]);
   let loading = $state(true);
+  let loadError = $state(false);
   let loadingTracks = $state(false);
   let filter = $state("");
   let selectedId = $state<number | null>(null);
@@ -46,11 +47,18 @@
       .filter((x): x is { track: Track; surah: Surah } => x !== null),
   );
 
-  onMount(async () => {
+  async function loadCatalogue() {
+    loading = true;
+    loadError = false;
     const [r, s] = await Promise.allSettled([api.reciters(), api.surahs()]);
     if (r.status === "fulfilled") reciters = r.value;
     if (s.status === "fulfilled") surahs = s.value;
+    loadError = r.status === "rejected";
     loading = false;
+  }
+
+  onMount(async () => {
+    await loadCatalogue();
     booted = true;
     if (nav.param) await openReciter(Number(nav.param));
   });
@@ -307,6 +315,7 @@
         <Icon name="search" size={15} class="text-muted" />
         <input
           bind:value={filter}
+          aria-label={i18n.t("quran.searchReciter")}
           placeholder={i18n.t("quran.searchReciter")}
           class="w-full bg-transparent text-sm text-cream placeholder:text-muted/70 focus:outline-none"
         />
@@ -321,6 +330,17 @@
             <div class="mt-2 h-3 w-3/4 rounded bg-ink-800"></div>
           </div>
         {/each}
+      </div>
+    {:else if loadError}
+      <div class="mt-10 rounded-2xl border border-gold/30 bg-gold/[0.05] px-5 py-6 text-center">
+        <p class="text-sm text-muted">{i18n.t("common.offline")}</p>
+        <button
+          type="button"
+          onclick={() => loadCatalogue()}
+          class="mt-3 rounded-lg border border-gold/40 px-3 py-1.5 text-xs text-gold"
+        >
+          {i18n.t("common.retry")}
+        </button>
       </div>
     {:else if visibleReciters.length === 0}
       <p class="mt-10 text-sm text-muted">{i18n.t("search.empty")}</p>

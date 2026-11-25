@@ -270,11 +270,18 @@ impl Database {
             return Ok(());
         }
         for (i, sql) in MIGRATIONS.iter().enumerate().skip(current as usize) {
-            conn.execute_batch(sql)
+            // Each schema change and its version bump commit together, so a
+            // crash cannot leave ALTER TABLE half-applied with a stale version.
+            let tx = conn
+                .unchecked_transaction()
+                .context("starting migration transaction")?;
+            tx.execute_batch(sql)
                 .with_context(|| format!("applying migration v{}", i + 1))?;
+            tx.pragma_update(None, "user_version", (i + 1) as i64)
+                .with_context(|| format!("recording migration v{}", i + 1))?;
+            tx.commit()
+                .with_context(|| format!("committing migration v{}", i + 1))?;
         }
-        conn.pragma_update(None, "user_version", target)
-            .context("recording schema version")?;
         Ok(())
     }
 
@@ -1301,6 +1308,27 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let db = Database::open(&dir.join("test.db")).unwrap();
         (dir, db)
+    }
+
+    #[test]
+    fn migrations_apply_and_reopen_cleanly() {
+        let (dir, db) = temp_db();
+        let version: i64 = db
+            .conn
+            .lock()
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, MIGRATIONS.len() as i64);
+        drop(db);
+        let reopened = Database::open(&dir.join("test.db")).unwrap();
+        let again: i64 = reopened
+            .conn
+            .lock()
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(again, MIGRATIONS.len() as i64);
+        drop(reopened);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

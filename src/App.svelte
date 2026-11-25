@@ -30,7 +30,7 @@
     void adhkar.load();
     adhkar.start();
     void adhan.init();
-    i18n.syncBackend();
+    void i18n.hydrate();
     const cleanups: (() => void)[] = [];
 
     // Tray menu, global hotkeys and Windows media keys all arrive here.
@@ -71,8 +71,14 @@
     })();
 
     const onKey = (e: KeyboardEvent) => {
-      const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) {
+      // Never steal keys from a focused control or an already-handled action.
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target instanceof Element ? e.target : null;
+      if (
+        target?.closest(
+          'input, textarea, select, button, a[href], summary, [contenteditable="true"], [role="slider"], [role="button"], [role="switch"]',
+        )
+      ) {
         return;
       }
       switch (e.code) {

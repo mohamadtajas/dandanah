@@ -122,12 +122,15 @@ pub fn close_to_tray(db: &Database) -> bool {
         .unwrap_or(true)
 }
 
-pub fn locale(db: &Database) -> String {
+pub fn stored_locale(db: &Database) -> Option<String> {
     db.get_setting(LOCALE_KEY)
         .ok()
         .flatten()
         .filter(|value| value == "en" || value == "ar")
-        .unwrap_or_else(|| "ar".to_string())
+}
+
+pub fn locale(db: &Database) -> String {
+    stored_locale(db).unwrap_or_else(|| "ar".to_string())
 }
 
 fn english(locale: &str) -> bool {
@@ -657,8 +660,8 @@ pub fn test_adhan(app: AppHandle, state: State<'_, AppState>) -> AdhanSettings {
 }
 
 #[tauri::command]
-pub fn get_ui_locale(state: State<'_, AppState>) -> String {
-    locale(&state.db)
+pub fn get_ui_locale(state: State<'_, AppState>) -> Option<String> {
+    stored_locale(&state.db)
 }
 
 #[tauri::command]

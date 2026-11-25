@@ -64,7 +64,15 @@
     playlistId ? (library.playlists.find((p) => p.id === playlistId) ?? null) : null,
   );
 
+  let loadError = $state(false);
+
   onMount(async () => {
+    await loadLibrary();
+  });
+
+  async function loadLibrary() {
+    loading = true;
+    loadError = false;
     const [r, m, s] = await Promise.allSettled([
       api.recent(40),
       api.memorization(),
@@ -73,8 +81,10 @@
     if (r.status === "fulfilled") recent = r.value;
     if (m.status === "fulfilled") memorisation = m.value;
     if (s.status === "fulfilled") surahs = s.value;
+    loadError = r.status === "rejected";
     loading = false;
-  });
+    await library.load();
+  }
 
   $effect(() => {
     const id = nav.params[0];
@@ -244,6 +254,18 @@
 {/snippet}
 
 <div class="fade-in">
+  {#if loadError || library.error}
+    <div class="mb-4 rounded-2xl border border-gold/30 bg-gold/[0.05] px-4 py-3 text-xs text-muted">
+      {i18n.t("common.offline")}
+      <button
+        type="button"
+        onclick={() => loadLibrary()}
+        class="ms-2 rounded-md border border-gold/40 px-2 py-0.5 text-gold"
+      >
+        {i18n.t("common.retry")}
+      </button>
+    </div>
+  {/if}
   {#if openPlaylist}
     <!-- Playlist detail -->
     <button
@@ -261,6 +283,7 @@
           <form onsubmit={saveRename} class="flex items-center gap-2">
             <input
               bind:value={renameValue}
+              aria-label={i18n.t("library.rename")}
               class="w-full max-w-sm rounded-lg border border-gold/40 bg-ink-850 px-3 py-1.5 text-xl font-bold text-cream focus:outline-none"
             />
             <button type="submit" class="rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-ink-950">
@@ -373,6 +396,7 @@
         <form onsubmit={createPlaylist} class="mb-4 flex max-w-md items-center gap-2">
           <input
             bind:value={newPlaylistName}
+            aria-label={i18n.t("library.playlistName")}
             placeholder={i18n.t("library.playlistName")}
             class="min-w-0 flex-1 rounded-xl border border-line bg-ink-850 px-3 py-2 text-sm text-cream placeholder:text-muted/70 focus:border-gold/50 focus:outline-none"
           />

@@ -59,10 +59,26 @@
   onpointercancel={up}
   onkeydown={(e) => {
     if (disabled) return;
-    if (e.key === "ArrowRight" || e.key === "ArrowUp") onseek(Math.min(max, value + 5));
-    if (e.key === "ArrowLeft" || e.key === "ArrowDown") onseek(Math.max(0, value - 5));
-    if (e.key === "Home") onseek(0);
-    if (e.key === "End") onseek(max);
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+      e.preventDefault();
+      e.stopPropagation();
+      onseek(Math.min(max, value + 5));
+    }
+    if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+      e.preventDefault();
+      e.stopPropagation();
+      onseek(Math.max(0, value - 5));
+    }
+    if (e.key === "Home") {
+      e.preventDefault();
+      e.stopPropagation();
+      onseek(0);
+    }
+    if (e.key === "End") {
+      e.preventDefault();
+      e.stopPropagation();
+      onseek(max);
+    }
   }}
   class="group relative h-2 w-full cursor-pointer touch-none select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950 {disabled
     ? 'pointer-events-none opacity-50'

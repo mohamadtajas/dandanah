@@ -14,26 +14,33 @@
   let term = $state(nav.query);
   let results = $state<SearchResults>({ reciters: [], surahs: [], tracks: [] });
   let loading = $state(false);
+  let failed = $state(false);
+  let retryTick = $state(0);
   let filter = $state<"all" | "quran" | "radio" | "music">("all");
   let inputEl = $state<HTMLInputElement>();
 
   onMount(() => inputEl?.focus());
 
   $effect(() => {
+    void retryTick;
     const q = term.trim();
     const f = filter;
     if (!q) {
       results = { reciters: [], surahs: [], tracks: [] };
       loading = false;
+      failed = false;
       return;
     }
     loading = true;
+    failed = false;
     const handle = setTimeout(async () => {
       try {
         const kinds = f === "all" ? undefined : [f];
         results = await api.search(q, kinds);
+        failed = false;
       } catch {
         results = { reciters: [], surahs: [], tracks: [] };
+        failed = true;
       } finally {
         loading = false;
       }
@@ -66,6 +73,7 @@
     <input
       bind:this={inputEl}
       bind:value={term}
+      aria-label={i18n.t("search.placeholder")}
       placeholder={i18n.t("search.placeholder")}
       class="w-full bg-transparent text-base text-cream placeholder:text-muted/70 focus:outline-none"
     />
@@ -100,6 +108,17 @@
     <div class="mt-16 text-center">
       <Icon name="search" size={34} class="mx-auto text-ink-700" />
       <p class="mt-3 text-sm text-muted">{i18n.t("search.hint")}</p>
+    </div>
+  {:else if failed}
+    <div class="mt-12 rounded-2xl border border-gold/30 bg-gold/[0.05] px-5 py-6 text-center">
+      <p class="text-sm text-muted">{i18n.t("common.offline")}</p>
+      <button
+        type="button"
+        onclick={() => (retryTick += 1)}
+        class="mt-3 rounded-lg border border-gold/40 px-3 py-1.5 text-xs text-gold"
+      >
+        {i18n.t("common.retry")}
+      </button>
     </div>
   {:else if loading}
     <div class="mt-8 space-y-1">

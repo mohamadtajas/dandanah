@@ -201,7 +201,6 @@ pub fn run() {
             commands::get_prayer_streak,
             commands::get_adhkar_progress,
             commands::get_adhkar_day,
-            commands::get_adhkar_logs,
             commands::set_adhkar_remaining,
             commands::mark_adhkar_done,
             commands::clear_adhkar_category,

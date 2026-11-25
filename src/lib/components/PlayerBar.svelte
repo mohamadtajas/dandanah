@@ -162,7 +162,7 @@
           onseek={(v) => player.seek(v)}
           label={i18n.t("player.seek")}
         />
-        <span class="w-9 shrink-0">{player.isLive ? "LIVE" : fmtTime(player.duration)}</span>
+        <span class="w-9 shrink-0">{player.isLive ? i18n.t("player.live") : fmtTime(player.duration)}</span>
       </div>
     </div>
 

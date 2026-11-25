@@ -153,6 +153,7 @@
     <Icon name="search" size={15} class="text-muted" />
     <input
       bind:value={term}
+      aria-label={i18n.t("explore.placeholder")}
       placeholder={i18n.t("explore.placeholder")}
       class="w-full bg-transparent text-sm text-cream placeholder:text-muted/70 focus:outline-none"
     />
