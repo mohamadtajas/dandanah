@@ -8,7 +8,7 @@
     PrayerMethod,
     WorshipSettings,
   } from "$lib/types";
-  import { i18n } from "$lib/i18n/index.svelte.ts";
+  import { fmtNumber, i18n } from "$lib/i18n/index.svelte.ts";
   import type { TranslationKey } from "$lib/i18n/dict";
   import { nav } from "$lib/stores/nav.svelte.ts";
   import { player } from "$lib/stores/player.svelte.ts";
@@ -247,6 +247,11 @@
       installing = false;
       ui.notify(i18n.t("settings.updateFailed"));
     }
+  }
+  function fmtBytes(bytes: number) {
+    if (!bytes) return "0 KB";
+    const mb = bytes / 1_048_576;
+    return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
   }
 </script>
 
@@ -501,6 +506,32 @@
           class="absolute top-[3px] size-[18px] rounded-full bg-cream shadow transition-all
                  {library.allowUnknownLicense ? 'start-[22px]' : 'start-[3px]'}"
         ></span>
+      </button>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-4">
+      <p class="text-xs text-muted">
+        <span class="font-semibold text-cream">
+          {fmtBytes(library.storage?.totalBytes ?? 0)}
+        </span>
+        · {i18n.t("library.storageDownloaded")}
+        {fmtNumber(library.storage?.downloadedCount ?? 0)}
+        {#if library.storage?.active}
+          · <span class="text-gold">{i18n.t("library.storageActive")}
+            {fmtNumber(library.storage?.active ?? 0)}</span>
+        {/if}
+        {#if library.storage?.queued}
+          · {i18n.t("library.storageQueued")}
+          {fmtNumber(library.storage?.queued ?? 0)}
+        {/if}
+      </p>
+      <button
+        type="button"
+        onclick={() => nav.go("library", "downloads")}
+        class="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-[11px] text-cream transition-colors hover:border-gold/40 hover:text-gold"
+      >
+        <Icon name="download" size={12} />
+        {i18n.t("settings.manageDownloads")}
       </button>
     </div>
   </section>
