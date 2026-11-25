@@ -1,6 +1,7 @@
 import { api, isTauri } from "$lib/api";
 import adhanUrl from "$lib/assets/adhan.ogg?url";
 import { i18n } from "$lib/i18n/index.svelte.ts";
+import { player } from "$lib/stores/player.svelte.ts";
 import { ui } from "$lib/stores/ui.svelte.ts";
 import type { AdhanSettings, PrayerAlert } from "$lib/types";
 
@@ -31,11 +32,14 @@ class AdhanStore {
   playing = $state(false);
   /** Set when the webview refused to start audio without a gesture. */
   blocked = $state(false);
-  previewing = $state(false);
+  /** Set when the bundled recording failed to load or decode. */
+  error = $state<string | null>(null);
 
   private audio: HTMLAudioElement | null = null;
+  private wasPlaying = false;
   private listening = false;
   private loading: Promise<void> | null = null;
+  private saveToken = 0;
 
   async init() {
     if (this.loading) return this.loading;
@@ -46,9 +50,9 @@ class AdhanStore {
       try {
         const { listen } = await import("@tauri-apps/api/event");
         await listen<PlayEvent>("adhan:play", (event) => {
-          this.previewing = false;
           void this.play(event.payload.volume);
         });
+        await listen("adhan:stop", () => this.stop());
       } catch {
         this.listening = false;
       }
@@ -62,12 +66,17 @@ class AdhanStore {
 
   async save(next: AdhanSettings) {
     const previous = this.settings;
+    const token = ++this.saveToken;
     this.settings = next;
     try {
-      this.settings = await api.setAdhanSettings(next);
+      const saved = await api.setAdhanSettings(next);
+      // Rapid toggles can resolve out of order; only the newest response wins.
+      if (token === this.saveToken) this.settings = saved;
     } catch {
-      this.settings = previous;
-      ui.notify(i18n.t("adhan.saveFailed"));
+      if (token === this.saveToken) {
+        this.settings = previous;
+        ui.notify(i18n.t("adhan.saveFailed"));
+      }
     }
   }
 
@@ -85,39 +94,80 @@ class AdhanStore {
   /** Plays from a user gesture; also exercises the native toast path. */
   preview() {
     if (this.settings) void this.play(this.settings.volume);
-    this.previewing = true;
     void api.testAdhan().catch(() => {});
   }
 
+  setVolume(volume: number) {
+    if (this.audio) {
+      this.audio.volume = Math.max(0, Math.min(1, volume));
+    }
+  }
+
   async play(volume: number) {
-    this.stop();
+    // Replacing a playing adhan keeps the original music-pause decision.
+    if (this.audio) this.stopInternal(false);
+    if (!this.wasPlaying) {
+      this.wasPlaying = player.playing;
+      if (this.wasPlaying) void player.toggle();
+    }
+
     this.blocked = false;
+    this.error = null;
+    const audio = new Audio(adhanUrl);
+    audio.volume = Math.max(0, Math.min(1, volume));
+
+    const finish = (failed: boolean) => {
+      if (this.audio !== audio) return;
+      this.audio = null;
+      this.playing = false;
+      audio.onended = null;
+      audio.onerror = null;
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+      if (failed) {
+        this.error = i18n.t("adhan.playFailed");
+        ui.notify(this.error);
+      }
+      this.resumeMusic();
+    };
+
+    audio.onended = () => finish(false);
+    audio.onerror = () => finish(true);
+    this.audio = audio;
+    this.playing = true;
+
     try {
-      const audio = new Audio(adhanUrl);
-      audio.volume = Math.max(0, Math.min(1, volume));
-      audio.onended = () => {
-        if (this.audio === audio) {
-          this.playing = false;
-          this.audio = null;
-        }
-      };
-      this.audio = audio;
-      this.playing = true;
       await audio.play();
     } catch {
-      this.playing = false;
-      this.blocked = true;
-      ui.notify(i18n.t("adhan.playBlocked"));
+      if (this.audio === audio) {
+        this.blocked = true;
+        finish(true);
+      }
     }
   }
 
   stop() {
-    if (this.audio) {
-      this.audio.pause();
-      this.audio.src = "";
-      this.audio = null;
-    }
+    this.stopInternal(true);
+  }
+
+  private stopInternal(resumeMusic: boolean) {
+    const audio = this.audio;
+    if (!audio) return;
+    this.audio = null;
     this.playing = false;
+    audio.onended = null;
+    audio.onerror = null;
+    audio.pause();
+    audio.removeAttribute("src");
+    audio.load();
+    if (resumeMusic) this.resumeMusic();
+  }
+
+  private resumeMusic() {
+    if (!this.wasPlaying) return;
+    this.wasPlaying = false;
+    if (!player.playing) void player.toggle();
   }
 }
 

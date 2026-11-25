@@ -1,6 +1,6 @@
 use crate::commands::AppState;
 use crate::db::Database;
-use crate::worship::{self, PrayerTime, WorshipSettings};
+use crate::worship::{self, PrayerTime, WorshipSettings, PRAYER_KEYS};
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
@@ -14,8 +14,9 @@ use tauri_plugin_notification::NotificationExt;
 pub const SETTINGS_KEY: &str = "worship.adhan.v1";
 /// Emitted to the webview so it can play the bundled CC0 recording.
 pub const PLAY_EVENT: &str = "adhan:play";
+/// Emitted by the tray so the webview can stop a playing adhan.
+pub const STOP_EVENT: &str = "adhan:stop";
 const CLOSE_TO_TRAY_KEY: &str = "desktop.closeToTray";
-const PRAYERS: [&str; 5] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 /// How late an alert may be and still fire. This is deliberately short so a
 /// laptop waking hours after a prayer does not play a stale adhan.
 pub const ALERT_WINDOW_S: i64 = 90;
@@ -62,7 +63,7 @@ impl Default for AdhanSettings {
     fn default() -> Self {
         Self {
             enabled: true,
-            prayers: PRAYERS
+            prayers: PRAYER_KEYS
                 .iter()
                 .map(|key| (key.to_string(), PrayerAlert::default()))
                 .collect(),
@@ -82,8 +83,13 @@ impl AdhanSettings {
         if !matches!(self.pre_alert_minutes, 0 | 5 | 10 | 15 | 20 | 30) {
             self.pre_alert_minutes = 10;
         }
-        self.prayers.retain(|key, _| PRAYERS.contains(&key.as_str()));
-        for key in PRAYERS {
+        // 0 means "off"; keep the select valid and make the state explicit.
+        if self.pre_alert_minutes == 0 {
+            self.pre_alert_enabled = false;
+            self.pre_alert_minutes = 10;
+        }
+        self.prayers.retain(|key, _| PRAYER_KEYS.contains(&key.as_str()));
+        for key in PRAYER_KEYS {
             self.prayers
                 .entry(key.to_string())
                 .or_insert_with(PrayerAlert::default);
@@ -143,6 +149,59 @@ pub struct Alert {
     pub lead_minutes: u32,
 }
 
+impl Alert {
+    /// The prayer's own instant, not the pre-alert trigger.
+    pub fn prayer_at(&self) -> DateTime<Utc> {
+        self.trigger_at + ChronoDuration::minutes(i64::from(self.lead_minutes))
+    }
+}
+
+/// A due alert after applying the user's switches. Kept pure so the gating
+/// rules are testable without a running app.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlannedAlert {
+    pub alert: Alert,
+    pub toast: bool,
+    pub sound: bool,
+    /// Suppress the toast's default ding when the adhan itself plays.
+    pub silent_toast: bool,
+}
+
+pub fn plan_alert(alert: Alert, settings: &AdhanSettings) -> Option<PlannedAlert> {
+    if !settings.enabled {
+        return None;
+    }
+    let switches = settings
+        .prayers
+        .get(&alert.prayer_key)
+        .cloned()
+        .unwrap_or_default();
+    match alert.kind {
+        AlertKind::Pre => {
+            if !settings.pre_alert_enabled || !switches.notify {
+                return None;
+            }
+            Some(PlannedAlert {
+                alert,
+                toast: true,
+                sound: false,
+                silent_toast: false,
+            })
+        }
+        AlertKind::Adhan => {
+            if !switches.notify && !switches.adhan {
+                return None;
+            }
+            Some(PlannedAlert {
+                alert,
+                toast: switches.notify,
+                sound: switches.adhan,
+                silent_toast: switches.adhan,
+            })
+        }
+    }
+}
+
 /// Pure scheduling rule: a prayer fires once when its instant has just passed,
 /// and a pre-alert fires once when its lead time has just been crossed.
 pub fn due_alerts(
@@ -153,7 +212,7 @@ pub fn due_alerts(
 ) -> Vec<Alert> {
     let mut due = Vec::new();
     for prayer in times {
-        if !PRAYERS.contains(&prayer.key.as_str()) {
+        if !PRAYER_KEYS.contains(&prayer.key.as_str()) {
             continue;
         }
         let Ok(at) = DateTime::parse_from_rfc3339(&prayer.iso) else {
@@ -221,10 +280,9 @@ impl AlertTracker {
                 continue;
             }
             let key = format!(
-                "{}:{}:{}",
+                "{}:{}",
                 alert.kind.as_str(),
-                alert.date,
-                alert.prayer_key
+                alert.trigger_at.timestamp()
             );
             if self.fired.insert(key) {
                 fresh.push(alert);
@@ -232,11 +290,12 @@ impl AlertTracker {
         }
         // Keep the set tiny on long-running sessions.
         if self.fired.len() > 100 {
-            let keep_after = (now - ChronoDuration::days(2)).format("%Y-%m-%d").to_string();
+            let cutoff = (now - ChronoDuration::days(2)).timestamp();
             self.fired.retain(|key| {
                 key.split(':')
                     .nth(1)
-                    .map(|date| date >= keep_after.as_str())
+                    .and_then(|stamp| stamp.parse::<i64>().ok())
+                    .map(|stamp| stamp >= cutoff)
                     .unwrap_or(false)
             });
         }
@@ -275,13 +334,16 @@ fn update_tray(app: &AppHandle, next: Option<&PrayerTime>, remaining_s: i64) {
     let handles = app.state::<TrayHandles>();
     let mut last = handles.last_text.lock();
     if *last != text {
-        if let Some(item) = handles.next_prayer.lock().as_ref() {
-            let _ = item.set_text(&text);
+        let updated = match handles.next_prayer.lock().as_ref() {
+            Some(item) => item.set_text(&text).is_ok(),
+            None => true,
+        };
+        if updated {
+            if let Some(tray) = app.tray_by_id("main") {
+                let _ = tray.set_tooltip(Some(&format!("سَكينة — {text}")));
+            }
+            *last = text;
         }
-        if let Some(tray) = app.tray_by_id("main") {
-            let _ = tray.set_tooltip(Some(&format!("سَكينة — {text}")));
-        }
-        *last = text;
     }
 }
 
@@ -293,13 +355,16 @@ pub struct AdhanPlayback {
     pub volume: f64,
 }
 
-fn notify(app: &AppHandle, title: &str, body: &str) {
-    let _ = app
-        .notification()
-        .builder()
-        .title(title)
-        .body(body)
-        .show();
+fn notify(app: &AppHandle, title: &str, body: &str, silent: bool) {
+    let mut builder = app.notification().builder().title(title).body(body);
+    if silent {
+        // `notify-rust` treats an unknown sound name as "no sound", which is
+        // exactly what we want while the adhan recording is playing.
+        builder = builder.sound("silent");
+    }
+    if let Err(error) = builder.show() {
+        eprintln!("prayer notification failed: {error}");
+    }
 }
 
 /// Runs once every 15 seconds for the whole process lifetime. It is the only
@@ -327,6 +392,7 @@ fn tick(app: &AppHandle, tracker: &mut AlertTracker) {
 
     let date = now.with_timezone(&settings.timezone()).date_naive();
     let Ok(day) = worship::prayer_day(&settings, date, now) else {
+        update_tray(app, None, 0);
         return;
     };
     update_tray(app, day.next.as_ref(), day.remaining_s);
@@ -339,45 +405,61 @@ fn tick(app: &AppHandle, tracker: &mut AlertTracker) {
     } else {
         0
     };
-    for alert in tracker.due(&day.times, now, pre_minutes) {
-        let switches = adhan
-            .prayers
-            .get(&alert.prayer_key)
-            .cloned()
-            .unwrap_or_default();
-        match alert.kind {
-            AlertKind::Pre => {
-                if switches.notify {
+
+    // Include the adjacent local days so a pre-alert crossing midnight and an
+    // Isha window that spills into the new day are still seen.
+    let mut candidates = Vec::with_capacity(15);
+    if let Ok(previous) = worship::prayer_day(&settings, date - ChronoDuration::days(1), now) {
+        candidates.extend(previous.times);
+    }
+    candidates.extend(day.times.clone());
+    if let Ok(tomorrow) = worship::prayer_day(&settings, date + ChronoDuration::days(1), now) {
+        candidates.extend(tomorrow.times);
+    }
+
+    for planned in tracker
+        .due(&candidates, now, pre_minutes)
+        .into_iter()
+        .filter_map(|alert| plan_alert(alert, &adhan))
+    {
+        let alert = &planned.alert;
+        if planned.toast {
+            match alert.kind {
+                AlertKind::Pre => {
+                    let remaining = ((alert.prayer_at() - now).num_seconds() + 59) / 60;
                     notify(
                         app,
                         &format!(
                             "بعد {} دقائق: {}",
-                            alert.lead_minutes, alert.prayer_name
+                            remaining.max(1),
+                            alert.prayer_name
                         ),
-                        &format!("حان وقت صلاة {} الساعة {}", alert.prayer_name, alert.time),
+                        &format!(
+                            "اقترب موعد صلاة {} الساعة {}",
+                            alert.prayer_name, alert.time
+                        ),
+                        false,
                     );
                 }
-            }
-            AlertKind::Adhan => {
-                if switches.notify {
+                AlertKind::Adhan => {
                     notify(
                         app,
                         &format!("حان وقت صلاة {}", alert.prayer_name),
                         &format!("{} · {}", alert.prayer_name, alert.time),
-                    );
-                }
-                if switches.adhan {
-                    let _ = app.emit("player:command", "pause");
-                    let _ = app.emit(
-                        PLAY_EVENT,
-                        AdhanPlayback {
-                            prayer: alert.prayer_key,
-                            name: alert.prayer_name,
-                            volume: adhan.volume,
-                        },
+                        planned.silent_toast,
                     );
                 }
             }
+        }
+        if planned.sound {
+            let _ = app.emit(
+                PLAY_EVENT,
+                AdhanPlayback {
+                    prayer: alert.prayer_key.clone(),
+                    name: alert.prayer_name.clone(),
+                    volume: adhan.volume,
+                },
+            );
         }
     }
 }
@@ -401,12 +483,51 @@ pub fn get_autostart(app: AppHandle) -> bool {
     app.autolaunch().is_enabled().unwrap_or(false)
 }
 
+/// `auto-launch` writes `path with spaces --minimized` unquoted, which Windows
+/// may parse as a different executable. Rewrite the Run value with quotes.
+#[cfg(windows)]
+fn quote_autostart_entry() {
+    use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
+    use winreg::types::FromRegValue;
+    let hkcu = winreg::RegKey::predef(HKEY_CURRENT_USER);
+    let Ok(run) = hkcu.open_subkey_with_flags(
+        "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+        KEY_READ | KEY_WRITE,
+    ) else {
+        return;
+    };
+    let entries: Vec<(String, String)> = run
+        .enum_values()
+        .flatten()
+        .filter_map(|(name, value)| {
+            String::from_reg_value(&value)
+                .ok()
+                .map(|value| (name, value))
+        })
+        .filter(|(_, value)| value.to_ascii_lowercase().contains("sakeenah.exe"))
+        .collect();
+    for (name, value) in entries {
+        if value.starts_with('"') {
+            continue;
+        }
+        if let Some(position) = value.to_ascii_lowercase().find(".exe") {
+            let end = position + 4;
+            let quoted = format!("\"{}\"{}", &value[..end], &value[end..]);
+            let _ = run.set_value(&name, &quoted);
+        }
+    }
+}
+
+#[cfg(not(windows))]
+fn quote_autostart_entry() {}
+
 #[tauri::command]
 pub fn set_autostart(app: AppHandle, enabled: bool) -> Result<bool, String> {
     use tauri_plugin_autostart::ManagerExt;
     let manager = app.autolaunch();
     if enabled {
         manager.enable().map_err(|error| error.to_string())?;
+        quote_autostart_entry();
     } else {
         manager.disable().map_err(|error| error.to_string())?;
     }
@@ -430,12 +551,13 @@ pub fn set_close_to_tray(
     Ok(enabled)
 }
 
-/// Settings preview: plays the bundled recording and shows the same toast the
-/// scheduler would use, without touching the prayer log or schedule.
+/// Settings preview: shows the same toast the scheduler would use; the
+/// webview plays the recording from the user gesture. Works even when the
+/// schedule is disabled so the sound can be checked before enabling alerts.
 #[tauri::command]
 pub fn test_adhan(app: AppHandle, state: State<'_, AppState>) -> AdhanSettings {
     let settings = load_settings(&state.db);
-    notify(&app, "اختبار الأذان", "سيُسمع الأذان الآن");
+    notify(&app, "اختبار الأذان", "سيُسمع الأذان الآن", true);
     settings
 }
 
@@ -540,6 +662,149 @@ mod tests {
         assert_eq!(settings.volume, 1.0);
         assert_eq!(settings.pre_alert_minutes, 10);
         assert_eq!(settings.prayers.len(), 5);
+
+        // 0 is not a selectable lead time: it means "off".
+        let zero = AdhanSettings {
+            pre_alert_enabled: true,
+            pre_alert_minutes: 0,
+            ..AdhanSettings::default()
+        }
+        .sanitized();
+        assert!(!zero.pre_alert_enabled);
+        assert_eq!(zero.pre_alert_minutes, 10);
+    }
+
+    #[test]
+    fn alert_window_accepts_ninety_seconds_but_not_ninety_one() {
+        let at = utc(2026, 11, 25, 9, 5, 0); // Dhuhr 12:05 +03
+        assert_eq!(
+            due_alerts(&day(), at + ChronoDuration::seconds(90), 0, ALERT_WINDOW_S).len(),
+            1
+        );
+        assert!(due_alerts(
+            &day(),
+            at + ChronoDuration::seconds(91),
+            0,
+            ALERT_WINDOW_S
+        )
+        .is_empty());
+    }
+
+    #[test]
+    fn crossing_midnight_keeps_isha_and_early_fajr_alerts() {
+        // Yesterday's Isha at 23:59:30 and tomorrow's Fajr at 00:08.
+        let isha = prayer("isha", "العشاء", "2026-11-25T23:59:30+03:00");
+        let fajr = prayer("fajr", "الفجر", "2026-11-26T00:08:00+03:00");
+
+        // 00:00:10 local: yesterday's Isha is still inside its window.
+        let just_after_midnight = utc(2026, 11, 25, 21, 0, 10);
+        let due = due_alerts(&[isha], just_after_midnight, 0, ALERT_WINDOW_S);
+        assert_eq!(due.len(), 1);
+        assert_eq!(due[0].prayer_key, "isha");
+
+        // 23:58 local: the 10-minute pre-alert for tomorrow's Fajr is due.
+        let before_midnight = utc(2026, 11, 25, 20, 58, 0);
+        let due = due_alerts(&[fajr], before_midnight, 10, ALERT_WINDOW_S);
+        assert_eq!(due.len(), 1);
+        assert_eq!(due[0].kind, AlertKind::Pre);
+        assert_eq!(due[0].prayer_key, "fajr");
+    }
+
+    #[test]
+    fn per_prayer_and_master_switches_plan_the_right_actions() {
+        let at = utc(2026, 11, 25, 9, 6, 0);
+        let due = due_alerts(&day(), at, 0, ALERT_WINDOW_S);
+        let adhan = due.into_iter().next().unwrap();
+
+        let mut settings = AdhanSettings::default();
+        settings.prayers.insert(
+            "dhuhr".into(),
+            PrayerAlert {
+                adhan: true,
+                notify: false,
+            },
+        );
+        let plan = plan_alert(adhan.clone(), &settings).unwrap();
+        assert!(plan.sound);
+        assert!(!plan.toast);
+        assert!(plan.silent_toast, "silent flag follows the sound switch");
+
+        settings.prayers.insert(
+            "dhuhr".into(),
+            PrayerAlert {
+                adhan: false,
+                notify: false,
+            },
+        );
+        assert!(plan_alert(adhan.clone(), &settings).is_none());
+
+        settings.enabled = false;
+        assert!(plan_alert(adhan, &settings).is_none());
+    }
+
+    #[test]
+    fn pre_alert_respects_master_and_per_prayer_switches() {
+        let at = utc(2026, 11, 25, 8, 55, 0); // 10 minutes before Dhuhr
+        let pre = due_alerts(&day(), at, 10, ALERT_WINDOW_S)
+            .into_iter()
+            .find(|alert| alert.kind == AlertKind::Pre)
+            .unwrap();
+        let settings = AdhanSettings {
+            pre_alert_enabled: true,
+            ..AdhanSettings::default()
+        };
+        assert!(plan_alert(pre.clone(), &settings).unwrap().toast);
+
+        let off = AdhanSettings {
+            pre_alert_enabled: false,
+            ..AdhanSettings::default()
+        };
+        assert!(plan_alert(pre.clone(), &off).is_none());
+
+        let mut muted = settings.clone();
+        muted.prayers.insert(
+            "dhuhr".into(),
+            PrayerAlert {
+                adhan: true,
+                notify: false,
+            },
+        );
+        assert!(plan_alert(pre, &muted).is_none());
+    }
+
+    #[test]
+    fn dst_changes_the_local_offsets_but_keeps_prayer_order() {
+        let settings = WorshipSettings {
+            latitude: 40.7128,
+            longitude: -74.006,
+            timezone: "America/New_York".into(),
+            method: "northAmerica".into(),
+            configured: true,
+            ..WorshipSettings::default()
+        };
+        // US DST starts 2026-03-08 and ends 2026-11-01.
+        let winter = worship::prayer_day(
+            &settings,
+            chrono::NaiveDate::from_ymd_opt(2026, 3, 7).unwrap(),
+            utc(2026, 3, 7, 17, 0, 0),
+        )
+        .unwrap();
+        let summer = worship::prayer_day(
+            &settings,
+            chrono::NaiveDate::from_ymd_opt(2026, 3, 9).unwrap(),
+            utc(2026, 3, 9, 16, 0, 0),
+        )
+        .unwrap();
+        assert!(winter.times[0].iso.contains("-05:00"));
+        assert!(summer.times[0].iso.contains("-04:00"));
+        assert!(winter
+            .times
+            .windows(2)
+            .all(|pair| pair[0].iso <= pair[1].iso));
+        assert!(summer
+            .times
+            .windows(2)
+            .all(|pair| pair[0].iso <= pair[1].iso));
     }
 
     #[test]

@@ -20,7 +20,11 @@ use tauri::{Emitter, Manager};
 
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            // A login-time second launch must not steal focus from the user.
+            if argv.iter().any(|arg| arg == "--minimized") {
+                return;
+            }
             media::show_main(app);
         }))
         .plugin(tauri_plugin_opener::init())
@@ -110,10 +114,15 @@ pub fn run() {
             adhan::start(app.handle().clone());
 
             // Autostart launches with `--minimized`; stay in the tray so the
-            // prayer scheduler runs without stealing focus at login.
-            if std::env::args().any(|arg| arg == "--minimized") {
-                if let Some(window) = app.get_webview_window("main") {
+            // prayer scheduler runs without stealing focus at login. The
+            // window is configured invisible to avoid a blank flash.
+            let minimized = std::env::args().any(|arg| arg == "--minimized");
+            if let Some(window) = app.get_webview_window("main") {
+                if minimized {
                     let _ = window.hide();
+                } else {
+                    let _ = window.show();
+                    let _ = window.set_focus();
                 }
             }
 
@@ -217,6 +226,7 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
         true,
         None::<&str>,
     )?;
+    let stop_adhan = MenuItem::with_id(app, "stop_adhan", "إيقاف الأذان", true, None::<&str>)?;
     let show = MenuItem::with_id(app, "show", "إظهار Sakeenah", true, None::<&str>)?;
     let hide = MenuItem::with_id(app, "hide", "إخفاء النافذة", true, None::<&str>)?;
     let toggle = MenuItem::with_id(app, "toggle", "تشغيل / إيقاف", true, None::<&str>)?;
@@ -227,6 +237,7 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
         app,
         &[
             &next_prayer,
+            &stop_adhan,
             &PredefinedMenuItem::separator(app)?,
             &show,
             &hide,
@@ -247,6 +258,10 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
+            "next_prayer" => media::show_main(app),
+            "stop_adhan" => {
+                let _ = app.emit(adhan::STOP_EVENT, ());
+            }
             "show" => media::show_main(app),
             "hide" => media::hide_main(app),
             "toggle" => {

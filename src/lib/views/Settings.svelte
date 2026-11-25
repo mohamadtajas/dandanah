@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { api, isTauri } from "$lib/api";
   import type {
+    AdhanSettings,
     AppInfo,
     HighLatitudeRule,
     HotkeyMap,
@@ -278,13 +279,14 @@
     return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
   }
 
-  function saveAdhan(patch: Record<string, unknown>) {
+  function saveAdhan(patch: Partial<AdhanSettings>) {
     if (!adhan.settings) return;
     void adhan.save({ ...adhan.settings, ...patch });
   }
 
   function changeVolume(event: Event) {
     volumePct = Number((event.currentTarget as HTMLInputElement).value);
+    adhan.setVolume(volumePct / 100);
   }
 
   function commitVolume() {
@@ -602,14 +604,20 @@
         <p class="mt-1 text-xs leading-relaxed text-muted">
           {i18n.t("settings.adhanHint")}
         </p>
+        {#if !prayer.configured}
+          <p class="mt-2 rounded-lg border border-gold/30 bg-gold/[0.05] px-2.5 py-2 text-[10px] leading-relaxed text-gold">
+            {i18n.t("settings.adhanNeedsLocation")}
+          </p>
+        {/if}
       </div>
       <button
         type="button"
         role="switch"
         aria-checked={adhan.settings?.enabled ?? false}
         aria-label={i18n.t("settings.adhanEnabled")}
+        disabled={!prayer.configured}
         onclick={() => saveAdhan({ enabled: !(adhan.settings?.enabled ?? false) })}
-        class="relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors
+        class="relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors disabled:opacity-40
                {adhan.settings?.enabled
           ? 'border-gold/60 bg-gold/80'
           : 'border-line bg-ink-800'}"
@@ -639,7 +647,8 @@
         <button
           type="button"
           onclick={() => (adhan.playing ? adhan.stop() : adhan.preview())}
-          class="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors
+          disabled={!prayer.configured}
+          class="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors disabled:opacity-40
                  {adhan.playing
             ? 'border-gold/40 bg-gold/10 text-gold'
             : 'border-line text-cream hover:border-gold/40 hover:text-gold'}"
@@ -648,6 +657,12 @@
           {i18n.t(adhan.playing ? "settings.adhanStop" : "settings.adhanTest")}
         </button>
       </div>
+
+      {#if adhan.blocked || adhan.error}
+        <p class="mt-2 rounded-lg border border-red-400/30 bg-red-400/[0.06] px-2.5 py-2 text-[10px] leading-relaxed text-red-300">
+          {adhan.error ?? i18n.t("adhan.playBlocked")}
+        </p>
+      {/if}
 
       <div class="mt-4 overflow-hidden rounded-xl border border-line/60">
         <div class="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-line/60 bg-ink-850/60 px-3 py-2 text-[10px] text-muted">
@@ -664,8 +679,9 @@
               role="switch"
               aria-checked={alert.adhan}
               aria-label={`${i18n.t(row.label)} — ${i18n.t("settings.adhanSound")}`}
+              disabled={!prayer.configured}
               onclick={() => adhan.setPrayer(row.key, { adhan: !alert.adhan })}
-              class="relative h-5 w-9 rounded-full border transition-colors
+              class="relative h-5 w-9 rounded-full border transition-colors disabled:opacity-40
                      {alert.adhan ? 'border-gold/60 bg-gold/80' : 'border-line bg-ink-800'}"
             >
               <span
@@ -678,8 +694,9 @@
               role="switch"
               aria-checked={alert.notify}
               aria-label={`${i18n.t(row.label)} — ${i18n.t("settings.adhanNotify")}`}
+              disabled={!prayer.configured}
               onclick={() => adhan.setPrayer(row.key, { notify: !alert.notify })}
-              class="relative h-5 w-9 rounded-full border transition-colors
+              class="relative h-5 w-9 rounded-full border transition-colors disabled:opacity-40
                      {alert.notify ? 'border-gold/60 bg-gold/80' : 'border-line bg-ink-800'}"
             >
               <span
@@ -701,12 +718,12 @@
             value={adhan.settings.preAlertMinutes}
             onchange={(event) =>
               saveAdhan({ preAlertMinutes: Number(event.currentTarget.value) })}
-            disabled={!adhan.settings.preAlertEnabled}
+            disabled={!prayer.configured || !adhan.settings.preAlertEnabled}
             aria-label={i18n.t("settings.preAlertMinutes")}
             class="rounded-lg border border-line bg-ink-850 px-2 py-1 text-[11px] text-cream disabled:opacity-40"
           >
             {#each PRE_ALERT_MINUTES as minutes (minutes)}
-              <option value={minutes}>{fmtNumber(minutes)} د</option>
+              <option value={minutes}>{fmtNumber(minutes)} {i18n.t("settings.minuteShort")}</option>
             {/each}
           </select>
           <button
@@ -714,8 +731,9 @@
             role="switch"
             aria-checked={adhan.settings.preAlertEnabled}
             aria-label={i18n.t("settings.preAlert")}
+            disabled={!prayer.configured}
             onclick={() => saveAdhan({ preAlertEnabled: !adhan.settings?.preAlertEnabled })}
-            class="relative h-5 w-9 rounded-full border transition-colors
+            class="relative h-5 w-9 rounded-full border transition-colors disabled:opacity-40
                    {adhan.settings.preAlertEnabled
               ? 'border-gold/60 bg-gold/80'
               : 'border-line bg-ink-800'}"
