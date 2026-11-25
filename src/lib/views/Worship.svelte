@@ -247,7 +247,7 @@
               <QiblaDial bearing={day.qibla} />
             {/if}
           </div>
-          <p class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] tabular-nums text-muted/70">
+          <p class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] tabular-nums text-muted">
             <span>{i18n.t("settings.latitude")} {(settings?.latitude ?? 0).toFixed(3)}°</span>
             <span>{i18n.t("settings.longitude")} {(settings?.longitude ?? 0).toFixed(3)}°</span>
           </p>

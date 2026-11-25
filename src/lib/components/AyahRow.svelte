@@ -47,7 +47,7 @@
         </p>
       {/if}
 
-      <div class="mt-2 flex items-center gap-3 text-[10px] text-muted/70">
+      <div class="mt-2 flex items-center gap-3 text-[10px] text-muted">
         {#if ayah.juz}<span>{i18n.t("reader.juz")} {fmtNumber(ayah.juz)}</span>{/if}
         {#if ayah.page}<span>{i18n.t("reader.page", { page: fmtNumber(ayah.page) })}</span>{/if}
       </div>

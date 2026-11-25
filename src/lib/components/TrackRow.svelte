@@ -90,7 +90,7 @@
             {i18n.t("radio.live")}
           </span>
         {:else if track.subtitle}
-          <span class="truncate text-muted/60">· {track.subtitle}</span>
+          <span class="truncate text-muted">· {track.subtitle}</span>
         {/if}
         {#if track.license && (track.kind === "music" || track.kind === "anasheed")}
           <span

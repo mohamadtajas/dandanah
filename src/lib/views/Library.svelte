@@ -83,7 +83,7 @@
     if (s.status === "fulfilled") surahs = s.value;
     loadError = r.status === "rejected";
     loading = false;
-    await library.load();
+    if (library.error) await library.load();
   }
 
   $effect(() => {

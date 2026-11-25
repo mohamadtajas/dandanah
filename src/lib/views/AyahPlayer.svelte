@@ -286,47 +286,45 @@
           <button
             type="button"
             onclick={() => playAyah(ayah.number)}
-            aria-label={i18n.t("quran.playAyah")}
-            class="flex min-w-0 flex-1 gap-3 rounded-lg text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70"
+            aria-label={`${i18n.t("quran.playAyah")} ${surah.number}:${ayah.number}`}
+            class="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg border text-[10px] tabular-nums transition-colors
+                   {active
+              ? 'border-gold/50 bg-gold/15 text-gold'
+              : 'border-line text-muted group-hover:border-gold/30 group-hover:text-gold'}"
           >
-            <span
-              class="grid size-8 shrink-0 place-items-center rounded-lg border text-[10px] tabular-nums transition-colors
-                     {active
-                ? 'border-gold/50 bg-gold/15 text-gold'
-                : 'border-line text-muted group-hover:border-gold/30 group-hover:text-gold'}"
-            >
-              {#if active && player.playing}
-                <span class="eq"><i></i><i></i><i></i><i></i></span>
-              {:else}
-                {fmtNumber(ayah.number)}
-              {/if}
-            </span>
-
-            <span class="min-w-0 flex-1">
-              <span
-                class="block font-quran text-[1.35rem] leading-[2.1] {active
-                  ? 'text-cream'
-                  : 'text-cream/85'}"
-              >
-                {ayah.text}
-              </span>
-              {#if showTranslation && translations?.[ayah.number - 1]?.translation}
-                <span class="mt-1 block text-[12px] leading-relaxed text-muted" dir="ltr" style="text-align: start">
-                  {translations[ayah.number - 1].translation}
-                </span>
-              {/if}
-              {#if ayah.sajda}
-                <span class="mt-1 inline-block rounded border border-teal/30 px-1.5 py-px text-[9px] text-teal">
-                  {i18n.t("quran.sajda")}
-                </span>
-              {/if}
-            </span>
+            {#if active && player.playing}
+              <span class="eq"><i></i><i></i><i></i><i></i></span>
+            {:else}
+              {fmtNumber(ayah.number)}
+            {/if}
           </button>
+
+          <div class="min-w-0 flex-1 select-text">
+            <p
+              dir="rtl"
+              lang="ar"
+              class="font-quran text-[1.35rem] leading-[2.1] {active
+                ? 'text-cream'
+                : 'text-cream/85'}"
+            >
+              {ayah.text}
+            </p>
+            {#if showTranslation && translations?.[ayah.number - 1]?.translation}
+              <p class="mt-1 text-[12px] leading-relaxed text-muted" dir="ltr" style="text-align: start">
+                {translations[ayah.number - 1].translation}
+              </p>
+            {/if}
+            {#if ayah.sajda}
+              <span class="mt-1 inline-block rounded border border-teal/30 px-1.5 py-px text-[9px] text-teal">
+                {i18n.t("quran.sajda")}
+              </span>
+            {/if}
+          </div>
 
           <button
             type="button"
             onclick={() => hifz.toggleMemorized(ayah.number)}
-            aria-label={i18n.t("quran.memorized")}
+            aria-label={`${i18n.t("quran.memorized")} ${surah.number}:${ayah.number}`}
             class="mt-1 shrink-0 rounded-full p-1 transition-colors
                    {memorised ? 'text-teal' : 'text-muted/40 hover:text-muted'}"
           >

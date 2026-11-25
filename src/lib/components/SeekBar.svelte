@@ -5,6 +5,7 @@
     onseek,
     disabled = false,
     label = "",
+    step = 5,
     class: klass = "",
   }: {
     value: number;
@@ -12,6 +13,7 @@
     onseek: (v: number) => void;
     disabled?: boolean;
     label?: string;
+    step?: number;
     class?: string;
   } = $props();
 
@@ -59,15 +61,19 @@
   onpointercancel={up}
   onkeydown={(e) => {
     if (disabled) return;
+    const nudge = (delta: number) => {
+      const next = Math.min(max, Math.max(0, value + delta));
+      onseek(Math.round(next * 1000) / 1000);
+    };
     if (e.key === "ArrowRight" || e.key === "ArrowUp") {
       e.preventDefault();
       e.stopPropagation();
-      onseek(Math.min(max, value + 5));
+      nudge(step);
     }
     if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
       e.preventDefault();
       e.stopPropagation();
-      onseek(Math.max(0, value - 5));
+      nudge(-step);
     }
     if (e.key === "Home") {
       e.preventDefault();

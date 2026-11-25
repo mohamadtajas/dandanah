@@ -190,6 +190,7 @@
           max={1}
           onseek={(v) => player.setVolume(v)}
           label={i18n.t("player.volume")}
+          step={0.05}
         />
       </div>
       <button

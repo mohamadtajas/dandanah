@@ -129,7 +129,7 @@ This copyright notice shall be included in all verbatim copies of the text, and 
           href={source.url}
           target="_blank"
           rel="noreferrer"
-          class="mt-2 block truncate text-[11px] text-muted/70 transition-colors hover:text-gold"
+          class="mt-2 block truncate text-[11px] text-muted transition-colors hover:text-gold"
           dir="ltr">{source.url}</a
         >
         {#if source.notice}
