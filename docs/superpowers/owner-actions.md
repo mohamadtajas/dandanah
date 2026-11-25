@@ -5,15 +5,14 @@ independent tasks while these are open.
 
 ## Needed before M5 audio can be finished
 
-- **Quran audio source:** choose the reciters and the download/stream source.
-  The desktop app already has provider code; confirm which of those providers
-  may be reused on mobile and whether their terms allow mobile downloads.
+- **Confirm mobile use of EveryAyah:** M5 currently streams eight EveryAyah
+  reciters, reusing the desktop-approved source and attribution. Confirm that
+  mobile distribution is allowed; if not, name the replacement provider.
+- **Download/storage budget:** decide whether mobile downloads are in v1 and
+  set a cap (for example “warn above 2 GB, never auto-download on cellular”).
 - **Anasheed source:** choose the catalogue source and confirm the licence for
   bundled/streamed tracks.
-- **Adhan audio:** choose the adhan recording and confirm it is CC0 or
-  otherwise redistributable.
-- **Storage defaults:** confirm a mobile download budget (for example “warn
-  above 2 GB, never auto-download on cellular”).
+- **Adhan audio:** confirm the desktop CC0 adhan file may be bundled on mobile.
 - **Provider keys:** any API key or account needed by a chosen provider.
 
 ## Needed before release (M10)

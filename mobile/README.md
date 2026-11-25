@@ -6,7 +6,7 @@ and prayer calculations but not the desktop runtime.
 
 ## Status
 
-Phase **M4** - Quran catalog, continuous reader, bookmarks, resume and daily ayah.
+Phase **M5** - Quran audio catalog, foreground player and background service.
 
 - Arabic-first UI with `flutter_localizations` and generated ARB accessors.
 - Bottom navigation: Dashboard, Mushaf, Adhkar, Audio.
@@ -22,16 +22,21 @@ Phase **M4** - Quran catalog, continuous reader, bookmarks, resume and daily aya
 - Quran catalog with surah/juz tabs, search, bookmarks and resume; a
   continuous Uthmani reader with bookmark toggles, 20–44 pt font sizing and
   a deterministic daily ayah.
+- Quran audio with eight EveryAyah reciters, a surah queue, mini-player,
+  full player, seek, speed and repeat; `audio_service` publishes the media
+  session for background and lock-screen controls.
 
 The full Uthmani Quran (114 surahs, 6236 ayahs) and Hisn al-Muslim (126
 categories, 302 items) are seeded from bundled assets on first launch. Adhkar
-and Quran screens read them fully offline; audio arrives in M5.
+and Quran reading work fully offline; Quran audio streams from EveryAyah.
+Downloads and a storage budget are the remaining M5 work.
 
 ## Data layer
 
 ```
 lib/data/
   cities.dart              59 offline city presets
+  audio/                   EveryAyah catalog, engine, playback controller
   db/app_database.dart      Drift schema v4 (content + user state)
   location/                 device fix, timezone channel, onboarding helper
   models/                   Surah, Ayah, Adhkar, Quran bookmark, local date
@@ -88,7 +93,8 @@ writes both the desktop and mobile Quran bundles from the same XML.
   2x-text layout tests. Location tests cover permission outcomes, an invalid
   timezone, onboarding suppression and the Settings save path. M4 adds reader
   position, bookmark, font-size, catalog, daily-ayah and continuous-reader
-  tests.
+  tests. M5 adds audio URL/queue, playback controller, mini-player and full
+  player tests.
 
 ## Requirements
 
@@ -137,9 +143,9 @@ Captured on an Android 16 (API 36) emulator at 1080x2400 in Arabic RTL.
 |---|---|---|
 | ![Audio](../docs/screenshots/mobile/03-audio.png) | ![Settings dark](../docs/screenshots/mobile/04-settings-dark.png) | ![Settings light](../docs/screenshots/mobile/05-settings-light.png) |
 
-| Quran reader |
-|---|
-| ![Quran reader](../docs/screenshots/mobile/10-quran-reader.png) |
+| Quran reader | Audio player |
+|---|---|
+| ![Quran reader](../docs/screenshots/mobile/10-quran-reader.png) | ![Audio player](../docs/screenshots/mobile/11-audio-player.png) |
 
 | Adhkar counter |
 |---|
