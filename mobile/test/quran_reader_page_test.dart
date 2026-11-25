@@ -7,6 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart'
     show GlobalWidgetsLocalizations;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:sakeenah_mobile/data/app_services.dart';
 import 'package:sakeenah_mobile/data/db/app_database.dart';
 import 'package:sakeenah_mobile/data/worship/prayer_settings.dart';
@@ -87,6 +88,9 @@ void main() {
     expect(ayahText().style?.fontSize, 30);
     expect(await AppServices.current.quranReader.fontSize(), 30);
 
+    await pumpReader(tester, const QuranReaderPage.surah(surah: 1));
+    expect(ayahText().style?.fontSize, 30);
+
     await tester.tap(find.byKey(const ValueKey('quran-font-decrease')));
     await tester.pumpAndSettle();
     expect(ayahText().style?.fontSize, 28);
@@ -131,6 +135,68 @@ void main() {
 
     expect(find.text('النبإ'), findsOneWidget);
     expect(find.text(first.text), findsOneWidget);
+  });
+
+  testWidgets('juz 2 does not inject a mid-surah basmala', (tester) async {
+    final baqarah = await AppServices.current.quran.surahByNumber(2);
+    await pumpReader(tester, const QuranReaderPage.juz(juz: 2));
+
+    expect(find.text(baqarah!.bismillah!), findsNothing);
+  });
+
+  testWidgets('at-Tawba renders without a basmala', (tester) async {
+    final baqarah = await AppServices.current.quran.surahByNumber(2);
+    await pumpReader(tester, const QuranReaderPage.surah(surah: 9));
+
+    expect(find.text(baqarah!.bismillah!), findsNothing);
+  });
+
+  testWidgets('flushes the pending position before the route pops', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ar'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const QuranReaderPage.surah(surah: 2),
+                ),
+              ),
+              child: const Text('فتح'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('فتح'));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byType(ScrollablePositionedList),
+      const Offset(0, -1400),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    final position = await AppServices.current.quranReader.position();
+    expect(position, isNotNull);
+    expect(position!.surah, 2);
+    expect(position.ayah, greaterThan(1));
   });
 }
 

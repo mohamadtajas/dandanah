@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sakeenah_mobile/data/db/app_database.dart';
+import 'package:sakeenah_mobile/data/models/local_date.dart';
 import 'package:sakeenah_mobile/data/repositories/quran_repository.dart';
 import 'package:sakeenah_mobile/data/seed/quran_seeder.dart';
 import 'package:sakeenah_mobile/data/worship/daily_ayah.dart';
@@ -13,6 +14,16 @@ void main() {
     expect(first, inInclusiveRange(1, 6236));
     expect(dailyAyahOrdinal('2026-11-27'), isNot(first));
     expect(dailyAyahOrdinal('2026-11-27'), inInclusiveRange(1, 6236));
+  });
+
+  test('a year of dates maps to many different ayat', () {
+    final ordinals = {
+      for (var day = 0; day < 365; day++)
+        dailyAyahOrdinal(
+          localDateKey(DateTime(2026, 1, 1).add(Duration(days: day))),
+        ),
+    };
+    expect(ordinals.length, greaterThan(330));
   });
 
   test('ayahByOrdinal starts at Al-Fatiha 1 and handles bounds', () async {

@@ -35,6 +35,7 @@ class _QuranReaderPageState extends State<QuranReaderPage> {
   final ItemScrollController _scroll = ItemScrollController();
   final ItemPositionsListener _positions = ItemPositionsListener.create();
   Timer? _saveTimer;
+  AppLifecycleListener? _lifecycle;
   ({int surah, int ayah})? _pending;
   List<_Entry> _entries = const [];
   Set<String> _bookmarked = {};
@@ -43,26 +44,32 @@ class _QuranReaderPageState extends State<QuranReaderPage> {
   String _surahTitle = '';
   bool _loading = true;
   bool _failed = false;
+  bool _canPop = false;
 
   @override
   void initState() {
     super.initState();
+    _lifecycle = AppLifecycleListener(
+      onPause: () => unawaited(_flushPending()),
+    );
     _load();
   }
 
   @override
   void dispose() {
     _saveTimer?.cancel();
+    _lifecycle?.dispose();
     _positions.itemPositions.removeListener(_onPositions);
-    final pending = _pending;
-    if (pending != null) {
-      unawaited(
-        _services.quranReader
-            .savePosition(pending.surah, pending.ayah)
-            .catchError((_) {}),
-      );
-    }
+    unawaited(_flushPending());
     super.dispose();
+  }
+
+  Future<void> _flushPending() async {
+    _saveTimer?.cancel();
+    final pending = _pending;
+    _pending = null;
+    if (pending == null) return;
+    await _services.quranReader.savePosition(pending.surah, pending.ayah);
   }
 
   Future<void> _load() async {
@@ -87,7 +94,9 @@ class _QuranReaderPageState extends State<QuranReaderPage> {
           if (ayah.surah != current) {
             current = ayah.surah;
             final surah = surahs[ayah.surah];
-            if (surah != null) entries.add(_Entry.surah(surah));
+            if (surah != null) {
+              entries.add(_Entry.surah(surah, showBismillah: ayah.number == 1));
+            }
           }
           entries.add(_Entry.ayah(ayah));
         }
@@ -143,43 +152,50 @@ class _QuranReaderPageState extends State<QuranReaderPage> {
     _pending = (surah: ayah.surah, ayah: ayah.number);
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 500), () {
-      final pending = _pending;
-      if (pending == null) return;
-      unawaited(
-        _services.quranReader
-            .savePosition(pending.surah, pending.ayah)
-            .catchError((_) {}),
-      );
+      unawaited(_flushPending());
     });
   }
 
   void _saveNow(Ayah ayah) {
     _pending = (surah: ayah.surah, ayah: ayah.number);
     _saveTimer?.cancel();
-    unawaited(
-      _services.quranReader
-          .savePosition(ayah.surah, ayah.number)
-          .catchError((_) {}),
-    );
+    unawaited(_flushPending());
   }
 
   Future<void> _toggleBookmark(Ayah ayah) async {
-    await _services.quranReader.toggleBookmark(ayah.surah, ayah.number);
-    if (!mounted) return;
-    final key = '${ayah.surah}:${ayah.number}';
-    setState(() {
-      if (!_bookmarked.remove(key)) _bookmarked.add(key);
-    });
+    try {
+      await _services.quranReader.toggleBookmark(ayah.surah, ayah.number);
+      final bookmarked = await _services.quranReader.isBookmarked(
+        ayah.surah,
+        ayah.number,
+      );
+      if (!mounted) return;
+      final key = '${ayah.surah}:${ayah.number}';
+      setState(() {
+        if (bookmarked) {
+          _bookmarked.add(key);
+        } else {
+          _bookmarked.remove(key);
+        }
+      });
+    } catch (_) {
+      // Leave the previous icon state on a failed write.
+    }
   }
 
   Future<void> _changeFont(int delta) async {
+    final previous = _fontSize;
     final next = (_fontSize + delta).clamp(
       QuranReaderRepository.minFontSize,
       QuranReaderRepository.maxFontSize,
     );
     if (next == _fontSize) return;
     setState(() => _fontSize = next);
-    await _services.quranReader.saveFontSize(next);
+    try {
+      await _services.quranReader.saveFontSize(next);
+    } catch (_) {
+      if (mounted) setState(() => _fontSize = previous);
+    }
   }
 
   @override
@@ -189,78 +205,100 @@ class _QuranReaderPageState extends State<QuranReaderPage> {
     final title = widget.surah != null
         ? _surahTitle
         : l10n.quranJuz(widget.juz!);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        actions: [
-          IconButton(
-            key: const ValueKey('quran-font-decrease'),
-            tooltip: l10n.quranFontDecrease,
-            onPressed: _fontSize <= QuranReaderRepository.minFontSize
-                ? null
-                : () => _changeFont(-2),
-            icon: const Icon(Icons.text_decrease_rounded),
-          ),
-          IconButton(
-            key: const ValueKey('quran-font-increase'),
-            tooltip: l10n.quranFontIncrease,
-            onPressed: _fontSize >= QuranReaderRepository.maxFontSize
-                ? null
-                : () => _changeFont(2),
-            icon: const Icon(Icons.text_increase_rounded),
-          ),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _failed
-          ? Center(
-              child: Text(
-                l10n.quranReaderError,
-                style: TextStyle(color: scheme.onSurfaceVariant),
-              ),
-            )
-          : ScrollablePositionedList.builder(
-              initialScrollIndex: _initialIndex,
-              itemCount: _entries.length,
-              itemScrollController: _scroll,
-              itemPositionsListener: _positions,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-              itemBuilder: (context, index) {
-                final entry = _entries[index];
-                final surah = entry.surah;
-                if (surah != null) {
-                  return _SurahHeader(surah: surah);
-                }
-                final ayah = entry.ayah!;
-                return _AyahTile(
-                  ayah: ayah,
-                  fontSize: _fontSize.toDouble(),
-                  bookmarked: _bookmarked.contains(
-                    '${ayah.surah}:${ayah.number}',
-                  ),
-                  onTap: () => _saveNow(ayah),
-                  onBookmark: () => _toggleBookmark(ayah),
-                );
-              },
+    return PopScope(
+      canPop: _canPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_handlePop());
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+          actions: [
+            IconButton(
+              key: const ValueKey('quran-font-decrease'),
+              tooltip: l10n.quranFontDecrease,
+              onPressed: _fontSize <= QuranReaderRepository.minFontSize
+                  ? null
+                  : () => _changeFont(-2),
+              icon: const Icon(Icons.text_decrease_rounded),
             ),
+            IconButton(
+              key: const ValueKey('quran-font-increase'),
+              tooltip: l10n.quranFontIncrease,
+              onPressed: _fontSize >= QuranReaderRepository.maxFontSize
+                  ? null
+                  : () => _changeFont(2),
+              icon: const Icon(Icons.text_increase_rounded),
+            ),
+          ],
+        ),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _failed
+            ? Center(
+                child: Text(
+                  l10n.quranReaderError,
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              )
+            : ScrollablePositionedList.builder(
+                initialScrollIndex: _initialIndex,
+                itemCount: _entries.length,
+                itemScrollController: _scroll,
+                itemPositionsListener: _positions,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                itemBuilder: (context, index) {
+                  final entry = _entries[index];
+                  final surah = entry.surah;
+                  if (surah != null) {
+                    return _SurahHeader(
+                      surah: surah,
+                      showBismillah: entry.showBismillah,
+                    );
+                  }
+                  final ayah = entry.ayah!;
+                  return _AyahTile(
+                    ayah: ayah,
+                    fontSize: _fontSize.toDouble(),
+                    bookmarked: _bookmarked.contains(
+                      '${ayah.surah}:${ayah.number}',
+                    ),
+                    onTap: () => _saveNow(ayah),
+                    onBookmark: () => _toggleBookmark(ayah),
+                  );
+                },
+              ),
+      ),
     );
+  }
+
+  Future<void> _handlePop() async {
+    if (_canPop) return;
+    await _flushPending();
+    if (!mounted) return;
+    setState(() => _canPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).pop();
+    });
   }
 }
 
 class _Entry {
-  const _Entry.surah(Surah this.surah) : ayah = null;
+  const _Entry.surah(Surah this.surah, {this.showBismillah = true})
+    : ayah = null;
 
-  const _Entry.ayah(Ayah this.ayah) : surah = null;
+  const _Entry.ayah(Ayah this.ayah) : surah = null, showBismillah = false;
 
   final Surah? surah;
   final Ayah? ayah;
+  final bool showBismillah;
 }
 
 class _SurahHeader extends StatelessWidget {
-  const _SurahHeader({required this.surah});
+  const _SurahHeader({required this.surah, required this.showBismillah});
 
   final Surah surah;
+  final bool showBismillah;
 
   @override
   Widget build(BuildContext context) {
@@ -284,7 +322,7 @@ class _SurahHeader extends StatelessWidget {
             '${l10n.quranAyahCount(surah.ayahCount)}',
             style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant),
           ),
-          if (surah.bismillah != null) ...[
+          if (showBismillah && surah.bismillah != null) ...[
             const SizedBox(height: 14),
             Text(
               surah.bismillah!,
