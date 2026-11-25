@@ -6,16 +6,55 @@ and prayer calculations but not the desktop runtime.
 
 ## Status
 
-Phase **M0** — toolchain, scaffold and design system.
+Phase **M1** — offline data layer.
 
 - Arabic-first UI with `flutter_localizations` and generated ARB accessors.
 - Bottom navigation: Dashboard, Mushaf, Adhkar, Audio.
 - Dark and light themes built from the same colour tokens as desktop.
 - Tajawal for UI text and Amiri Quran for Quranic text, both bundled offline.
-- No network dependency and no platform channels yet.
+- Drift database with tested schema migrations and bundled content seeding.
+- Offline prayer methods, Hijri conversion and qibla bearings.
 
-Quran text shown in this phase is a small visual preview for the design system;
-the full Uthmani dataset arrives in M1.
+The full Uthmani Quran (114 surahs, 6236 ayahs) and Hisn al-Muslim (126
+categories, 302 items) are seeded from bundled assets on first launch. Screens
+that consume them arrive in M2–M4.
+
+## Data layer
+
+```
+lib/data/
+  db/app_database.dart      Drift schema v2 (content + user state)
+  models/                   Surah, Ayah, Adhkar, ...
+  repositories/             read-only content interfaces
+  seed/                     QuranSeeder, AdhkarSeeder
+  worship/                  prayer methods, Adhan wrapper, Hijri, qibla
+  app_services.dart         startup seeding and shared repositories
+```
+
+- `ContentBootstrap` loads `assets/data/quran.json` and
+  `assets/data/adhkar.json` and seeds idempotently inside one transaction.
+- Schema v1 held Quran/adkhar content; v2 added settings, bookmarks, reader
+  position, adhkar progress/logs and the prayer log. The v1 → v2 migration is
+  covered by a generated schema test.
+- Quran text is inserted verbatim; tests compare stored rows against the
+  bundled source.
+- Calculation methods match the desktop catalogue (Umm al-Qura, MWL, Egyptian,
+  Karachi, Dubai, Moonsighting, ISNA, Kuwait, Qatar, Singapore, Tehran,
+  Turkey), with the seventh-of-the-night high-latitude rule.
+- Hijri dates use Umm al-Qura tables and support the desktop-style day
+  adjustment. Qibla bearings are computed offline from coordinates.
+
+Attribution and licence files live next to the assets:
+`QURAN_LICENSE.md` (Tanzil, CC BY 3.0) and `ADHKAR_LICENSE.md`
+(HisnElMuslim, MIT).
+
+## Reliability
+
+- Native SQLite comes from `sqlite3` 3.x native assets; no platform channel
+  setup is required.
+- Seeders skip already-populated tables, so relaunching is cheap.
+- Tests use in-memory databases and generated schema snapshots.
+
 
 ## Requirements
 
