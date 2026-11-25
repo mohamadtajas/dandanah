@@ -2,6 +2,7 @@
   import type { Track } from "$lib/types";
   import { library } from "$lib/stores/library.svelte.ts";
   import { i18n } from "$lib/i18n/index.svelte.ts";
+  import { onMount } from "svelte";
   import Icon from "./Icon.svelte";
 
   let {
@@ -13,6 +14,33 @@
 
   let name = $state("");
   let busy = $state(false);
+  let panel = $state<HTMLElement>();
+  let input = $state<HTMLInputElement>();
+
+  onMount(() => input?.focus());
+
+  function onKey(event: KeyboardEvent) {
+    if (event.key === "Escape") {
+      onclose();
+      return;
+    }
+    if (event.key !== "Tab" || !panel) return;
+    const focusable = [
+      ...panel.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    ];
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   async function create(event: Event) {
     event.preventDefault();
@@ -33,14 +61,16 @@
   }
 </script>
 
-<svelte:window onkeydown={(e) => e.key === "Escape" && onclose()} />
+<svelte:window onkeydown={onKey} />
 
 <div class="fixed inset-0 z-40" role="presentation" onclick={onclose}></div>
 
 <div
+  bind:this={panel}
   class="fade-in fixed z-50 w-[268px] overflow-hidden rounded-xl border border-line bg-ink-900/98 shadow-2xl shadow-black/50 backdrop-blur"
   style="top: {y}px; left: {x}px"
   role="dialog"
+  aria-modal="true"
   aria-label={i18n.t("library.addToPlaylist")}
 >
   <div class="flex items-center justify-between border-b border-line px-3 py-2">
@@ -57,6 +87,7 @@
 
   <form onsubmit={create} class="flex items-center gap-1.5 border-b border-line/60 px-2.5 py-2">
     <input
+      bind:this={input}
       bind:value={name}
       placeholder={i18n.t("library.playlistName")}
       class="min-w-0 flex-1 bg-transparent px-1 text-xs text-cream placeholder:text-muted/70 focus:outline-none"
