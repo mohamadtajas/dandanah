@@ -661,6 +661,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'الرئيسية'**
   String get adhkarGoHome;
+
+  /// No description provided for @prayerTodayProgress.
+  ///
+  /// In ar, this message translates to:
+  /// **'اليوم: {count} / 5'**
+  String prayerTodayProgress(int count);
 }
 
 class _AppLocalizationsDelegate

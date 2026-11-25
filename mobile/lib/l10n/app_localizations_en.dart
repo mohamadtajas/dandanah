@@ -313,4 +313,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adhkarGoHome => 'Home';
+
+  @override
+  String prayerTodayProgress(int count) {
+    return 'Today: $count / 5';
+  }
 }

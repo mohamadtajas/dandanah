@@ -145,5 +145,13 @@
     }
   },
   "adhkarClearSearch": "مسح البحث",
-  "adhkarGoHome": "الرئيسية"
+  "adhkarGoHome": "الرئيسية",
+  "prayerTodayProgress": "اليوم: {count} / 5",
+  "@prayerTodayProgress": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

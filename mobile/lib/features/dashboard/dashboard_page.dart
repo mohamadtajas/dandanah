@@ -667,6 +667,10 @@ class _StreakRow extends StatelessWidget {
               text: '${l10n.prayerStreak} ${streak?.current ?? 0}',
             ),
             _Chip(
+              icon: Icons.today_outlined,
+              text: l10n.prayerTodayProgress(streak?.todayCount ?? 0),
+            ),
+            _Chip(
               icon: Icons.emoji_events_outlined,
               text: '${l10n.prayerBestStreak} ${streak?.best ?? 0}',
             ),

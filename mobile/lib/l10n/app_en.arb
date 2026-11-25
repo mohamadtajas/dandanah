@@ -145,5 +145,13 @@
     }
   },
   "adhkarClearSearch": "Clear search",
-  "adhkarGoHome": "Home"
+  "adhkarGoHome": "Home",
+  "prayerTodayProgress": "Today: {count} / 5",
+  "@prayerTodayProgress": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

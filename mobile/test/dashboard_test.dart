@@ -110,6 +110,7 @@ void main() {
     expect(find.byIcon(Icons.check_circle_rounded), findsWidgets);
     final streak = await AppServices.current.prayerLog.streak('2026-11-26');
     expect(streak.todayCount, 1);
+    expect(find.text('اليوم: 1 / 5'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('prayer-2026-11-26-fajr')));
     for (var i = 0; i < 8; i++) {
