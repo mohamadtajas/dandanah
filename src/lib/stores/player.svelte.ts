@@ -1,5 +1,6 @@
 import { api, isTauri } from "$lib/api";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { i18n } from "$lib/i18n/index.svelte.ts";
 import type { Track } from "$lib/types";
 import { library } from "$lib/stores/library.svelte.ts";
 
@@ -311,7 +312,7 @@ class PlayerStore {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: track.title,
         artist: track.artist,
-        album: track.album ?? "سَكينة",
+        album: track.album ?? i18n.t("app.name"),
         artwork: track.artworkUrl ? [{ src: track.artworkUrl, sizes: "512x512" }] : [],
       });
       navigator.mediaSession.setActionHandler("play", () => this.toggle());
