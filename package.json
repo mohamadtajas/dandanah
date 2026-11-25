@@ -1,7 +1,7 @@
 {
   "name": "sakeenah",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.5.1",
   "type": "module",
   "description": "سَكينة — Sakeenah. Quran, adhkar, prayer times and free audio.",
   "scripts": {
