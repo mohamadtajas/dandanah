@@ -3328,6 +3328,18 @@ class $AdhkarLogsTable extends AdhkarLogs
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _localDateMeta = const VerificationMeta(
+    'localDate',
+  );
+  @override
+  late final GeneratedColumn<String> localDate = GeneratedColumn<String>(
+    'local_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _completedAtMeta = const VerificationMeta(
     'completedAt',
   );
@@ -3340,7 +3352,7 @@ class $AdhkarLogsTable extends AdhkarLogs
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, streakKey, completedAt];
+  List<GeneratedColumn> get $columns => [id, streakKey, localDate, completedAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3363,6 +3375,12 @@ class $AdhkarLogsTable extends AdhkarLogs
       );
     } else if (isInserting) {
       context.missing(_streakKeyMeta);
+    }
+    if (data.containsKey('local_date')) {
+      context.handle(
+        _localDateMeta,
+        localDate.isAcceptableOrUnknown(data['local_date']!, _localDateMeta),
+      );
     }
     if (data.containsKey('completed_at')) {
       context.handle(
@@ -3392,6 +3410,10 @@ class $AdhkarLogsTable extends AdhkarLogs
         DriftSqlType.string,
         data['${effectivePrefix}streak_key'],
       )!,
+      localDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_date'],
+      )!,
       completedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}completed_at'],
@@ -3408,10 +3430,12 @@ class $AdhkarLogsTable extends AdhkarLogs
 class AdhkarLog extends DataClass implements Insertable<AdhkarLog> {
   final int id;
   final String streakKey;
+  final String localDate;
   final DateTime completedAt;
   const AdhkarLog({
     required this.id,
     required this.streakKey,
+    required this.localDate,
     required this.completedAt,
   });
   @override
@@ -3419,6 +3443,7 @@ class AdhkarLog extends DataClass implements Insertable<AdhkarLog> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['streak_key'] = Variable<String>(streakKey);
+    map['local_date'] = Variable<String>(localDate);
     map['completed_at'] = Variable<DateTime>(completedAt);
     return map;
   }
@@ -3427,6 +3452,7 @@ class AdhkarLog extends DataClass implements Insertable<AdhkarLog> {
     return AdhkarLogsCompanion(
       id: Value(id),
       streakKey: Value(streakKey),
+      localDate: Value(localDate),
       completedAt: Value(completedAt),
     );
   }
@@ -3439,6 +3465,7 @@ class AdhkarLog extends DataClass implements Insertable<AdhkarLog> {
     return AdhkarLog(
       id: serializer.fromJson<int>(json['id']),
       streakKey: serializer.fromJson<String>(json['streakKey']),
+      localDate: serializer.fromJson<String>(json['localDate']),
       completedAt: serializer.fromJson<DateTime>(json['completedAt']),
     );
   }
@@ -3448,20 +3475,27 @@ class AdhkarLog extends DataClass implements Insertable<AdhkarLog> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'streakKey': serializer.toJson<String>(streakKey),
+      'localDate': serializer.toJson<String>(localDate),
       'completedAt': serializer.toJson<DateTime>(completedAt),
     };
   }
 
-  AdhkarLog copyWith({int? id, String? streakKey, DateTime? completedAt}) =>
-      AdhkarLog(
-        id: id ?? this.id,
-        streakKey: streakKey ?? this.streakKey,
-        completedAt: completedAt ?? this.completedAt,
-      );
+  AdhkarLog copyWith({
+    int? id,
+    String? streakKey,
+    String? localDate,
+    DateTime? completedAt,
+  }) => AdhkarLog(
+    id: id ?? this.id,
+    streakKey: streakKey ?? this.streakKey,
+    localDate: localDate ?? this.localDate,
+    completedAt: completedAt ?? this.completedAt,
+  );
   AdhkarLog copyWithCompanion(AdhkarLogsCompanion data) {
     return AdhkarLog(
       id: data.id.present ? data.id.value : this.id,
       streakKey: data.streakKey.present ? data.streakKey.value : this.streakKey,
+      localDate: data.localDate.present ? data.localDate.value : this.localDate,
       completedAt: data.completedAt.present
           ? data.completedAt.value
           : this.completedAt,
@@ -3473,45 +3507,52 @@ class AdhkarLog extends DataClass implements Insertable<AdhkarLog> {
     return (StringBuffer('AdhkarLog(')
           ..write('id: $id, ')
           ..write('streakKey: $streakKey, ')
+          ..write('localDate: $localDate, ')
           ..write('completedAt: $completedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, streakKey, completedAt);
+  int get hashCode => Object.hash(id, streakKey, localDate, completedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is AdhkarLog &&
           other.id == this.id &&
           other.streakKey == this.streakKey &&
+          other.localDate == this.localDate &&
           other.completedAt == this.completedAt);
 }
 
 class AdhkarLogsCompanion extends UpdateCompanion<AdhkarLog> {
   final Value<int> id;
   final Value<String> streakKey;
+  final Value<String> localDate;
   final Value<DateTime> completedAt;
   const AdhkarLogsCompanion({
     this.id = const Value.absent(),
     this.streakKey = const Value.absent(),
+    this.localDate = const Value.absent(),
     this.completedAt = const Value.absent(),
   });
   AdhkarLogsCompanion.insert({
     this.id = const Value.absent(),
     required String streakKey,
+    this.localDate = const Value.absent(),
     required DateTime completedAt,
   }) : streakKey = Value(streakKey),
        completedAt = Value(completedAt);
   static Insertable<AdhkarLog> custom({
     Expression<int>? id,
     Expression<String>? streakKey,
+    Expression<String>? localDate,
     Expression<DateTime>? completedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (streakKey != null) 'streak_key': streakKey,
+      if (localDate != null) 'local_date': localDate,
       if (completedAt != null) 'completed_at': completedAt,
     });
   }
@@ -3519,11 +3560,13 @@ class AdhkarLogsCompanion extends UpdateCompanion<AdhkarLog> {
   AdhkarLogsCompanion copyWith({
     Value<int>? id,
     Value<String>? streakKey,
+    Value<String>? localDate,
     Value<DateTime>? completedAt,
   }) {
     return AdhkarLogsCompanion(
       id: id ?? this.id,
       streakKey: streakKey ?? this.streakKey,
+      localDate: localDate ?? this.localDate,
       completedAt: completedAt ?? this.completedAt,
     );
   }
@@ -3537,6 +3580,9 @@ class AdhkarLogsCompanion extends UpdateCompanion<AdhkarLog> {
     if (streakKey.present) {
       map['streak_key'] = Variable<String>(streakKey.value);
     }
+    if (localDate.present) {
+      map['local_date'] = Variable<String>(localDate.value);
+    }
     if (completedAt.present) {
       map['completed_at'] = Variable<DateTime>(completedAt.value);
     }
@@ -3548,6 +3594,7 @@ class AdhkarLogsCompanion extends UpdateCompanion<AdhkarLog> {
     return (StringBuffer('AdhkarLogsCompanion(')
           ..write('id: $id, ')
           ..write('streakKey: $streakKey, ')
+          ..write('localDate: $localDate, ')
           ..write('completedAt: $completedAt')
           ..write(')'))
         .toString();
@@ -3562,11 +3609,11 @@ class $PrayerLogsTable extends PrayerLogs
   $PrayerLogsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _dateMeta = const VerificationMeta('date');
   @override
-  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
     'date',
     aliasedName,
     false,
-    type: DriftSqlType.dateTime,
+    type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _prayerMeta = const VerificationMeta('prayer');
@@ -3635,7 +3682,7 @@ class $PrayerLogsTable extends PrayerLogs
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return PrayerLog(
       date: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
+        DriftSqlType.string,
         data['${effectivePrefix}date'],
       )!,
       prayer: attachedDatabase.typeMapping.read(
@@ -3656,7 +3703,7 @@ class $PrayerLogsTable extends PrayerLogs
 }
 
 class PrayerLog extends DataClass implements Insertable<PrayerLog> {
-  final DateTime date;
+  final String date;
   final String prayer;
   final String status;
   const PrayerLog({
@@ -3667,7 +3714,7 @@ class PrayerLog extends DataClass implements Insertable<PrayerLog> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['date'] = Variable<DateTime>(date);
+    map['date'] = Variable<String>(date);
     map['prayer'] = Variable<String>(prayer);
     map['status'] = Variable<String>(status);
     return map;
@@ -3687,7 +3734,7 @@ class PrayerLog extends DataClass implements Insertable<PrayerLog> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return PrayerLog(
-      date: serializer.fromJson<DateTime>(json['date']),
+      date: serializer.fromJson<String>(json['date']),
       prayer: serializer.fromJson<String>(json['prayer']),
       status: serializer.fromJson<String>(json['status']),
     );
@@ -3696,13 +3743,13 @@ class PrayerLog extends DataClass implements Insertable<PrayerLog> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'date': serializer.toJson<DateTime>(date),
+      'date': serializer.toJson<String>(date),
       'prayer': serializer.toJson<String>(prayer),
       'status': serializer.toJson<String>(status),
     };
   }
 
-  PrayerLog copyWith({DateTime? date, String? prayer, String? status}) =>
+  PrayerLog copyWith({String? date, String? prayer, String? status}) =>
       PrayerLog(
         date: date ?? this.date,
         prayer: prayer ?? this.prayer,
@@ -3738,7 +3785,7 @@ class PrayerLog extends DataClass implements Insertable<PrayerLog> {
 }
 
 class PrayerLogsCompanion extends UpdateCompanion<PrayerLog> {
-  final Value<DateTime> date;
+  final Value<String> date;
   final Value<String> prayer;
   final Value<String> status;
   final Value<int> rowid;
@@ -3749,7 +3796,7 @@ class PrayerLogsCompanion extends UpdateCompanion<PrayerLog> {
     this.rowid = const Value.absent(),
   });
   PrayerLogsCompanion.insert({
-    required DateTime date,
+    required String date,
     required String prayer,
     required String status,
     this.rowid = const Value.absent(),
@@ -3757,7 +3804,7 @@ class PrayerLogsCompanion extends UpdateCompanion<PrayerLog> {
        prayer = Value(prayer),
        status = Value(status);
   static Insertable<PrayerLog> custom({
-    Expression<DateTime>? date,
+    Expression<String>? date,
     Expression<String>? prayer,
     Expression<String>? status,
     Expression<int>? rowid,
@@ -3771,7 +3818,7 @@ class PrayerLogsCompanion extends UpdateCompanion<PrayerLog> {
   }
 
   PrayerLogsCompanion copyWith({
-    Value<DateTime>? date,
+    Value<String>? date,
     Value<String>? prayer,
     Value<String>? status,
     Value<int>? rowid,
@@ -3788,7 +3835,7 @@ class PrayerLogsCompanion extends UpdateCompanion<PrayerLog> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     if (date.present) {
-      map['date'] = Variable<DateTime>(date.value);
+      map['date'] = Variable<String>(date.value);
     }
     if (prayer.present) {
       map['prayer'] = Variable<String>(prayer.value);
@@ -3849,11 +3896,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final Index adhkarLogsStreak = Index(
     'adhkar_logs_streak',
-    'CREATE INDEX adhkar_logs_streak ON adhkar_logs (streak_key, completed_at)',
-  );
-  late final Index prayerLogsDate = Index(
-    'prayer_logs_date',
-    'CREATE INDEX prayer_logs_date ON prayer_logs (date)',
+    'CREATE INDEX adhkar_logs_streak ON adhkar_logs (streak_key, local_date)',
   );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -3877,7 +3920,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     adhkarItemsCategory,
     bookmarksAyah,
     adhkarLogsStreak,
-    prayerLogsDate,
   ];
 }
 
@@ -6630,11 +6672,13 @@ typedef $$AdhkarProgressTableProcessedTableManager =
 typedef $$AdhkarLogsTableCreateCompanionBuilder = AdhkarLogsCompanion Function({
   Value<int> id,
   required String streakKey,
+  Value<String> localDate,
   required DateTime completedAt,
 });
 typedef $$AdhkarLogsTableUpdateCompanionBuilder = AdhkarLogsCompanion Function({
   Value<int> id,
   Value<String> streakKey,
+  Value<String> localDate,
   Value<DateTime> completedAt,
 });
 
@@ -6654,6 +6698,11 @@ class $$AdhkarLogsTableFilterComposer
 
   ColumnFilters<String> get streakKey => $composableBuilder(
     column: $table.streakKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localDate => $composableBuilder(
+    column: $table.localDate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6682,6 +6731,11 @@ class $$AdhkarLogsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get localDate => $composableBuilder(
+    column: $table.localDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get completedAt => $composableBuilder(
     column: $table.completedAt,
     builder: (column) => ColumnOrderings(column),
@@ -6702,6 +6756,9 @@ class $$AdhkarLogsTableAnnotationComposer
 
   GeneratedColumn<String> get streakKey =>
       $composableBuilder(column: $table.streakKey, builder: (column) => column);
+
+  GeneratedColumn<String> get localDate =>
+      $composableBuilder(column: $table.localDate, builder: (column) => column);
 
   GeneratedColumn<DateTime> get completedAt => $composableBuilder(
     column: $table.completedAt,
@@ -6742,20 +6799,24 @@ class $$AdhkarLogsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> streakKey = const Value.absent(),
+                Value<String> localDate = const Value.absent(),
                 Value<DateTime> completedAt = const Value.absent(),
               }) => AdhkarLogsCompanion(
                 id: id,
                 streakKey: streakKey,
+                localDate: localDate,
                 completedAt: completedAt,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 required String streakKey,
+                Value<String> localDate = const Value.absent(),
                 required DateTime completedAt,
               }) => AdhkarLogsCompanion.insert(
                 id: id,
                 streakKey: streakKey,
+                localDate: localDate,
                 completedAt: completedAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -6790,13 +6851,13 @@ typedef $$AdhkarLogsTableProcessedTableManager =
       PrefetchHooks Function()
     >;
 typedef $$PrayerLogsTableCreateCompanionBuilder = PrayerLogsCompanion Function({
-  required DateTime date,
+  required String date,
   required String prayer,
   required String status,
   Value<int> rowid,
 });
 typedef $$PrayerLogsTableUpdateCompanionBuilder = PrayerLogsCompanion Function({
-  Value<DateTime> date,
+  Value<String> date,
   Value<String> prayer,
   Value<String> status,
   Value<int> rowid,
@@ -6811,7 +6872,7 @@ class $$PrayerLogsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<DateTime> get date => $composableBuilder(
+  ColumnFilters<String> get date => $composableBuilder(
     column: $table.date,
     builder: (column) => ColumnFilters(column),
   );
@@ -6836,7 +6897,7 @@ class $$PrayerLogsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<DateTime> get date => $composableBuilder(
+  ColumnOrderings<String> get date => $composableBuilder(
     column: $table.date,
     builder: (column) => ColumnOrderings(column),
   );
@@ -6861,7 +6922,7 @@ class $$PrayerLogsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<DateTime> get date =>
+  GeneratedColumn<String> get date =>
       $composableBuilder(column: $table.date, builder: (column) => column);
 
   GeneratedColumn<String> get prayer =>
@@ -6902,7 +6963,7 @@ class $$PrayerLogsTableTableManager
               $$PrayerLogsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<DateTime> date = const Value.absent(),
+                Value<String> date = const Value.absent(),
                 Value<String> prayer = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -6914,7 +6975,7 @@ class $$PrayerLogsTableTableManager
               ),
           createCompanionCallback:
               ({
-                required DateTime date,
+                required String date,
                 required String prayer,
                 required String status,
                 Value<int> rowid = const Value.absent(),

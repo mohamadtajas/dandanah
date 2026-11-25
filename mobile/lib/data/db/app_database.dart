@@ -5,6 +5,8 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'schema_versions.dart';
+
 part 'app_database.g.dart';
 
 /// Surah metadata, exactly as bundled from the Tanzil Uthmani source.
@@ -108,7 +110,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -116,17 +118,54 @@ class AppDatabase extends _$AppDatabase {
       await migrator.createAll();
     },
     onUpgrade: (migrator, from, to) async {
-      if (from < 2) {
-        await migrator.createTable(settings);
-        await migrator.createTable(bookmarks);
-        await migrator.createIndex(bookmarksAyah);
-        await migrator.createTable(readerState);
-        await migrator.createTable(adhkarProgress);
-        await migrator.createTable(adhkarLogs);
-        await migrator.createIndex(adhkarLogsStreak);
-        await migrator.createTable(prayerLogs);
-        await migrator.createIndex(prayerLogsDate);
-      }
+      final steps = migrationSteps(
+        from1To2: (m, schema) async {
+          await m.createTable(schema.settings);
+          await m.createTable(schema.bookmarks);
+          await m.createIndex(schema.bookmarksAyah);
+          await m.createTable(schema.readerState);
+          await m.createTable(schema.adhkarProgress);
+          await m.createTable(schema.adhkarLogs);
+          await m.createIndex(schema.adhkarLogsStreak);
+          await m.createTable(schema.prayerLogs);
+          await m.createIndex(schema.prayerLogsDate);
+        },
+        from2To3: (m, schema) async {
+          // Streak logs gain a stable local calendar date. Existing rows are
+          // backfilled from their instant using the device's local timezone.
+          await m.addColumn(schema.adhkarLogs, schema.adhkarLogs.localDate);
+          await m.database.customStatement(
+            "UPDATE adhkar_logs "
+            "SET local_date = date(completed_at, 'unixepoch', 'localtime')",
+          );
+          await m.database.customStatement(
+            'DROP INDEX IF EXISTS adhkar_logs_streak',
+          );
+          await m.createIndex(schema.adhkarLogsStreak);
+
+          // Prayer logs move from an instant to a YYYY-MM-DD local date so
+          // streak grouping and timezone changes cannot create duplicate days.
+          await m.database.customStatement(
+            'ALTER TABLE prayer_logs RENAME TO prayer_logs_v2',
+          );
+          await m.createTable(schema.prayerLogs);
+          await m.database.customStatement(
+            'INSERT INTO prayer_logs (date, prayer, status) '
+            "SELECT date(date, 'unixepoch', 'localtime'), prayer, status "
+            'FROM prayer_logs_v2',
+          );
+          await m.database.customStatement('DROP TABLE prayer_logs_v2');
+        },
+      );
+
+      // Drift updates user_version after each step, so a failure leaves the
+      // database on the last completed version and the step can be retried.
+      await migrator.runMigrationSteps(
+        from: from,
+        to: to,
+        steps: (version, database) =>
+            database.transaction(() => steps(version, database)),
+      );
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -171,16 +210,16 @@ class AdhkarProgress extends Table {
   Set<Column<Object>> get primaryKey => {itemId};
 }
 
-@TableIndex(name: 'adhkar_logs_streak', columns: {#streakKey, #completedAt})
+@TableIndex(name: 'adhkar_logs_streak', columns: {#streakKey, #localDate})
 class AdhkarLogs extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get streakKey => text()();
+  TextColumn get localDate => text().withDefault(const Constant(''))();
   DateTimeColumn get completedAt => dateTime()();
 }
 
-@TableIndex(name: 'prayer_logs_date', columns: {#date})
 class PrayerLogs extends Table {
-  DateTimeColumn get date => dateTime()();
+  TextColumn get date => text()();
   TextColumn get prayer => text()();
   TextColumn get status => text()();
 
