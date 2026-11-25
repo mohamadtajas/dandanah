@@ -14,6 +14,8 @@ Phase **M3** - adhkar catalog, counter, auto-advance and streak.
 - Tajawal for UI text and Amiri Quran for Quranic text, both bundled offline.
 - Drift database with tested schema migrations and bundled content seeding.
 - Offline prayer methods, Hijri conversion and qibla bearings.
+- Device location through `geolocator` with a first-run Arabic permission
+  sheet and a Settings refresh; manual city selection remains the fallback.
 - Adhkar catalog with featured sections, search, per-section progress and a
   morning/evening streak, plus a full-screen counter with haptics,
   auto-advance and persisted per-item progress.
@@ -28,6 +30,7 @@ screens consume them in M3; Quran screens arrive in M4.
 lib/data/
   cities.dart              59 offline city presets
   db/app_database.dart      Drift schema v4 (content + user state)
+  location/                 device fix, timezone channel, onboarding helper
   models/                   Surah, Ayah, Adhkar, local date keys
   repositories/             content, prayer log, adhkar practice
   seed/                     QuranSeeder, AdhkarSeeder
@@ -79,7 +82,8 @@ writes both the desktop and mobile Quran bundles from the same XML.
   snapshots. M2 adds schedule/timezone matrices, prayer logging and streak
   tests, plus dashboard and settings widget tests. M3 adds adhkar repeat,
   auto-advance, resume, morning/evening streak, Arabic search, reset and
-  2x-text layout tests.
+  2x-text layout tests. Location tests cover permission outcomes, an invalid
+  timezone, onboarding suppression and the Settings save path.
 
 ## Requirements
 

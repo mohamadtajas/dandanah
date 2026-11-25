@@ -24,6 +24,8 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>يُستخدم موقعك على هذا الجهاز فقط لحساب مواقيت الصلاة والقبلة.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

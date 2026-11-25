@@ -153,5 +153,17 @@
         "type": "int"
       }
     }
-  }
+  },
+  "locationTitle": "تحديد الموقع",
+  "locationBody": "نستخدم موقعك على هذا الجهاز فقط لحساب مواقيت الصلاة والقبلة. لا يُرسل إلى أي خادم.",
+  "locationUse": "استخدم موقعي",
+  "locationChooseCity": "اختيار مدينة",
+  "locationDenied": "لم يتم السماح بالوصول إلى الموقع. يمكنك اختيار مدينة يدويًا.",
+  "locationDeniedForever": "تم رفض إذن الموقع. افتح إعدادات التطبيق للسماح به.",
+  "locationUnavailable": "تعذر تحديد موقعك الآن. حاول مرة أخرى.",
+  "locationOpenSettings": "فتح إعدادات التطبيق",
+  "locationFetching": "جارٍ تحديد موقعك…",
+  "locationSaved": "تم استخدام موقعك الحالي.",
+  "locationSourceDevice": "موقع الجهاز",
+  "settingsLocationUse": "استخدم موقعي الحالي"
 }

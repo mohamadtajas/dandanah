@@ -8,6 +8,7 @@ import 'package:sakeenah_mobile/app.dart';
 import 'package:sakeenah_mobile/data/app_services.dart';
 import 'package:sakeenah_mobile/data/db/app_database.dart';
 import 'package:sakeenah_mobile/data/settings_store.dart';
+import 'package:sakeenah_mobile/data/worship/prayer_settings.dart';
 import 'package:sakeenah_mobile/features/settings/settings_page.dart';
 
 void main() {
@@ -15,6 +16,9 @@ void main() {
     await AppServices.initialize(
       database: AppDatabase.memory(),
       bundle: _FileAssetBundle(),
+    );
+    await AppServices.current.updatePrayerSettings(
+      PrayerSettings.defaults().copyWith(configured: true),
     );
   });
 

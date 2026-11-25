@@ -44,6 +44,29 @@ void main() {
       expect(bad.hijriAdjustment, -3);
     });
 
+    test('location source survives JSON and validates source names', () {
+      final device = makkah.copyWith(
+        cityId: null,
+        clearCity: true,
+        locationSource: 'device',
+      );
+      final restored = PrayerSettings.fromJson(device.toJson());
+      expect(restored.locationSource, 'device');
+      expect(restored.cityId, isNull);
+
+      expect(
+        PrayerSettings.fromJson({
+          ...device.toJson(),
+          'locationSource': 'somewhere-else',
+        }).locationSource,
+        isNull,
+      );
+      expect(
+        restored.copyWith(locationSource: 'manual').locationSource,
+        'manual',
+      );
+    });
+
     test('repository saves and reloads settings', () async {
       final db = AppDatabase.memory();
       addTearDown(db.close);

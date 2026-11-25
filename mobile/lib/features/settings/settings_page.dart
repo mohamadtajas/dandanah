@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../data/app_services.dart';
 import '../../data/cities.dart';
+import '../../data/location/device_location.dart';
+import '../../data/location/location_service.dart';
 import '../../data/worship/prayer_method.dart';
 import '../../data/worship/coordinate_input.dart';
 import '../../data/worship/prayer_settings.dart';
@@ -13,10 +15,12 @@ class SettingsPage extends StatefulWidget {
     super.key,
     required this.themeMode,
     required this.onThemeChanged,
+    required this.location,
   });
 
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
+  final LocationService location;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -38,7 +42,9 @@ class _SettingsPageState extends State<SettingsPage> {
   late PrayerMadhab _madhab = _settings.madhab;
   late PrayerHighLatitude _highLatitude = _settings.highLatitude;
   late int _hijriAdjustment = _settings.hijriAdjustment;
+  late String? _locationSource = _settings.locationSource;
   bool _saving = false;
+  bool _locating = false;
 
   late final List<String> _timezones = _buildTimezones();
 
@@ -57,7 +63,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _pickCity(String? value) {
     if (value == null || value == 'custom') {
-      setState(() => _cityId = null);
+      setState(() {
+        _cityId = null;
+        _locationSource = 'manual';
+      });
       return;
     }
     final city = cityById(value);
@@ -67,7 +76,52 @@ class _SettingsPageState extends State<SettingsPage> {
       _timezone = city.timezone;
       _latitude.text = city.latitude.toStringAsFixed(4);
       _longitude.text = city.longitude.toStringAsFixed(4);
+      _locationSource = 'city';
     });
+  }
+
+  Future<void> _useCurrentLocation() async {
+    setState(() => _locating = true);
+    final result = await widget.location.currentLocation();
+    if (!mounted) return;
+    if (!result.isSuccess) {
+      setState(() => _locating = false);
+      _showLocationError(result.failure!);
+      return;
+    }
+    final fix = result.location!;
+    setState(() {
+      _locating = false;
+      _cityId = null;
+      _locationSource = 'device';
+      _latitude.text = fix.latitude.toStringAsFixed(4);
+      _longitude.text = fix.longitude.toStringAsFixed(4);
+      _timezone = fix.timezone ?? _timezone;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.locationSaved)),
+    );
+  }
+
+  void _showLocationError(LocationFailure failure) {
+    final l10n = AppLocalizations.of(context)!;
+    final message = switch (failure) {
+      LocationFailure.denied => l10n.locationDenied,
+      LocationFailure.deniedForever => l10n.locationDeniedForever,
+      LocationFailure.timeout ||
+      LocationFailure.unavailable => l10n.locationUnavailable,
+    };
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: failure == LocationFailure.deniedForever
+            ? SnackBarAction(
+                label: l10n.locationOpenSettings,
+                onPressed: widget.location.openAppSettings,
+              )
+            : null,
+      ),
+    );
   }
 
   Future<void> _save() async {
@@ -98,6 +152,7 @@ class _SettingsPageState extends State<SettingsPage> {
           configured: true,
           cityId: _cityId,
           clearCity: _cityId == null,
+          locationSource: _locationSource,
         )
         .sanitized();
     try {
@@ -108,6 +163,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _latitude.text = updated.latitude.toStringAsFixed(4);
         _longitude.text = updated.longitude.toStringAsFixed(4);
         _timezone = updated.timezone;
+        _locationSource = updated.locationSource;
         _saving = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -139,6 +195,36 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (_locationSource == 'device')
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.my_location_rounded,
+                          size: 15,
+                          color: scheme.primary,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          l10n.locationSourceDevice,
+                          style: TextStyle(fontSize: 10, color: scheme.primary),
+                        ),
+                      ],
+                    ),
+                  ),
+                OutlinedButton.icon(
+                  onPressed: _locating ? null : _useCurrentLocation,
+                  icon: _locating
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.my_location_rounded, size: 18),
+                  label: Text(l10n.settingsLocationUse),
+                ),
+                const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   key: ValueKey('city-${_cityId ?? 'custom'}'),
                   initialValue: _cityId ?? 'custom',
@@ -174,7 +260,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         decoration: InputDecoration(
                           labelText: l10n.latitudeLabel,
                         ),
-                        onChanged: (_) => setState(() => _cityId = null),
+                        onChanged: (_) => setState(() {
+                          _cityId = null;
+                          _locationSource = 'manual';
+                        }),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -188,7 +277,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         decoration: InputDecoration(
                           labelText: l10n.longitudeLabel,
                         ),
-                        onChanged: (_) => setState(() => _cityId = null),
+                        onChanged: (_) => setState(() {
+                          _cityId = null;
+                          _locationSource = 'manual';
+                        }),
                       ),
                     ),
                   ],

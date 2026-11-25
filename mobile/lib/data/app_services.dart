@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import 'db/app_database.dart';
+import 'location/location_service.dart';
 import 'repositories/adhkar_practice_repository.dart';
 import 'repositories/adhkar_repository.dart';
 import 'repositories/prayer_log_repository.dart';
@@ -81,6 +82,7 @@ class AppServices {
     this.prayerSettingsRepository,
     this.prayerSettings,
     this.themeMode,
+    this.location,
   );
 
   static const themeKey = 'ui.theme';
@@ -93,6 +95,7 @@ class AppServices {
   final PrayerSettingsRepository prayerSettingsRepository;
   final ValueNotifier<PrayerSettings> prayerSettings;
   final ValueNotifier<ThemeMode> themeMode;
+  final LocationService location;
 
   static ThemeMode themeModeFrom(String? raw) =>
       raw == 'light' ? ThemeMode.light : ThemeMode.dark;
@@ -110,6 +113,7 @@ class AppServices {
   static Future<AppServices> initialize({
     AssetBundle? bundle,
     AppDatabase? database,
+    LocationService? location,
   }) async {
     final db = database ?? await AppDatabase.open();
     try {
@@ -126,6 +130,7 @@ class AppServices {
         settingsRepository,
         ValueNotifier(settings),
         ValueNotifier(theme),
+        location ?? LocationService(),
       );
       _current = services;
       return services;

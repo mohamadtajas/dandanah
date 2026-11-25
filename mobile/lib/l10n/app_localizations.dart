@@ -667,6 +667,78 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'اليوم: {count} / 5'**
   String prayerTodayProgress(int count);
+
+  /// No description provided for @locationTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديد الموقع'**
+  String get locationTitle;
+
+  /// No description provided for @locationBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'نستخدم موقعك على هذا الجهاز فقط لحساب مواقيت الصلاة والقبلة. لا يُرسل إلى أي خادم.'**
+  String get locationBody;
+
+  /// No description provided for @locationUse.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخدم موقعي'**
+  String get locationUse;
+
+  /// No description provided for @locationChooseCity.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختيار مدينة'**
+  String get locationChooseCity;
+
+  /// No description provided for @locationDenied.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يتم السماح بالوصول إلى الموقع. يمكنك اختيار مدينة يدويًا.'**
+  String get locationDenied;
+
+  /// No description provided for @locationDeniedForever.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم رفض إذن الموقع. افتح إعدادات التطبيق للسماح به.'**
+  String get locationDeniedForever;
+
+  /// No description provided for @locationUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تحديد موقعك الآن. حاول مرة أخرى.'**
+  String get locationUnavailable;
+
+  /// No description provided for @locationOpenSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'فتح إعدادات التطبيق'**
+  String get locationOpenSettings;
+
+  /// No description provided for @locationFetching.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ تحديد موقعك…'**
+  String get locationFetching;
+
+  /// No description provided for @locationSaved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم استخدام موقعك الحالي.'**
+  String get locationSaved;
+
+  /// No description provided for @locationSourceDevice.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقع الجهاز'**
+  String get locationSourceDevice;
+
+  /// No description provided for @settingsLocationUse.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخدم موقعي الحالي'**
+  String get settingsLocationUse;
 }
 
 class _AppLocalizationsDelegate

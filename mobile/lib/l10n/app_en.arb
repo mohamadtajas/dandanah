@@ -153,5 +153,17 @@
         "type": "int"
       }
     }
-  }
+  },
+  "locationTitle": "Set location",
+  "locationBody": "Your location is used on this device only to calculate prayer times and qibla. It is never sent to a server.",
+  "locationUse": "Use my location",
+  "locationChooseCity": "Choose a city",
+  "locationDenied": "Location access was not allowed. You can choose a city manually.",
+  "locationDeniedForever": "Location permission is blocked. Open the app settings to allow it.",
+  "locationUnavailable": "Could not get your location. Try again.",
+  "locationOpenSettings": "Open app settings",
+  "locationFetching": "Getting your location…",
+  "locationSaved": "Current location applied.",
+  "locationSourceDevice": "Device location",
+  "settingsLocationUse": "Use my current location"
 }

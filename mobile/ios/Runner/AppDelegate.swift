@@ -12,5 +12,17 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    let timezoneChannel = FlutterMethodChannel(
+      name: "app.sakeenah.mobile/timezone",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    timezoneChannel.setMethodCallHandler { call, result in
+      if call.method == "getLocalTimezone" {
+        result(TimeZone.current.identifier)
+      } else {
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
 }

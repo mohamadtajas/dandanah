@@ -318,4 +318,43 @@ class AppLocalizationsAr extends AppLocalizations {
   String prayerTodayProgress(int count) {
     return 'اليوم: $count / 5';
   }
+
+  @override
+  String get locationTitle => 'تحديد الموقع';
+
+  @override
+  String get locationBody =>
+      'نستخدم موقعك على هذا الجهاز فقط لحساب مواقيت الصلاة والقبلة. لا يُرسل إلى أي خادم.';
+
+  @override
+  String get locationUse => 'استخدم موقعي';
+
+  @override
+  String get locationChooseCity => 'اختيار مدينة';
+
+  @override
+  String get locationDenied =>
+      'لم يتم السماح بالوصول إلى الموقع. يمكنك اختيار مدينة يدويًا.';
+
+  @override
+  String get locationDeniedForever =>
+      'تم رفض إذن الموقع. افتح إعدادات التطبيق للسماح به.';
+
+  @override
+  String get locationUnavailable => 'تعذر تحديد موقعك الآن. حاول مرة أخرى.';
+
+  @override
+  String get locationOpenSettings => 'فتح إعدادات التطبيق';
+
+  @override
+  String get locationFetching => 'جارٍ تحديد موقعك…';
+
+  @override
+  String get locationSaved => 'تم استخدام موقعك الحالي.';
+
+  @override
+  String get locationSourceDevice => 'موقع الجهاز';
+
+  @override
+  String get settingsLocationUse => 'استخدم موقعي الحالي';
 }

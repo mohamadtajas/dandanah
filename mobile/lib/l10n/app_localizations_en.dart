@@ -318,4 +318,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String prayerTodayProgress(int count) {
     return 'Today: $count / 5';
   }
+
+  @override
+  String get locationTitle => 'Set location';
+
+  @override
+  String get locationBody =>
+      'Your location is used on this device only to calculate prayer times and qibla. It is never sent to a server.';
+
+  @override
+  String get locationUse => 'Use my location';
+
+  @override
+  String get locationChooseCity => 'Choose a city';
+
+  @override
+  String get locationDenied =>
+      'Location access was not allowed. You can choose a city manually.';
+
+  @override
+  String get locationDeniedForever =>
+      'Location permission is blocked. Open the app settings to allow it.';
+
+  @override
+  String get locationUnavailable => 'Could not get your location. Try again.';
+
+  @override
+  String get locationOpenSettings => 'Open app settings';
+
+  @override
+  String get locationFetching => 'Getting your location…';
+
+  @override
+  String get locationSaved => 'Current location applied.';
+
+  @override
+  String get locationSourceDevice => 'Device location';
+
+  @override
+  String get settingsLocationUse => 'Use my current location';
 }

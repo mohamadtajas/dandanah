@@ -1,8 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../data/app_services.dart';
+import '../data/location/location_onboarding.dart';
 import '../features/adhkar/adhkar_page.dart';
 import '../features/audio/audio_page.dart';
 import '../features/dashboard/dashboard_page.dart';
+import '../features/location/location_onboarding_sheet.dart';
 import '../features/quran/quran_page.dart';
 import '../features/settings/settings_page.dart';
 import '../l10n/app_localizations.dart';
@@ -23,6 +26,41 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _index = 0;
+  bool _locationPrompted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeShowLocationOnboarding();
+    });
+  }
+
+  Future<void> _maybeShowLocationOnboarding() async {
+    if (_locationPrompted) return;
+    final services = AppServices.current;
+    final show = await shouldShowLocationOnboarding(
+      services.database,
+      services.prayerSettings.value,
+    );
+    if (!mounted || !show) return;
+    _locationPrompted = true;
+    await showModalBottomSheet<void>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      isScrollControlled: true,
+      builder: (context) => LocationOnboardingSheet(
+        location: services.location,
+        settings: services.prayerSettings.value,
+        onSave: (settings) async {
+          await services.updatePrayerSettings(settings);
+          await markLocationOnboardingSeen(services.database);
+        },
+        onDismiss: () => markLocationOnboardingSeen(services.database),
+      ),
+    );
+  }
 
   void _select(int index) => setState(() => _index = index);
 
@@ -54,6 +92,7 @@ class _AppShellState extends State<AppShell> {
                 builder: (_) => SettingsPage(
                   themeMode: widget.themeMode,
                   onThemeChanged: widget.onThemeChanged,
+                  location: AppServices.current.location,
                 ),
               ),
             ),

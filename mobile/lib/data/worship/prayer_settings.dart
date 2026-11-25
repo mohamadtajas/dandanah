@@ -18,6 +18,7 @@ class PrayerSettings {
     this.hijriAdjustment = 0,
     this.configured = false,
     this.cityId,
+    this.locationSource,
   });
 
   static const storageKey = 'prayer.settings';
@@ -31,6 +32,9 @@ class PrayerSettings {
   final int hijriAdjustment;
   final bool configured;
   final String? cityId;
+
+  /// How the current coordinates were chosen: `device`, `city` or `manual`.
+  final String? locationSource;
 
   factory PrayerSettings.defaults({String timezone = 'Asia/Riyadh'}) =>
       PrayerSettings(latitude: 21.4225, longitude: 39.8262, timezone: timezone);
@@ -49,6 +53,7 @@ class PrayerSettings {
     hijriAdjustment: (json['hijriAdjustment'] as num?)?.toInt() ?? 0,
     configured: json['configured'] as bool? ?? false,
     cityId: json['cityId'] as String?,
+    locationSource: json['locationSource'] as String?,
   ).sanitized();
 
   Map<String, dynamic> toJson() => {
@@ -61,6 +66,7 @@ class PrayerSettings {
     'hijriAdjustment': hijriAdjustment,
     'configured': configured,
     'cityId': cityId,
+    'locationSource': locationSource,
   };
 
   PrayerSettings copyWith({
@@ -74,6 +80,8 @@ class PrayerSettings {
     bool? configured,
     String? cityId,
     bool clearCity = false,
+    String? locationSource,
+    bool clearLocationSource = false,
   }) => PrayerSettings(
     latitude: latitude ?? this.latitude,
     longitude: longitude ?? this.longitude,
@@ -84,6 +92,9 @@ class PrayerSettings {
     hijriAdjustment: hijriAdjustment ?? this.hijriAdjustment,
     configured: configured ?? this.configured,
     cityId: clearCity ? null : cityId ?? this.cityId,
+    locationSource: clearLocationSource
+        ? null
+        : locationSource ?? this.locationSource,
   ).sanitized();
 
   PrayerSettings sanitized() {
@@ -103,6 +114,10 @@ class PrayerSettings {
       hijriAdjustment: hijriAdjustment.clamp(-3, 3),
       configured: configured,
       cityId: cityId != null && cityById(cityId!) != null ? cityId : null,
+      locationSource:
+          const {'device', 'city', 'manual'}.contains(locationSource)
+          ? locationSource
+          : null,
     );
   }
 }
