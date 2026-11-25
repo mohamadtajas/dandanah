@@ -30,6 +30,17 @@ This Quran text can be used in any website or application, provided that its sou
 This copyright notice shall be included in all verbatim copies of the text, and shall be reproduced appropriately in all files derived from or containing a substantial portion of this text.`,
     },
     {
+      name: "Beautiful adhan",
+      url: "https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg",
+      what: {
+        ar: "تسجيل الأذان المضمَّن (بدون تعديل)",
+        en: "Bundled adhan recording (unmodified)",
+      },
+      license: { ar: "CC0 1.0 — Adam-synagda", en: "CC0 1.0 — Adam-synagda" },
+      notice:
+        "Beautiful adhan by Adam-synagda, Wikimedia Commons, CC0 1.0 Universal Public Domain Dedication. No changes were made.",
+    },
+    {
       name: "mp3quran.net",
       url: "https://mp3quran.net",
       what: { ar: "تلاوات القرآن الكريم وأكثر من ٢٠٠ قارئ", en: "Quran recitations from 200+ reciters" },

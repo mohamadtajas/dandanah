@@ -153,6 +153,19 @@ export interface StorageTotals {
   queued: number;
 }
 
+export interface PrayerAlert {
+  adhan: boolean;
+  notify: boolean;
+}
+
+export interface AdhanSettings {
+  enabled: boolean;
+  prayers: Record<string, PrayerAlert>;
+  preAlertEnabled: boolean;
+  preAlertMinutes: number;
+  volume: number;
+}
+
 export interface ImportSummary {
   imported: number;
   scannedFolders: number;

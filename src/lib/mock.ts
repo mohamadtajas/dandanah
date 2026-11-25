@@ -6,6 +6,7 @@ import type {
   AdhkarDay,
   AdhkarProgress,
   AdhkarStreak,
+  AdhanSettings,
   AppInfo,
   Ayah,
   AyahReciter,
@@ -1206,6 +1207,21 @@ const positions = new Map<string, number>();
 const favoriteSet = new Map<string, Track>();
 const playlistStore = new Map<string, { meta: Playlist; tracks: Track[] }>();
 const downloadsStore = new Map<string, DownloadRow>();
+let adhanSettingsStore: AdhanSettings = {
+  enabled: true,
+  prayers: {
+    fajr: { adhan: true, notify: true },
+    dhuhr: { adhan: true, notify: true },
+    asr: { adhan: true, notify: true },
+    maghrib: { adhan: true, notify: true },
+    isha: { adhan: true, notify: true },
+  },
+  preAlertEnabled: false,
+  preAlertMinutes: 10,
+  volume: 0.8,
+};
+let autostartStore = false;
+let closeToTrayStore = true;
 const prayerLogStore = new Map<string, PrayerLog>();
 const adhkarProgressStore = new Map<string, Map<string, number>>();
 const adhkarDayStore = new Map<string, AdhkarDay>();
@@ -1977,5 +1993,34 @@ export function mockApi() {
       return [] as Track[];
     },
     async forgetLocalTrack(_trackId: string) {},
+
+    async adhanSettings() {
+      return { ...adhanSettingsStore, prayers: { ...adhanSettingsStore.prayers } };
+    },
+    async setAdhanSettings(settings: AdhanSettings) {
+      adhanSettingsStore = {
+        ...settings,
+        volume: Math.max(0, Math.min(1, settings.volume)),
+        prayers: { ...settings.prayers },
+      };
+      return this.adhanSettings();
+    },
+    async testAdhan() {
+      return this.adhanSettings();
+    },
+    async autostart() {
+      return autostartStore;
+    },
+    async setAutostart(enabled: boolean) {
+      autostartStore = enabled;
+      return autostartStore;
+    },
+    async closeToTray() {
+      return closeToTrayStore;
+    },
+    async setCloseToTray(enabled: boolean) {
+      closeToTrayStore = enabled;
+      return closeToTrayStore;
+    },
   };
 }

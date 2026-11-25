@@ -1,4 +1,5 @@
 mod adhkar;
+mod adhan;
 mod commands;
 mod db;
 mod downloads;
@@ -27,6 +28,27 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let app = window.app_handle();
+                if adhan::is_quitting() {
+                    return;
+                }
+                let db = app.state::<AppState>().db.clone();
+                if adhan::close_to_tray(&db) {
+                    api.prevent_close();
+                    let _ = window.hide();
+                } else {
+                    adhan::mark_quitting();
+                    app.exit(0);
+                }
+            }
+        })
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             match migrate::migrate_legacy(&data_dir) {
@@ -78,12 +100,22 @@ pub fn run() {
                 download_http,
                 queue: Arc::new(downloads::DownloadQueue::new()),
             });
+            app.manage(adhan::TrayHandles::default());
 
             if !media::init(app.handle()) {
                 eprintln!("SMTC unavailable; hardware media keys will not control the app");
             }
 
             build_tray(app.handle())?;
+            adhan::start(app.handle().clone());
+
+            // Autostart launches with `--minimized`; stay in the tray so the
+            // prayer scheduler runs without stealing focus at login.
+            if std::env::args().any(|arg| arg == "--minimized") {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+            }
 
             let bindings = hotkeys::load(&app.state::<AppState>().db);
             if let Err(error) = hotkeys::apply(app.handle(), &bindings) {
@@ -165,12 +197,26 @@ pub fn run() {
             commands::mark_adhkar_done,
             commands::clear_adhkar_category,
             commands::get_adhkar_streak,
+            adhan::get_adhan_settings,
+            adhan::set_adhan_settings,
+            adhan::get_autostart,
+            adhan::set_autostart,
+            adhan::get_close_to_tray,
+            adhan::set_close_to_tray,
+            adhan::test_adhan,
         ])
         .run(tauri::generate_context!())
         .expect("error while running the Sakeenah application");
 }
 
 fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
+    let next_prayer = MenuItem::with_id(
+        app,
+        "next_prayer",
+        "الصلاة القادمة: —",
+        true,
+        None::<&str>,
+    )?;
     let show = MenuItem::with_id(app, "show", "إظهار Sakeenah", true, None::<&str>)?;
     let hide = MenuItem::with_id(app, "hide", "إخفاء النافذة", true, None::<&str>)?;
     let toggle = MenuItem::with_id(app, "toggle", "تشغيل / إيقاف", true, None::<&str>)?;
@@ -180,6 +226,8 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     let menu = Menu::with_items(
         app,
         &[
+            &next_prayer,
+            &PredefinedMenuItem::separator(app)?,
             &show,
             &hide,
             &toggle,
@@ -189,6 +237,10 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
             &quit,
         ],
     )?;
+    app.state::<adhan::TrayHandles>()
+        .next_prayer
+        .lock()
+        .replace(next_prayer);
 
     let mut builder = TrayIconBuilder::with_id("main")
         .tooltip("سَكينة · Sakeenah")
@@ -206,7 +258,10 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
             "next" => {
                 let _ = app.emit("player:command", "next");
             }
-            "quit" => app.exit(0),
+            "quit" => {
+                adhan::mark_quitting();
+                app.exit(0);
+            }
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {

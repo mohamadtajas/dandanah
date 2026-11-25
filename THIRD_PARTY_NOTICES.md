@@ -73,6 +73,15 @@ SOFTWARE.
 The underlying texts are from *Hisn al-Muslim* by Dr. Sa'id bin Ali bin Wahf
 al-Qahtani. The full licence text is also kept at `data/LICENSE.md`.
 
+## Adhan audio - Beautiful adhan (CC0 1.0)
+
+The bundled adhan recording at `src/lib/assets/adhan.ogg` is "Beautiful adhan"
+by Adam-synagda, downloaded from Wikimedia Commons
+(<https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg>). It is released
+under the Creative Commons CC0 1.0 Universal Public Domain Dedication
+(<https://creativecommons.org/publicdomain/zero/1.0/>). No changes were made.
+The licence record is kept at `data/ADHAN_LICENSE.md`.
+
 ## Other direct dependencies
 
 | Package | Licence |

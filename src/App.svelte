@@ -19,6 +19,7 @@
   import { library } from "$lib/stores/library.svelte.ts";
   import { worship } from "$lib/stores/worship.svelte.ts";
   import { adhkar } from "$lib/stores/adhkar.svelte.ts";
+  import { adhan } from "$lib/stores/adhan.svelte.ts";
   import { isTauri } from "$lib/api";
   import { i18n } from "$lib/i18n/index.svelte.ts";
 
@@ -28,6 +29,7 @@
     worship.start();
     void adhkar.load();
     adhkar.start();
+    void adhan.init();
     const cleanups: (() => void)[] = [];
 
     // Tray menu, global hotkeys and Windows media keys all arrive here.

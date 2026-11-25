@@ -11,6 +11,8 @@
     "dialog:default",
     "global-shortcut:default",
     "process:default",
-    "updater:default"
+    "updater:default",
+    "notification:default",
+    "autostart:default"
   ]
 }

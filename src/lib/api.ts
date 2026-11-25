@@ -3,6 +3,7 @@ import type {
   AdhkarDay,
   AdhkarProgress,
   AdhkarStreak,
+  AdhanSettings,
   AppInfo,
   Ayah,
   AyahReciter,
@@ -389,4 +390,37 @@ export const api = {
 
   adhkarStreak: async (): Promise<AdhkarStreak> =>
     isTauri ? invoke<AdhkarStreak>("get_adhkar_streak") : (await mock()).adhkarStreak(),
+
+  // --- adhan, notifications and desktop residency --------------------------
+
+  adhanSettings: async (): Promise<AdhanSettings> =>
+    isTauri
+      ? invoke<AdhanSettings>("get_adhan_settings")
+      : (await mock()).adhanSettings(),
+
+  setAdhanSettings: async (settings: AdhanSettings): Promise<AdhanSettings> => {
+    if (!isTauri) return (await mock()).setAdhanSettings(settings);
+    return invoke<AdhanSettings>("set_adhan_settings", { settings });
+  },
+
+  testAdhan: async (): Promise<AdhanSettings> => {
+    if (!isTauri) return (await mock()).testAdhan();
+    return invoke<AdhanSettings>("test_adhan");
+  },
+
+  autostart: async (): Promise<boolean> =>
+    isTauri ? invoke<boolean>("get_autostart") : (await mock()).autostart(),
+
+  setAutostart: async (enabled: boolean): Promise<boolean> => {
+    if (!isTauri) return (await mock()).setAutostart(enabled);
+    return invoke<boolean>("set_autostart", { enabled });
+  },
+
+  closeToTray: async (): Promise<boolean> =>
+    isTauri ? invoke<boolean>("get_close_to_tray") : (await mock()).closeToTray(),
+
+  setCloseToTray: async (enabled: boolean): Promise<boolean> => {
+    if (!isTauri) return (await mock()).setCloseToTray(enabled);
+    return invoke<boolean>("set_close_to_tray", { enabled });
+  },
 };

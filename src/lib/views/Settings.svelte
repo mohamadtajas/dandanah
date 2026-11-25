@@ -13,6 +13,7 @@
   import { nav } from "$lib/stores/nav.svelte.ts";
   import { player } from "$lib/stores/player.svelte.ts";
   import { library } from "$lib/stores/library.svelte.ts";
+  import { adhan } from "$lib/stores/adhan.svelte.ts";
   import { worship } from "$lib/stores/worship.svelte.ts";
   import { ui } from "$lib/stores/ui.svelte.ts";
   import { cities, nearestCity, timezoneChoices } from "$lib/data/cities";
@@ -58,6 +59,25 @@
   const matchedCity = $derived(nearestCity(prayer.latitude, prayer.longitude));
   const zoneOptions = $derived(timezoneChoices(prayer.timezone));
 
+  const PRAYER_ALERTS = [
+    { key: "fajr", label: "prayer.fajr" },
+    { key: "dhuhr", label: "prayer.dhuhr" },
+    { key: "asr", label: "prayer.asr" },
+    { key: "maghrib", label: "prayer.maghrib" },
+    { key: "isha", label: "prayer.isha" },
+  ] as const;
+  const PRE_ALERT_MINUTES = [5, 10, 15, 20, 30];
+  let volumePct = $state(80);
+  let autostart = $state(false);
+  let closeToTray = $state(true);
+  let desktopBusy = $state(false);
+
+  $effect(() => {
+    if (adhan.settings) {
+      volumePct = Math.round(adhan.settings.volume * 100);
+    }
+  });
+
   type UpdateState = "idle" | "checking" | "available" | "none" | "error";
   let updateState = $state<UpdateState>("idle");
   let updateVersion = $state("");
@@ -102,6 +122,10 @@
     if (prayerResult.status === "fulfilled") {
       prayer = { ...prayerResult.value };
     }
+    void adhan.init();
+    const [auto, tray] = await Promise.allSettled([api.autostart(), api.closeToTray()]);
+    if (auto.status === "fulfilled") autostart = auto.value;
+    if (tray.status === "fulfilled") closeToTray = tray.value;
   });
 
   function chooseCity(id: string) {
@@ -252,6 +276,41 @@
     if (!bytes) return "0 KB";
     const mb = bytes / 1_048_576;
     return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+  }
+
+  function saveAdhan(patch: Record<string, unknown>) {
+    if (!adhan.settings) return;
+    void adhan.save({ ...adhan.settings, ...patch });
+  }
+
+  function changeVolume(event: Event) {
+    volumePct = Number((event.currentTarget as HTMLInputElement).value);
+  }
+
+  function commitVolume() {
+    saveAdhan({ volume: volumePct / 100 });
+  }
+
+  async function toggleAutostart() {
+    desktopBusy = true;
+    try {
+      autostart = await api.setAutostart(!autostart);
+    } catch {
+      ui.notify(i18n.t("settings.desktopFailed"));
+    } finally {
+      desktopBusy = false;
+    }
+  }
+
+  async function toggleCloseToTray() {
+    desktopBusy = true;
+    try {
+      closeToTray = await api.setCloseToTray(!closeToTray);
+    } catch {
+      ui.notify(i18n.t("settings.desktopFailed"));
+    } finally {
+      desktopBusy = false;
+    }
   }
 </script>
 
@@ -534,6 +593,194 @@
         {i18n.t("settings.manageDownloads")}
       </button>
     </div>
+  </section>
+
+  <section class="mt-4 rounded-2xl border border-line bg-ink-900/60 p-5">
+    <div class="flex items-start justify-between gap-4">
+      <div class="min-w-0">
+        <h2 class="text-sm font-semibold text-cream">{i18n.t("settings.adhan")}</h2>
+        <p class="mt-1 text-xs leading-relaxed text-muted">
+          {i18n.t("settings.adhanHint")}
+        </p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={adhan.settings?.enabled ?? false}
+        aria-label={i18n.t("settings.adhanEnabled")}
+        onclick={() => saveAdhan({ enabled: !(adhan.settings?.enabled ?? false) })}
+        class="relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors
+               {adhan.settings?.enabled
+          ? 'border-gold/60 bg-gold/80'
+          : 'border-line bg-ink-800'}"
+      >
+        <span
+          class="absolute top-[3px] size-[18px] rounded-full bg-cream shadow transition-all
+                 {adhan.settings?.enabled ? 'start-[22px]' : 'start-[3px]'}"
+        ></span>
+      </button>
+    </div>
+
+    {#if adhan.settings}
+      <div class="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-line/60 bg-ink-850/40 px-3 py-2.5">
+        <Icon name="volume" size={14} class="shrink-0 text-gold" />
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          bind:value={volumePct}
+          oninput={changeVolume}
+          onchange={commitVolume}
+          aria-label={i18n.t("settings.adhanVolume")}
+          class="min-w-24 flex-1 accent-gold"
+        />
+        <span class="w-10 shrink-0 text-end text-[11px] tabular-nums text-muted">{volumePct}%</span>
+        <button
+          type="button"
+          onclick={() => (adhan.playing ? adhan.stop() : adhan.preview())}
+          class="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors
+                 {adhan.playing
+            ? 'border-gold/40 bg-gold/10 text-gold'
+            : 'border-line text-cream hover:border-gold/40 hover:text-gold'}"
+        >
+          <Icon name={adhan.playing ? "pause" : "play"} size={12} />
+          {i18n.t(adhan.playing ? "settings.adhanStop" : "settings.adhanTest")}
+        </button>
+      </div>
+
+      <div class="mt-4 overflow-hidden rounded-xl border border-line/60">
+        <div class="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-line/60 bg-ink-850/60 px-3 py-2 text-[10px] text-muted">
+          <span>{i18n.t("settings.adhanPerPrayer")}</span>
+          <span class="w-11 text-center">{i18n.t("settings.adhanSound")}</span>
+          <span class="w-11 text-center">{i18n.t("settings.adhanNotify")}</span>
+        </div>
+        {#each PRAYER_ALERTS as row (row.key)}
+          {@const alert = adhan.settings.prayers[row.key] ?? { adhan: true, notify: true }}
+          <div class="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-line/40 px-3 py-2 text-xs last:border-0">
+            <span class="text-cream">{i18n.t(row.label)}</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={alert.adhan}
+              aria-label={`${i18n.t(row.label)} — ${i18n.t("settings.adhanSound")}`}
+              onclick={() => adhan.setPrayer(row.key, { adhan: !alert.adhan })}
+              class="relative h-5 w-9 rounded-full border transition-colors
+                     {alert.adhan ? 'border-gold/60 bg-gold/80' : 'border-line bg-ink-800'}"
+            >
+              <span
+                class="absolute top-[2px] size-3.5 rounded-full bg-cream shadow transition-all
+                       {alert.adhan ? 'start-[18px]' : 'start-[2px]'}"
+              ></span>
+            </button>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={alert.notify}
+              aria-label={`${i18n.t(row.label)} — ${i18n.t("settings.adhanNotify")}`}
+              onclick={() => adhan.setPrayer(row.key, { notify: !alert.notify })}
+              class="relative h-5 w-9 rounded-full border transition-colors
+                     {alert.notify ? 'border-gold/60 bg-gold/80' : 'border-line bg-ink-800'}"
+            >
+              <span
+                class="absolute top-[2px] size-3.5 rounded-full bg-cream shadow transition-all
+                       {alert.notify ? 'start-[18px]' : 'start-[2px]'}"
+              ></span>
+            </button>
+          </div>
+        {/each}
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-xs text-cream">{i18n.t("settings.preAlert")}</p>
+          <p class="mt-0.5 text-[10px] text-muted">{i18n.t("settings.preAlertHint")}</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <select
+            value={adhan.settings.preAlertMinutes}
+            onchange={(event) =>
+              saveAdhan({ preAlertMinutes: Number(event.currentTarget.value) })}
+            disabled={!adhan.settings.preAlertEnabled}
+            aria-label={i18n.t("settings.preAlertMinutes")}
+            class="rounded-lg border border-line bg-ink-850 px-2 py-1 text-[11px] text-cream disabled:opacity-40"
+          >
+            {#each PRE_ALERT_MINUTES as minutes (minutes)}
+              <option value={minutes}>{fmtNumber(minutes)} د</option>
+            {/each}
+          </select>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={adhan.settings.preAlertEnabled}
+            aria-label={i18n.t("settings.preAlert")}
+            onclick={() => saveAdhan({ preAlertEnabled: !adhan.settings?.preAlertEnabled })}
+            class="relative h-5 w-9 rounded-full border transition-colors
+                   {adhan.settings.preAlertEnabled
+              ? 'border-gold/60 bg-gold/80'
+              : 'border-line bg-ink-800'}"
+          >
+            <span
+              class="absolute top-[2px] size-3.5 rounded-full bg-cream shadow transition-all
+                     {adhan.settings.preAlertEnabled ? 'start-[18px]' : 'start-[2px]'}"
+            ></span>
+          </button>
+        </div>
+      </div>
+    {/if}
+  </section>
+
+  <section class="mt-4 rounded-2xl border border-line bg-ink-900/60 p-5">
+    <h2 class="text-sm font-semibold text-cream">{i18n.t("settings.desktop")}</h2>
+    <div class="mt-4 flex items-start justify-between gap-4">
+      <div class="min-w-0">
+        <p class="text-xs text-cream">{i18n.t("settings.autostart")}</p>
+        <p class="mt-0.5 text-[10px] leading-relaxed text-muted">
+          {i18n.t("settings.autostartHint")}
+        </p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={autostart}
+        aria-label={i18n.t("settings.autostart")}
+        disabled={desktopBusy}
+        onclick={toggleAutostart}
+        class="relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors disabled:opacity-50
+               {autostart ? 'border-gold/60 bg-gold/80' : 'border-line bg-ink-800'}"
+      >
+        <span
+          class="absolute top-[3px] size-[18px] rounded-full bg-cream shadow transition-all
+                 {autostart ? 'start-[22px]' : 'start-[3px]'}"
+        ></span>
+      </button>
+    </div>
+    <div class="mt-4 flex items-start justify-between gap-4 border-t border-line/60 pt-4">
+      <div class="min-w-0">
+        <p class="text-xs text-cream">{i18n.t("settings.closeToTray")}</p>
+        <p class="mt-0.5 text-[10px] leading-relaxed text-muted">
+          {i18n.t("settings.closeToTrayHint")}
+        </p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={closeToTray}
+        aria-label={i18n.t("settings.closeToTray")}
+        disabled={desktopBusy}
+        onclick={toggleCloseToTray}
+        class="relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors disabled:opacity-50
+               {closeToTray ? 'border-gold/60 bg-gold/80' : 'border-line bg-ink-800'}"
+      >
+        <span
+          class="absolute top-[3px] size-[18px] rounded-full bg-cream shadow transition-all
+                 {closeToTray ? 'start-[22px]' : 'start-[3px]'}"
+        ></span>
+      </button>
+    </div>
+    <p class="mt-4 rounded-lg border border-line/60 bg-ink-850/40 px-3 py-2 text-[10px] leading-relaxed text-muted">
+      {i18n.t("settings.residentHint")}
+    </p>
   </section>
 
   <section class="mt-4 rounded-2xl border border-line bg-ink-900/60 p-5">
