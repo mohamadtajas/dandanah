@@ -100,4 +100,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String versionLine(String version) {
     return 'الإصدار $version';
   }
+
+  @override
+  String get startupErrorTitle => 'تعذّر بدء سَكينة';
+
+  @override
+  String get startupErrorBody =>
+      'لم نتمكن من تجهيز البيانات المحلية. أعد المحاولة، وإن استمرت المشكلة فأعد تثبيت التطبيق.';
+
+  @override
+  String get retry => 'إعادة المحاولة';
 }

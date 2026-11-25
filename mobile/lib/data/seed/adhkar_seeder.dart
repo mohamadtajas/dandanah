@@ -10,7 +10,12 @@ import '../models/adhkar.dart';
 abstract final class AdhkarSeeder {
   static Future<void> seed(AppDatabase db, String json) async {
     if (await db.adhkarCategories.count().getSingle() > 0) return;
+    await db.transaction(() => seedInto(db, json));
+  }
 
+  /// Inserts the parsed bundle without checking or opening a transaction.
+  /// Callers are responsible for doing both.
+  static Future<void> seedInto(AppDatabase db, String json) async {
     final data = jsonDecode(json) as Map<String, dynamic>;
     final categories = (data['categories'] as List)
         .cast<Map<String, dynamic>>();
@@ -38,20 +43,18 @@ abstract final class AdhkarSeeder {
       }
     }
 
-    await db.transaction(() async {
-      await db.batch((batch) {
-        batch.insertAll(db.adhkarCategories, [
-          for (var index = 0; index < categories.length; index++)
-            AdhkarCategoriesCompanion.insert(
-              id: categories[index]['id'] as String,
-              title: categories[index]['title'] as String,
-              featured: categories[index]['featured'] as bool,
-              streakKey: Value(categories[index]['streakKey'] as String?),
-              sortOrder: index,
-            ),
-        ]);
-        batch.insertAll(db.adhkarItems, itemRows);
-      });
+    await db.batch((batch) {
+      batch.insertAll(db.adhkarCategories, [
+        for (var index = 0; index < categories.length; index++)
+          AdhkarCategoriesCompanion.insert(
+            id: categories[index]['id'] as String,
+            title: categories[index]['title'] as String,
+            featured: categories[index]['featured'] as bool,
+            streakKey: Value(categories[index]['streakKey'] as String?),
+            sortOrder: index,
+          ),
+      ]);
+      batch.insertAll(db.adhkarItems, itemRows);
     });
   }
 

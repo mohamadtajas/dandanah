@@ -100,4 +100,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String versionLine(String version) {
     return 'Version $version';
   }
+
+  @override
+  String get startupErrorTitle => 'Sakeenah could not start';
+
+  @override
+  String get startupErrorBody =>
+      'The local data could not be prepared. Try again, and reinstall the app if the problem persists.';
+
+  @override
+  String get retry => 'Try again';
 }

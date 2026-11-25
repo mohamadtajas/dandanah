@@ -28,6 +28,9 @@
   "themeDark": "Dark",
   "themeLight": "Light",
   "versionLine": "Version {version}",
+  "startupErrorTitle": "Sakeenah could not start",
+  "startupErrorBody": "The local data could not be prepared. Try again, and reinstall the app if the problem persists.",
+  "retry": "Try again",
   "@versionLine": {
     "placeholders": {
       "version": {

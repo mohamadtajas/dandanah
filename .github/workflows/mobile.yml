@@ -30,6 +30,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verify bundled Quran matches Tanzil source
+        working-directory: .
+        run: |
+          node scripts/build-quran.mjs
+          git diff --exit-code -- src-tauri/data/quran.json mobile/assets/data/quran.json
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

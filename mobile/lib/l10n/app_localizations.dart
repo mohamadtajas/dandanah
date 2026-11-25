@@ -265,6 +265,24 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'الإصدار {version}'**
   String versionLine(String version);
+
+  /// No description provided for @startupErrorTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر بدء سَكينة'**
+  String get startupErrorTitle;
+
+  /// No description provided for @startupErrorBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم نتمكن من تجهيز البيانات المحلية. أعد المحاولة، وإن استمرت المشكلة فأعد تثبيت التطبيق.'**
+  String get startupErrorBody;
+
+  /// No description provided for @retry.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة المحاولة'**
+  String get retry;
 }
 
 class _AppLocalizationsDelegate

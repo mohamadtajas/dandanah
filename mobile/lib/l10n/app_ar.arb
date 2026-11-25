@@ -28,6 +28,9 @@
   "themeDark": "داكن",
   "themeLight": "فاتح",
   "versionLine": "الإصدار {version}",
+  "startupErrorTitle": "تعذّر بدء سَكينة",
+  "startupErrorBody": "لم نتمكن من تجهيز البيانات المحلية. أعد المحاولة، وإن استمرت المشكلة فأعد تثبيت التطبيق.",
+  "retry": "إعادة المحاولة",
   "@versionLine": {
     "placeholders": {
       "version": {

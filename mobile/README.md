@@ -32,29 +32,40 @@ lib/data/
 ```
 
 - `ContentBootstrap` loads `assets/data/quran.json` and
-  `assets/data/adhkar.json` and seeds idempotently inside one transaction.
+  `assets/data/adhkar.json` once and seeds them in a single transaction.
+  A stored `content_version` plus complete row counts skips all asset I/O on
+  later launches; bumping the version refreshes bundled content while keeping
+  user state.
 - Schema v1 held Quran/adkhar content; v2 added settings, bookmarks, reader
-  position, adhkar progress/logs and the prayer log. The v1 → v2 migration is
-  covered by a generated schema test.
-- Quran text is inserted verbatim; tests compare stored rows against the
-  bundled source.
+  position, adhkar progress/logs and the prayer log; v3 stores prayer and
+  adhkar streak days as `YYYY-MM-DD` local dates. Step-by-step migrations and
+  a generated schema test cover v1 → v2 → v3.
+- Quran text is inserted verbatim; tests compare every stored row against the
+  bundled source, verify the asset is byte-identical to the desktop bundle,
+  and check the Tanzil XML hash.
 - Calculation methods match the desktop catalogue (Umm al-Qura, MWL, Egyptian,
   Karachi, Dubai, Moonsighting, ISNA, Kuwait, Qatar, Singapore, Tehran,
-  Turkey), with the seventh-of-the-night high-latitude rule.
+  Turkey), with the seventh-of-the-night high-latitude rule. Returned times are
+  wall-clock values on the requested local date for the supplied UTC offset.
 - Hijri dates use Umm al-Qura tables and support the desktop-style day
   adjustment. Qibla bearings are computed offline from coordinates.
 
 Attribution and licence files live next to the assets:
 `QURAN_LICENSE.md` (Tanzil, CC BY 3.0) and `ADHKAR_LICENSE.md`
 (HisnElMuslim, MIT). Package and font notices are listed in
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). `scripts/build-quran.mjs`
+writes both the desktop and mobile Quran bundles from the same XML.
 
 ## Reliability
 
 - Native SQLite comes from `sqlite3` 3.x native assets; no platform channel
   setup is required.
-- Seeders skip already-populated tables, so relaunching is cheap.
-- Tests use in-memory databases and generated schema snapshots.
+- Startup runs behind a catch-all: a failed database open or seed shows an
+  Arabic recovery screen with a retry button instead of a blank splash.
+- Seeders skip completed collections; the version gate avoids reading the
+  1.7 MB Quran asset on every launch.
+- Tests use in-memory databases, real bundled assets and generated migration
+  snapshots.
 
 
 ## Requirements

@@ -10,14 +10,26 @@ void main() {
   late AppDatabase db;
   late QuranRepository quran;
   late Map<(int, int), String> source;
+  late Map<(int, int), ({String text, int juz, int page, bool sajda})>
+  sourceRows;
 
   setUp(() async {
     db = AppDatabase.memory();
     final raw = await File('assets/data/quran.json').readAsString();
     final data = jsonDecode(raw) as Map<String, dynamic>;
+    final ayahs = (data['ayahs'] as List).cast<Map<String, dynamic>>();
     source = {
-      for (final ayah in (data['ayahs'] as List).cast<Map<String, dynamic>>())
+      for (final ayah in ayahs)
         (ayah['surah'] as int, ayah['ayah'] as int): ayah['text'] as String,
+    };
+    sourceRows = {
+      for (final ayah in ayahs)
+        (ayah['surah'] as int, ayah['ayah'] as int): (
+          text: ayah['text'] as String,
+          juz: ayah['juz'] as int,
+          page: ayah['page'] as int,
+          sajda: ayah['sajda'] as bool? ?? false,
+        ),
     };
     await QuranSeeder.seed(db, raw);
     quran = DriftQuranRepository(db);
@@ -52,6 +64,44 @@ void main() {
     expect(nas, hasLength(6));
     expect(nas.last.text, source[(114, 6)]);
     expect(_bare(nas.last.text), 'من الجنة والناس');
+  });
+
+  test('every stored ayah matches the bundled source exactly', () async {
+    final rows = await db.select(db.ayahs).get();
+    expect(rows, hasLength(6236));
+    for (final row in rows) {
+      final expected = sourceRows[(row.surah, row.ayah)];
+      expect(expected, isNotNull, reason: 'missing ${row.surah}:${row.ayah}');
+      expect(row.body, expected!.text);
+      expect(row.juz, expected.juz, reason: 'juz ${row.surah}:${row.ayah}');
+      expect(row.page, expected.page, reason: 'page ${row.surah}:${row.ayah}');
+      expect(
+        row.sajda,
+        expected.sajda,
+        reason: 'sajda ${row.surah}:${row.ayah}',
+      );
+    }
+    expect(
+      rows.map((row) => (row.surah, row.ayah)).toSet(),
+      sourceRows.keys.toSet(),
+    );
+  });
+
+  test('basmala is separate except Al-Fatiha and At-Tawba', () async {
+    expect((await quran.surahByNumber(1))!.bismillah, isNull);
+    expect((await quran.surahByNumber(9))!.bismillah, isNull);
+    final baqarah = await quran.surahByNumber(2);
+    expect(baqarah!.bismillah, isNotNull);
+    expect(baqarah.bismillah, startsWith('بِسْمِ'));
+
+    final first = await quran.ayah(2, 1);
+    expect(first!.text, 'الٓمٓ');
+    expect(first.text.contains('بِسْمِ'), isFalse);
+
+    final count = (await quran.surahs())
+        .where((surah) => surah.bismillah != null)
+        .length;
+    expect(count, 112);
   });
 
   test('known ayah carries juz, page and sajda metadata', () async {

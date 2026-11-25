@@ -13,6 +13,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const textPath = path.join(root, "data", "quran-uthmani.xml");
 const metaPath = path.join(root, "data", "quran-metadata.xml");
 const outputPath = path.join(root, "src-tauri", "data", "quran.json");
+const mobileOutputPath = path.join(root, "mobile", "assets", "data", "quran.json");
 
 const textXml = fs.readFileSync(textPath, "utf8");
 const metaXml = fs.readFileSync(metaPath, "utf8");
@@ -204,8 +205,11 @@ const output = {
   ayahs,
 };
 
+fs.mkdirSync(path.dirname(mobileOutputPath), { recursive: true });
 fs.writeFileSync(outputPath, `${JSON.stringify(output)}\n`, "utf8");
+fs.writeFileSync(mobileOutputPath, `${JSON.stringify(output)}\n`, "utf8");
 console.log(`wrote ${path.relative(root, outputPath)}`);
+console.log(`wrote ${path.relative(root, mobileOutputPath)}`);
 console.log(
   `${surahs.length} surahs, ${ayahs.length} ayahs, ${juzs.length} juz, ${pageStarts.length} pages`,
 );

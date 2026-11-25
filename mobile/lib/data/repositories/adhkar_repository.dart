@@ -60,7 +60,8 @@ class DriftAdhkarRepository implements AdhkarRepository {
 
   @override
   Future<bool> isSeeded() async =>
-      await _db.adhkarCategories.count().getSingle() > 0;
+      await _db.adhkarCategories.count().getSingle() > 0 &&
+      await _db.adhkarItems.count().getSingle() > 0;
 
   JoinedSelectStatement<HasResultSet, dynamic> _categoryQuery({
     bool featuredOnly = false,

@@ -130,7 +130,9 @@ class DriftQuranRepository implements QuranRepository {
   Future<int> ayahCount() => _db.ayahs.count().getSingle();
 
   @override
-  Future<bool> isSeeded() async => await _db.surahs.count().getSingle() > 0;
+  Future<bool> isSeeded() async =>
+      await _db.surahs.count().getSingle() > 0 &&
+      await _db.ayahs.count().getSingle() > 0;
 
   Surah _surah(db.Surah row) => Surah(
     number: row.number,
