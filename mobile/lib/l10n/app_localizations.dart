@@ -283,6 +283,222 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'إعادة المحاولة'**
   String get retry;
+
+  /// No description provided for @prayerNext.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصلاة القادمة'**
+  String get prayerNext;
+
+  /// No description provided for @prayerTimeRemaining.
+  ///
+  /// In ar, this message translates to:
+  /// **'متبقي {time}'**
+  String prayerTimeRemaining(String time);
+
+  /// No description provided for @prayerToday.
+  ///
+  /// In ar, this message translates to:
+  /// **'مواقيت اليوم'**
+  String get prayerToday;
+
+  /// No description provided for @prayerStreak.
+  ///
+  /// In ar, this message translates to:
+  /// **'سلسلة الصلوات'**
+  String get prayerStreak;
+
+  /// No description provided for @prayerBestStreak.
+  ///
+  /// In ar, this message translates to:
+  /// **'أفضل سلسلة'**
+  String get prayerBestStreak;
+
+  /// No description provided for @prayerExcusedDay.
+  ///
+  /// In ar, this message translates to:
+  /// **'يوم معذور'**
+  String get prayerExcusedDay;
+
+  /// No description provided for @prayerMarkOnTime.
+  ///
+  /// In ar, this message translates to:
+  /// **'في الوقت'**
+  String get prayerMarkOnTime;
+
+  /// No description provided for @prayerMarkLate.
+  ///
+  /// In ar, this message translates to:
+  /// **'متأخرة'**
+  String get prayerMarkLate;
+
+  /// No description provided for @prayerMarkQada.
+  ///
+  /// In ar, this message translates to:
+  /// **'قضاء'**
+  String get prayerMarkQada;
+
+  /// No description provided for @prayerMarkMissed.
+  ///
+  /// In ar, this message translates to:
+  /// **'فائتة'**
+  String get prayerMarkMissed;
+
+  /// No description provided for @prayerClear.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسح'**
+  String get prayerClear;
+
+  /// No description provided for @prayerExcuse.
+  ///
+  /// In ar, this message translates to:
+  /// **'احتساب اليوم معذورًا'**
+  String get prayerExcuse;
+
+  /// No description provided for @prayerUnExcuse.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء عذر اليوم'**
+  String get prayerUnExcuse;
+
+  /// No description provided for @prayerLocationMissing.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يتم ضبط موقعك بعد؛ المواقيت المعروضة لإحداثيات مكة الافتراضية.'**
+  String get prayerLocationMissing;
+
+  /// No description provided for @prayerOpenSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'ضبط الموقع'**
+  String get prayerOpenSettings;
+
+  /// No description provided for @qiblaTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'القبلة'**
+  String get qiblaTitle;
+
+  /// No description provided for @qiblaBearing.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتجاه القبلة {degrees}°'**
+  String qiblaBearing(String degrees);
+
+  /// No description provided for @hijriTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'التاريخ الهجري'**
+  String get hijriTitle;
+
+  /// No description provided for @prayerSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعدادات الصلاة'**
+  String get prayerSettings;
+
+  /// No description provided for @prayerLocationSection.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموقع والمواقيت'**
+  String get prayerLocationSection;
+
+  /// No description provided for @prayerCalculationSection.
+  ///
+  /// In ar, this message translates to:
+  /// **'طريقة الحساب'**
+  String get prayerCalculationSection;
+
+  /// No description provided for @cityLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المدينة'**
+  String get cityLabel;
+
+  /// No description provided for @customLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقع مخصص'**
+  String get customLocation;
+
+  /// No description provided for @latitudeLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'خط العرض'**
+  String get latitudeLabel;
+
+  /// No description provided for @longitudeLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'خط الطول'**
+  String get longitudeLabel;
+
+  /// No description provided for @timezoneLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المنطقة الزمنية'**
+  String get timezoneLabel;
+
+  /// No description provided for @methodLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'طريقة الحساب'**
+  String get methodLabel;
+
+  /// No description provided for @madhabLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مذهب العصر'**
+  String get madhabLabel;
+
+  /// No description provided for @shafi.
+  ///
+  /// In ar, this message translates to:
+  /// **'شافعي'**
+  String get shafi;
+
+  /// No description provided for @hanafi.
+  ///
+  /// In ar, this message translates to:
+  /// **'حنفي'**
+  String get hanafi;
+
+  /// No description provided for @highLatitudeLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'خطوط العرض العالية'**
+  String get highLatitudeLabel;
+
+  /// No description provided for @hijriAdjustmentLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل التاريخ الهجري'**
+  String get hijriAdjustmentLabel;
+
+  /// No description provided for @settingsSaved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حفظ الإعدادات'**
+  String get settingsSaved;
+
+  /// No description provided for @sunrise.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشروق'**
+  String get sunrise;
+
+  /// No description provided for @save.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ'**
+  String get save;
+
+  /// No description provided for @prayerInvalidCoordinates.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل إحداثيات صحيحة.'**
+  String get prayerInvalidCoordinates;
 }
 
 class _AppLocalizationsDelegate

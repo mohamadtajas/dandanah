@@ -110,4 +110,117 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retry => 'Try again';
+
+  @override
+  String get prayerNext => 'Next prayer';
+
+  @override
+  String prayerTimeRemaining(String time) {
+    return '$time remaining';
+  }
+
+  @override
+  String get prayerToday => 'Today\'s times';
+
+  @override
+  String get prayerStreak => 'Prayer streak';
+
+  @override
+  String get prayerBestStreak => 'Best streak';
+
+  @override
+  String get prayerExcusedDay => 'Excused day';
+
+  @override
+  String get prayerMarkOnTime => 'On time';
+
+  @override
+  String get prayerMarkLate => 'Late';
+
+  @override
+  String get prayerMarkQada => 'Made up';
+
+  @override
+  String get prayerMarkMissed => 'Missed';
+
+  @override
+  String get prayerClear => 'Clear';
+
+  @override
+  String get prayerExcuse => 'Mark today excused';
+
+  @override
+  String get prayerUnExcuse => 'Remove excused day';
+
+  @override
+  String get prayerLocationMissing =>
+      'Your location is not set; showing the default Makkah coordinates.';
+
+  @override
+  String get prayerOpenSettings => 'Set location';
+
+  @override
+  String get qiblaTitle => 'Qibla';
+
+  @override
+  String qiblaBearing(String degrees) {
+    return 'Qibla $degrees°';
+  }
+
+  @override
+  String get hijriTitle => 'Hijri date';
+
+  @override
+  String get prayerSettings => 'Prayer settings';
+
+  @override
+  String get prayerLocationSection => 'Location and times';
+
+  @override
+  String get prayerCalculationSection => 'Calculation';
+
+  @override
+  String get cityLabel => 'City';
+
+  @override
+  String get customLocation => 'Custom location';
+
+  @override
+  String get latitudeLabel => 'Latitude';
+
+  @override
+  String get longitudeLabel => 'Longitude';
+
+  @override
+  String get timezoneLabel => 'Timezone';
+
+  @override
+  String get methodLabel => 'Calculation method';
+
+  @override
+  String get madhabLabel => 'Asr madhab';
+
+  @override
+  String get shafi => 'Shafi';
+
+  @override
+  String get hanafi => 'Hanafi';
+
+  @override
+  String get highLatitudeLabel => 'High latitude rule';
+
+  @override
+  String get hijriAdjustmentLabel => 'Hijri adjustment';
+
+  @override
+  String get settingsSaved => 'Settings saved';
+
+  @override
+  String get sunrise => 'Sunrise';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get prayerInvalidCoordinates => 'Enter valid coordinates.';
 }

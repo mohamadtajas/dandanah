@@ -37,5 +37,55 @@
         "type": "String"
       }
     }
-  }
+  },
+  "prayerNext": "الصلاة القادمة",
+  "prayerTimeRemaining": "متبقي {time}",
+  "prayerToday": "مواقيت اليوم",
+  "prayerStreak": "سلسلة الصلوات",
+  "prayerBestStreak": "أفضل سلسلة",
+  "prayerExcusedDay": "يوم معذور",
+  "prayerMarkOnTime": "في الوقت",
+  "prayerMarkLate": "متأخرة",
+  "prayerMarkQada": "قضاء",
+  "prayerMarkMissed": "فائتة",
+  "prayerClear": "مسح",
+  "prayerExcuse": "احتساب اليوم معذورًا",
+  "prayerUnExcuse": "إلغاء عذر اليوم",
+  "prayerLocationMissing": "لم يتم ضبط موقعك بعد؛ المواقيت المعروضة لإحداثيات مكة الافتراضية.",
+  "prayerOpenSettings": "ضبط الموقع",
+  "qiblaTitle": "القبلة",
+  "qiblaBearing": "اتجاه القبلة {degrees}°",
+  "hijriTitle": "التاريخ الهجري",
+  "prayerSettings": "إعدادات الصلاة",
+  "prayerLocationSection": "الموقع والمواقيت",
+  "prayerCalculationSection": "طريقة الحساب",
+  "cityLabel": "المدينة",
+  "customLocation": "موقع مخصص",
+  "latitudeLabel": "خط العرض",
+  "longitudeLabel": "خط الطول",
+  "timezoneLabel": "المنطقة الزمنية",
+  "methodLabel": "طريقة الحساب",
+  "madhabLabel": "مذهب العصر",
+  "shafi": "شافعي",
+  "hanafi": "حنفي",
+  "highLatitudeLabel": "خطوط العرض العالية",
+  "hijriAdjustmentLabel": "تعديل التاريخ الهجري",
+  "settingsSaved": "تم حفظ الإعدادات",
+  "sunrise": "الشروق",
+  "save": "حفظ",
+  "@prayerTimeRemaining": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "@qiblaBearing": {
+    "placeholders": {
+      "degrees": {
+        "type": "String"
+      }
+    }
+  },
+  "prayerInvalidCoordinates": "أدخل إحداثيات صحيحة."
 }

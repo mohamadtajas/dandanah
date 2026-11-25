@@ -37,5 +37,55 @@
         "type": "String"
       }
     }
-  }
+  },
+  "prayerNext": "Next prayer",
+  "prayerTimeRemaining": "{time} remaining",
+  "prayerToday": "Today's times",
+  "prayerStreak": "Prayer streak",
+  "prayerBestStreak": "Best streak",
+  "prayerExcusedDay": "Excused day",
+  "prayerMarkOnTime": "On time",
+  "prayerMarkLate": "Late",
+  "prayerMarkQada": "Made up",
+  "prayerMarkMissed": "Missed",
+  "prayerClear": "Clear",
+  "prayerExcuse": "Mark today excused",
+  "prayerUnExcuse": "Remove excused day",
+  "prayerLocationMissing": "Your location is not set; showing the default Makkah coordinates.",
+  "prayerOpenSettings": "Set location",
+  "qiblaTitle": "Qibla",
+  "qiblaBearing": "Qibla {degrees}°",
+  "hijriTitle": "Hijri date",
+  "prayerSettings": "Prayer settings",
+  "prayerLocationSection": "Location and times",
+  "prayerCalculationSection": "Calculation",
+  "cityLabel": "City",
+  "customLocation": "Custom location",
+  "latitudeLabel": "Latitude",
+  "longitudeLabel": "Longitude",
+  "timezoneLabel": "Timezone",
+  "methodLabel": "Calculation method",
+  "madhabLabel": "Asr madhab",
+  "shafi": "Shafi",
+  "hanafi": "Hanafi",
+  "highLatitudeLabel": "High latitude rule",
+  "hijriAdjustmentLabel": "Hijri adjustment",
+  "settingsSaved": "Settings saved",
+  "sunrise": "Sunrise",
+  "save": "Save",
+  "@prayerTimeRemaining": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "@qiblaBearing": {
+    "placeholders": {
+      "degrees": {
+        "type": "String"
+      }
+    }
+  },
+  "prayerInvalidCoordinates": "Enter valid coordinates."
 }

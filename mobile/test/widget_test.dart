@@ -1,12 +1,33 @@
-import 'package:material_ui/material_ui.dart';
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:sakeenah_mobile/app.dart';
+import 'package:sakeenah_mobile/data/app_services.dart';
+import 'package:sakeenah_mobile/data/db/app_database.dart';
+import 'package:sakeenah_mobile/features/settings/settings_page.dart';
 
 void main() {
+  setUpAll(() async {
+    await AppServices.initialize(
+      database: AppDatabase.memory(),
+      bundle: _FileAssetBundle(),
+    );
+  });
+
+  tearDownAll(AppServices.shutdown);
+
+  Future<void> pumpUi(WidgetTester tester) async {
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+  }
+
   testWidgets('shell shows the four destinations', (tester) async {
     await tester.pumpWidget(const SakeenahApp());
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
     expect(find.text('سَكينة'), findsWidgets);
     expect(find.text('الرئيسية'), findsWidgets);
@@ -17,26 +38,38 @@ void main() {
 
   testWidgets('tapping the Mushaf tab opens the Quran page', (tester) async {
     await tester.pumpWidget(const SakeenahApp());
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
     await tester.tap(find.text('المصحف').last);
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
     expect(find.text('بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'), findsOneWidget);
   });
 
   testWidgets('settings opens and switches the theme', (tester) async {
+    tester.view.physicalSize = const Size(900, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const SakeenahApp());
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
     await tester.tap(find.byTooltip('الإعدادات'));
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
     expect(find.text('الإعدادات'), findsWidgets);
 
-    await tester.tap(find.text('فاتح'));
-    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.light_mode_outlined));
+    await pumpUi(tester);
 
-    final context = tester.element(find.text('فاتح'));
+    final context = tester.element(find.byType(SettingsPage));
     expect(Theme.of(context).brightness, Brightness.light);
   });
+}
+
+class _FileAssetBundle extends AssetBundle {
+  @override
+  Future<ByteData> load(String key) async {
+    final bytes = await File(key).readAsBytes();
+    return ByteData.sublistView(bytes);
+  }
 }

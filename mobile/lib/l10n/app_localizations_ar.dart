@@ -110,4 +110,117 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get retry => 'إعادة المحاولة';
+
+  @override
+  String get prayerNext => 'الصلاة القادمة';
+
+  @override
+  String prayerTimeRemaining(String time) {
+    return 'متبقي $time';
+  }
+
+  @override
+  String get prayerToday => 'مواقيت اليوم';
+
+  @override
+  String get prayerStreak => 'سلسلة الصلوات';
+
+  @override
+  String get prayerBestStreak => 'أفضل سلسلة';
+
+  @override
+  String get prayerExcusedDay => 'يوم معذور';
+
+  @override
+  String get prayerMarkOnTime => 'في الوقت';
+
+  @override
+  String get prayerMarkLate => 'متأخرة';
+
+  @override
+  String get prayerMarkQada => 'قضاء';
+
+  @override
+  String get prayerMarkMissed => 'فائتة';
+
+  @override
+  String get prayerClear => 'مسح';
+
+  @override
+  String get prayerExcuse => 'احتساب اليوم معذورًا';
+
+  @override
+  String get prayerUnExcuse => 'إلغاء عذر اليوم';
+
+  @override
+  String get prayerLocationMissing =>
+      'لم يتم ضبط موقعك بعد؛ المواقيت المعروضة لإحداثيات مكة الافتراضية.';
+
+  @override
+  String get prayerOpenSettings => 'ضبط الموقع';
+
+  @override
+  String get qiblaTitle => 'القبلة';
+
+  @override
+  String qiblaBearing(String degrees) {
+    return 'اتجاه القبلة $degrees°';
+  }
+
+  @override
+  String get hijriTitle => 'التاريخ الهجري';
+
+  @override
+  String get prayerSettings => 'إعدادات الصلاة';
+
+  @override
+  String get prayerLocationSection => 'الموقع والمواقيت';
+
+  @override
+  String get prayerCalculationSection => 'طريقة الحساب';
+
+  @override
+  String get cityLabel => 'المدينة';
+
+  @override
+  String get customLocation => 'موقع مخصص';
+
+  @override
+  String get latitudeLabel => 'خط العرض';
+
+  @override
+  String get longitudeLabel => 'خط الطول';
+
+  @override
+  String get timezoneLabel => 'المنطقة الزمنية';
+
+  @override
+  String get methodLabel => 'طريقة الحساب';
+
+  @override
+  String get madhabLabel => 'مذهب العصر';
+
+  @override
+  String get shafi => 'شافعي';
+
+  @override
+  String get hanafi => 'حنفي';
+
+  @override
+  String get highLatitudeLabel => 'خطوط العرض العالية';
+
+  @override
+  String get hijriAdjustmentLabel => 'تعديل التاريخ الهجري';
+
+  @override
+  String get settingsSaved => 'تم حفظ الإعدادات';
+
+  @override
+  String get sunrise => 'الشروق';
+
+  @override
+  String get save => 'حفظ';
+
+  @override
+  String get prayerInvalidCoordinates => 'أدخل إحداثيات صحيحة.';
 }
