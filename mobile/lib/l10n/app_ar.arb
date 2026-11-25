@@ -1,0 +1,38 @@
+{
+  "@@locale": "ar",
+  "appTitle": "سَكينة",
+  "navDashboard": "الرئيسية",
+  "navQuran": "المصحف",
+  "navAdhkar": "الأذكار",
+  "navAudio": "الصوت",
+  "settings": "الإعدادات",
+  "comingSoon": "قريبًا",
+  "dashboardWelcome": "طمأنينة القلب",
+  "dashboardSubtitle": "القرآن، ومواقيت الصلاة، والأذكار، والصوت — دون إنترنت.",
+  "prayerCardTitle": "الصلاة والقبلة",
+  "prayerCardBody": "مواقيت محسوبة على جهازك، وسجل صلوات، وسلسلة استمرارية.",
+  "quranCardTitle": "المصحف",
+  "quranCardBody": "النص العثماني كاملًا، قراءة بالسور أو الأجزاء، مع العلامات وآخر موضع.",
+  "adhkarCardTitle": "الأذكار",
+  "adhkarCardBody": "حصن المسلم كاملًا مع العدادات والتقدم وسلسلة يومية.",
+  "audioCardTitle": "التلاوات والأناشيد",
+  "audioCardBody": "تشغيل في الخلفية، قوائم تشغيل، وتنزيلات للاستماع دون إنترنت.",
+  "quranPageTitle": "المصحف",
+  "adhkarPageTitle": "الأذكار",
+  "audioPageTitle": "الصوت",
+  "settingsPageTitle": "الإعدادات",
+  "settingsOverview": "نظرة عامة",
+  "settingsPlaceholder": "ستصل إعدادات الموقع والتذكير والصوت في المراحل القادمة.",
+  "dashboardTitle": "الرئيسية",
+  "themeSection": "المظهر",
+  "themeDark": "داكن",
+  "themeLight": "فاتح",
+  "versionLine": "الإصدار {version}",
+  "@versionLine": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  }
+}

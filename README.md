@@ -393,6 +393,12 @@ cargo test --manifest-path src-tauri/Cargo.toml --lib
 
 ---
 
+## تطبيق الجوال
+
+يعيش تطبيق Flutter في [`mobile/`](mobile/) ويستهدف Android وiOS. المرحلة الحالية M0: الهيكل والتصميم والخطوط؛ راجع [`mobile/README.md`](mobile/README.md) للبناء والتشغيل ولقطات الشاشة.
+
+---
+
 ## الترخيص
 
 - **الكود:** MIT — انظر [LICENSE](LICENSE).

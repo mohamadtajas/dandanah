@@ -1,0 +1,38 @@
+{
+  "@@locale": "en",
+  "appTitle": "Sakeenah",
+  "navDashboard": "Home",
+  "navQuran": "Mushaf",
+  "navAdhkar": "Adhkar",
+  "navAudio": "Audio",
+  "settings": "Settings",
+  "comingSoon": "Coming soon",
+  "dashboardWelcome": "Tranquility of the heart",
+  "dashboardSubtitle": "Quran, prayer times, adhkar and audio — offline.",
+  "prayerCardTitle": "Prayer & Qibla",
+  "prayerCardBody": "Prayer times calculated on your device, a prayer log and a streak.",
+  "quranCardTitle": "Mushaf",
+  "quranCardBody": "The full Uthmani text by surah or juz, with bookmarks and last position.",
+  "adhkarCardTitle": "Adhkar",
+  "adhkarCardBody": "The full Hisn al-Muslim with counters, progress and a daily streak.",
+  "audioCardTitle": "Recitations & anasheed",
+  "audioCardBody": "Background playback, playlists and downloads for offline listening.",
+  "quranPageTitle": "Mushaf",
+  "adhkarPageTitle": "Adhkar",
+  "audioPageTitle": "Audio",
+  "settingsPageTitle": "Settings",
+  "settingsOverview": "Overview",
+  "settingsPlaceholder": "Location, reminders and audio settings arrive in later phases.",
+  "dashboardTitle": "Home",
+  "themeSection": "Appearance",
+  "themeDark": "Dark",
+  "themeLight": "Light",
+  "versionLine": "Version {version}",
+  "@versionLine": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  }
+}
