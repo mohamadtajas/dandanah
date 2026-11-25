@@ -275,7 +275,7 @@
               bind:value={query}
               placeholder={i18n.t("reader.search")}
               aria-label={i18n.t("reader.search")}
-              class="w-full bg-transparent text-[11px] text-cream placeholder:text-muted/70 focus:outline-none"
+              class="w-full bg-transparent text-[11px] text-cream placeholder:text-muted focus:outline-none"
             />
           </label>
 
@@ -351,7 +351,7 @@
                   type="button"
                   onclick={() => reader.toggleBookmark(bookmark.surah, bookmark.ayah)}
                   aria-label={i18n.t("reader.bookmarkRemove")}
-                  class="me-1 grid size-6 shrink-0 place-items-center rounded text-muted/50 hover:text-gold"
+                  class="me-1 grid size-6 shrink-0 place-items-center rounded text-muted hover:text-gold"
                 >
                   <Icon name="x" size={11} />
                 </button>

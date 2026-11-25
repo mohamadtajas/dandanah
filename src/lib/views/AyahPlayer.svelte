@@ -109,7 +109,7 @@
       <p class="mt-1 text-xs text-muted">
         {reciter.name} · {fmtNumber(surah.ayahs)} {i18n.t("quran.ayahs")}
         {#if hifz.lastAyah > 1}
-          <span class="text-muted/60">
+          <span class="text-muted">
             · {i18n.t("quran.continue")} {fmtNumber(hifz.lastAyah)}
           </span>
         {/if}
