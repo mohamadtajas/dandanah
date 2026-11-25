@@ -6,7 +6,7 @@ and prayer calculations but not the desktop runtime.
 
 ## Status
 
-Phase **M1** — offline data layer.
+Phase **M2** - dashboard, prayer, streaks and settings.
 
 - Arabic-first UI with `flutter_localizations` and generated ARB accessors.
 - Bottom navigation: Dashboard, Mushaf, Adhkar, Audio.
@@ -23,11 +23,12 @@ that consume them arrive in M2–M4.
 
 ```
 lib/data/
-  db/app_database.dart      Drift schema v2 (content + user state)
-  models/                   Surah, Ayah, Adhkar, ...
-  repositories/             read-only content interfaces
+  cities.dart              59 offline city presets
+  db/app_database.dart      Drift schema v3 (content + user state)
+  models/                   Surah, Ayah, Adhkar, local date keys
+  repositories/             content, prayer log
   seed/                     QuranSeeder, AdhkarSeeder
-  worship/                  prayer methods, Adhan wrapper, Hijri, qibla
+  worship/                  settings, schedule, prayer log, Hijri, qibla
   app_services.dart         startup seeding and shared repositories
 ```
 
@@ -48,7 +49,13 @@ lib/data/
   Turkey), with the seventh-of-the-night high-latitude rule. Returned times are
   wall-clock values on the requested local date for the supplied UTC offset.
 - Hijri dates use Umm al-Qura tables and support the desktop-style day
-  adjustment. Qibla bearings are computed offline from coordinates.
+  adjustment. Qibla bearings are computed offline from coordinates; the M2 dial
+  shows the bearing from true north, with live device heading planned for polish.
+- PrayerScheduleService resolves the selected IANA timezone (including DST)
+  and computes today/tomorrow so the next prayer rolls over correctly at
+  midnight. PrayerLogRepository stores each prayer status and computes the
+  current/best streak from YYYY-MM-DD local dates; excused days preserve a
+  chain.
 
 Attribution and licence files live next to the assets:
 `QURAN_LICENSE.md` (Tanzil, CC BY 3.0) and `ADHKAR_LICENSE.md`
@@ -65,7 +72,8 @@ writes both the desktop and mobile Quran bundles from the same XML.
 - Seeders skip completed collections; the version gate avoids reading the
   1.7 MB Quran asset on every launch.
 - Tests use in-memory databases, real bundled assets and generated migration
-  snapshots.
+  snapshots. M2 adds schedule/timezone matrices, prayer logging and streak
+  tests, plus dashboard and settings widget tests.
 
 
 ## Requirements
