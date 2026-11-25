@@ -30,6 +30,7 @@
     void adhkar.load();
     adhkar.start();
     void adhan.init();
+    i18n.syncBackend();
     const cleanups: (() => void)[] = [];
 
     // Tray menu, global hotkeys and Windows media keys all arrive here.

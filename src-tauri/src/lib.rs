@@ -213,26 +213,76 @@ pub fn run() {
             adhan::get_close_to_tray,
             adhan::set_close_to_tray,
             adhan::test_adhan,
+            adhan::get_ui_locale,
+            adhan::set_ui_locale,
         ])
         .run(tauri::generate_context!())
         .expect("error while running the Sakeenah application");
 }
 
 fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
+    let locale = adhan::locale(&app.state::<AppState>().db);
+    let en = locale == "en";
     let next_prayer = MenuItem::with_id(
         app,
         "next_prayer",
-        "الصلاة القادمة: —",
+        if en {
+            "Next prayer: —"
+        } else {
+            "الصلاة القادمة: —"
+        },
         true,
         None::<&str>,
     )?;
-    let stop_adhan = MenuItem::with_id(app, "stop_adhan", "إيقاف الأذان", true, None::<&str>)?;
-    let show = MenuItem::with_id(app, "show", "إظهار Sakeenah", true, None::<&str>)?;
-    let hide = MenuItem::with_id(app, "hide", "إخفاء النافذة", true, None::<&str>)?;
-    let toggle = MenuItem::with_id(app, "toggle", "تشغيل / إيقاف", true, None::<&str>)?;
-    let previous = MenuItem::with_id(app, "previous", "السابق", true, None::<&str>)?;
-    let next = MenuItem::with_id(app, "next", "التالي", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "خروج", true, None::<&str>)?;
+    let stop_adhan = MenuItem::with_id(
+        app,
+        "stop_adhan",
+        if en { "Stop adhan" } else { "إيقاف الأذان" },
+        true,
+        None::<&str>,
+    )?;
+    let show = MenuItem::with_id(
+        app,
+        "show",
+        if en { "Show Sakeenah" } else { "إظهار Sakeenah" },
+        true,
+        None::<&str>,
+    )?;
+    let hide = MenuItem::with_id(
+        app,
+        "hide",
+        if en { "Hide window" } else { "إخفاء النافذة" },
+        true,
+        None::<&str>,
+    )?;
+    let toggle = MenuItem::with_id(
+        app,
+        "toggle",
+        if en { "Play / Pause" } else { "تشغيل / إيقاف" },
+        true,
+        None::<&str>,
+    )?;
+    let previous = MenuItem::with_id(
+        app,
+        "previous",
+        if en { "Previous" } else { "السابق" },
+        true,
+        None::<&str>,
+    )?;
+    let next = MenuItem::with_id(
+        app,
+        "next",
+        if en { "Next" } else { "التالي" },
+        true,
+        None::<&str>,
+    )?;
+    let quit = MenuItem::with_id(
+        app,
+        "quit",
+        if en { "Quit" } else { "خروج" },
+        true,
+        None::<&str>,
+    )?;
     let menu = Menu::with_items(
         app,
         &[
@@ -248,10 +298,19 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
             &quit,
         ],
     )?;
-    app.state::<adhan::TrayHandles>()
-        .next_prayer
-        .lock()
-        .replace(next_prayer);
+    {
+        let handles = app.state::<adhan::TrayHandles>();
+        handles.next_prayer.lock().replace(next_prayer);
+        *handles.items.lock() = vec![
+            (stop_adhan, "إيقاف الأذان", "Stop adhan"),
+            (show, "إظهار Sakeenah", "Show Sakeenah"),
+            (hide, "إخفاء النافذة", "Hide window"),
+            (toggle, "تشغيل / إيقاف", "Play / Pause"),
+            (previous, "السابق", "Previous"),
+            (next, "التالي", "Next"),
+            (quit, "خروج", "Quit"),
+        ];
+    }
 
     let mut builder = TrayIconBuilder::with_id("main")
         .tooltip("سَكينة · Sakeenah")

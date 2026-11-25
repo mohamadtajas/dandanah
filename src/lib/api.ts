@@ -423,4 +423,9 @@ export const api = {
     if (!isTauri) return (await mock()).setCloseToTray(enabled);
     return invoke<boolean>("set_close_to_tray", { enabled });
   },
+
+  setUiLocale: async (locale: "ar" | "en"): Promise<string> => {
+    if (!isTauri) return locale;
+    return invoke<string>("set_ui_locale", { locale });
+  },
 };

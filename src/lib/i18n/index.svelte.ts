@@ -1,3 +1,4 @@
+import { api } from "$lib/api";
 import { dictionaries, type Locale, type TranslationKey } from "./dict";
 
 const STORAGE_KEY = "sakeenah.locale";
@@ -29,6 +30,12 @@ class I18nStore {
     this.locale = locale;
     if (typeof localStorage !== "undefined") localStorage.setItem(STORAGE_KEY, locale);
     this.applyDocument();
+    void api.setUiLocale(locale).catch(() => {});
+  }
+
+  /** Persist the current locale so native tray/notification copy follows it. */
+  syncBackend() {
+    void api.setUiLocale(this.locale).catch(() => {});
   }
 
   toggle() {

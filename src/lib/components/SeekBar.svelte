@@ -4,12 +4,14 @@
     max,
     onseek,
     disabled = false,
+    label = "",
     class: klass = "",
   }: {
     value: number;
     max: number;
     onseek: (v: number) => void;
     disabled?: boolean;
+    label?: string;
     class?: string;
   } = $props();
 
@@ -47,6 +49,7 @@
   bind:this={bar}
   role="slider"
   tabindex={disabled ? -1 : 0}
+  aria-label={label || undefined}
   aria-valuemin={0}
   aria-valuemax={max}
   aria-valuenow={value}
@@ -56,8 +59,10 @@
   onpointercancel={up}
   onkeydown={(e) => {
     if (disabled) return;
-    if (e.key === "ArrowRight") onseek(Math.min(max, value + 5));
-    if (e.key === "ArrowLeft") onseek(Math.max(0, value - 5));
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") onseek(Math.min(max, value + 5));
+    if (e.key === "ArrowLeft" || e.key === "ArrowDown") onseek(Math.max(0, value - 5));
+    if (e.key === "Home") onseek(0);
+    if (e.key === "End") onseek(max);
   }}
   class="group relative h-2 w-full cursor-pointer touch-none select-none {disabled
     ? 'pointer-events-none opacity-50'

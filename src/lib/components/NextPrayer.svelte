@@ -11,6 +11,13 @@
   const unconfigured = $derived(!!worship.settings && !worship.settings.configured);
   const next = $derived(day?.next ?? null);
   const hijri = $derived(day?.hijri ?? null);
+  const hijriText = $derived(
+    hijri
+      ? i18n.locale === "ar"
+        ? hijri.formatted
+        : `${hijri.day} ${hijri.monthNameEn} ${hijri.year} AH`
+      : "",
+  );
   const streak = $derived(worship.streak);
   const excused = $derived(worship.todayLog.excused);
 
@@ -42,7 +49,7 @@
     <div class="relative flex flex-col gap-7 px-6 py-6 lg:flex-row lg:items-center lg:justify-between">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium text-gold/90">
-          <span class="flex items-center gap-1.5"><Icon name="moon" size={13} />{hijri?.formatted ?? ""}</span>
+          <span class="flex items-center gap-1.5"><Icon name="moon" size={13} />{hijriText}</span>
           <span class="text-muted/60">·</span>
           <span class="text-muted">{i18n.t("prayer.calculated")}</span>
         </div>

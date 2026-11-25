@@ -17,6 +17,7 @@ pub const PLAY_EVENT: &str = "adhan:play";
 /// Emitted by the tray so the webview can stop a playing adhan.
 pub const STOP_EVENT: &str = "adhan:stop";
 const CLOSE_TO_TRAY_KEY: &str = "desktop.closeToTray";
+const LOCALE_KEY: &str = "ui.locale";
 /// How late an alert may be and still fire. This is deliberately short so a
 /// laptop waking hours after a prayer does not play a stale adhan.
 pub const ALERT_WINDOW_S: i64 = 90;
@@ -119,6 +120,33 @@ pub fn close_to_tray(db: &Database) -> bool {
         .flatten()
         .map(|value| value != "0")
         .unwrap_or(true)
+}
+
+pub fn locale(db: &Database) -> String {
+    db.get_setting(LOCALE_KEY)
+        .ok()
+        .flatten()
+        .filter(|value| value == "en" || value == "ar")
+        .unwrap_or_else(|| "ar".to_string())
+}
+
+fn english(locale: &str) -> bool {
+    locale == "en"
+}
+
+fn prayer_label(locale: &str, key: &str, arabic: &str) -> String {
+    if !english(locale) {
+        return arabic.to_string();
+    }
+    match key {
+        "fajr" => "Fajr",
+        "dhuhr" => "Dhuhr",
+        "asr" => "Asr",
+        "maghrib" => "Maghrib",
+        "isha" => "Isha",
+        _ => key,
+    }
+    .to_string()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -303,33 +331,57 @@ impl AlertTracker {
     }
 }
 
-pub fn format_tray_text(next: &PrayerTime, remaining_s: i64) -> String {
+pub fn format_tray_text(next: &PrayerTime, remaining_s: i64, locale: &str) -> String {
     let minutes = if remaining_s <= 0 {
         0
     } else {
         (remaining_s + 59) / 60
     };
-    let left = if minutes >= 60 {
+    let left = if english(locale) {
+        if minutes >= 60 {
+            format!("{}h {}m", minutes / 60, minutes % 60)
+        } else {
+            format!("{minutes}m")
+        }
+    } else if minutes >= 60 {
         format!("{}س {}د", minutes / 60, minutes % 60)
     } else {
         format!("{minutes}د")
     };
-    format!(
-        "الصلاة القادمة: {} · {} — بعد {}",
-        next.name, next.time, left
-    )
+    let name = prayer_label(locale, &next.key, &next.name);
+    if english(locale) {
+        format!("Next prayer: {name} · {} — in {left}", next.time)
+    } else {
+        format!("الصلاة القادمة: {name} · {} — بعد {left}", next.time)
+    }
 }
 
 #[derive(Default)]
 pub struct TrayHandles {
     pub next_prayer: parking_lot::Mutex<Option<MenuItem<tauri::Wry>>>,
+    /// Static menu labels that follow the UI language.
+    pub items: parking_lot::Mutex<Vec<(MenuItem<tauri::Wry>, &'static str, &'static str)>>,
     pub last_text: parking_lot::Mutex<String>,
 }
 
-fn update_tray(app: &AppHandle, next: Option<&PrayerTime>, remaining_s: i64) {
+pub fn refresh_labels(app: &AppHandle) {
+    let locale = locale(&app.state::<AppState>().db);
+    let handles = app.state::<TrayHandles>();
+    for (item, arabic, english_text) in handles.items.lock().iter() {
+        let _ = item.set_text(if english(&locale) { *english_text } else { *arabic });
+    }
+}
+
+fn update_tray(app: &AppHandle, next: Option<&PrayerTime>, remaining_s: i64, locale: &str) {
     let text = match next {
-        Some(prayer) => format_tray_text(prayer, remaining_s),
-        None => "الصلاة القادمة: —".to_string(),
+        Some(prayer) => format_tray_text(prayer, remaining_s, locale),
+        None => {
+            if english(locale) {
+                "Next prayer: —".to_string()
+            } else {
+                "الصلاة القادمة: —".to_string()
+            }
+        }
     };
     let handles = app.state::<TrayHandles>();
     let mut last = handles.last_text.lock();
@@ -340,10 +392,27 @@ fn update_tray(app: &AppHandle, next: Option<&PrayerTime>, remaining_s: i64) {
         };
         if updated {
             if let Some(tray) = app.tray_by_id("main") {
-                let _ = tray.set_tooltip(Some(&format!("سَكينة — {text}")));
+                let prefix = if english(locale) { "Sakeenah" } else { "سَكينة" };
+                let _ = tray.set_tooltip(Some(&format!("{prefix} — {text}")));
             }
             *last = text;
         }
+    }
+}
+
+/// Recomputes the tray line immediately after a language change.
+pub fn refresh_tray_now(app: &AppHandle) {
+    let db = app.state::<AppState>().db.clone();
+    let settings = worship::load_settings(&db);
+    let locale = locale(&db);
+    let now = Utc::now();
+    if !settings.configured {
+        update_tray(app, None, 0, &locale);
+        return;
+    }
+    let date = now.with_timezone(&settings.timezone()).date_naive();
+    if let Ok(day) = worship::prayer_day(&settings, date, now) {
+        update_tray(app, day.next.as_ref(), day.remaining_s, &locale);
     }
 }
 
@@ -383,19 +452,20 @@ fn tick(app: &AppHandle, tracker: &mut AlertTracker) {
     let db = app.state::<AppState>().db.clone();
     let settings = worship::load_settings(&db);
     let adhan = load_settings(&db);
+    let locale = locale(&db);
     let now = Utc::now();
 
     if !settings.configured {
-        update_tray(app, None, 0);
+        update_tray(app, None, 0, &locale);
         return;
     }
 
     let date = now.with_timezone(&settings.timezone()).date_naive();
     let Ok(day) = worship::prayer_day(&settings, date, now) else {
-        update_tray(app, None, 0);
+        update_tray(app, None, 0, &locale);
         return;
     };
-    update_tray(app, day.next.as_ref(), day.remaining_s);
+    update_tray(app, day.next.as_ref(), day.remaining_s, &locale);
 
     if !adhan.enabled {
         return;
@@ -423,31 +493,43 @@ fn tick(app: &AppHandle, tracker: &mut AlertTracker) {
         .filter_map(|alert| plan_alert(alert, &adhan))
     {
         let alert = &planned.alert;
+        let name = prayer_label(&locale, &alert.prayer_key, &alert.prayer_name);
         if planned.toast {
             match alert.kind {
                 AlertKind::Pre => {
                     let remaining = ((alert.prayer_at() - now).num_seconds() + 59) / 60;
-                    notify(
-                        app,
-                        &format!(
-                            "بعد {} دقائق: {}",
-                            remaining.max(1),
-                            alert.prayer_name
-                        ),
-                        &format!(
-                            "اقترب موعد صلاة {} الساعة {}",
-                            alert.prayer_name, alert.time
-                        ),
-                        false,
-                    );
+                    if english(&locale) {
+                        notify(
+                            app,
+                            &format!("In {} minutes: {name}", remaining.max(1)),
+                            &format!("{name} is at {}", alert.time),
+                            false,
+                        );
+                    } else {
+                        notify(
+                            app,
+                            &format!("بعد {} دقائق: {name}", remaining.max(1)),
+                            &format!("اقترب موعد صلاة {name} الساعة {}", alert.time),
+                            false,
+                        );
+                    }
                 }
                 AlertKind::Adhan => {
-                    notify(
-                        app,
-                        &format!("حان وقت صلاة {}", alert.prayer_name),
-                        &format!("{} · {}", alert.prayer_name, alert.time),
-                        planned.silent_toast,
-                    );
+                    if english(&locale) {
+                        notify(
+                            app,
+                            &format!("It is time for {name}"),
+                            &format!("{name} · {}", alert.time),
+                            planned.silent_toast,
+                        );
+                    } else {
+                        notify(
+                            app,
+                            &format!("حان وقت صلاة {name}"),
+                            &format!("{name} · {}", alert.time),
+                            planned.silent_toast,
+                        );
+                    }
                 }
             }
         }
@@ -456,7 +538,7 @@ fn tick(app: &AppHandle, tracker: &mut AlertTracker) {
                 PLAY_EVENT,
                 AdhanPlayback {
                     prayer: alert.prayer_key.clone(),
-                    name: alert.prayer_name.clone(),
+                    name,
                     volume: adhan.volume,
                 },
             );
@@ -557,8 +639,35 @@ pub fn set_close_to_tray(
 #[tauri::command]
 pub fn test_adhan(app: AppHandle, state: State<'_, AppState>) -> AdhanSettings {
     let settings = load_settings(&state.db);
-    notify(&app, "اختبار الأذان", "سيُسمع الأذان الآن", true);
+    if english(&locale(&state.db)) {
+        notify(&app, "Adhan test", "The adhan will play now", true);
+    } else {
+        notify(&app, "اختبار الأذان", "سيُسمع الأذان الآن", true);
+    }
     settings
+}
+
+#[tauri::command]
+pub fn get_ui_locale(state: State<'_, AppState>) -> String {
+    locale(&state.db)
+}
+
+#[tauri::command]
+pub fn set_ui_locale(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    locale: String,
+) -> Result<String, String> {
+    if locale != "ar" && locale != "en" {
+        return Err("unsupported locale".into());
+    }
+    state
+        .db
+        .set_setting(LOCALE_KEY, &locale)
+        .map_err(|error| error.to_string())?;
+    refresh_labels(&app);
+    refresh_tray_now(&app);
+    Ok(locale)
 }
 
 #[cfg(test)]
@@ -810,9 +919,21 @@ mod tests {
     #[test]
     fn tray_text_includes_name_time_and_countdown() {
         let next = prayer("asr", "العصر", "2026-11-25T15:10:00+03:00");
-        let text = format_tray_text(&next, 2 * 3600 + 14 * 60);
+        let text = format_tray_text(&next, 2 * 3600 + 14 * 60, "ar");
         assert!(text.contains("العصر"));
         assert!(text.contains("15:10"));
         assert!(text.contains("2س 14د"));
+
+        let english = format_tray_text(&next, 14 * 60, "en");
+        assert!(english.contains("Next prayer: Asr"));
+        assert!(english.contains("15:10"));
+        assert!(english.contains("14m"));
+    }
+
+    #[test]
+    fn locale_labels_and_prayer_names_switch() {
+        assert_eq!(prayer_label("ar", "fajr", "الفجر"), "الفجر");
+        assert_eq!(prayer_label("en", "fajr", "الفجر"), "Fajr");
+        assert_eq!(prayer_label("en", "maghrib", "المغرب"), "Maghrib");
     }
 }

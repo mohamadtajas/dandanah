@@ -160,6 +160,7 @@
           max={player.duration || 0}
           disabled={!player.duration || player.isLive}
           onseek={(v) => player.seek(v)}
+          label={i18n.t("player.seek")}
         />
         <span class="w-9 shrink-0">{player.isLive ? "LIVE" : fmtTime(player.duration)}</span>
       </div>
@@ -188,6 +189,7 @@
           value={player.muted ? 0 : player.volume}
           max={1}
           onseek={(v) => player.setVolume(v)}
+          label={i18n.t("player.volume")}
         />
       </div>
       <button
