@@ -22,7 +22,11 @@ enum PrayerMethod {
     'لجنة رؤية الهلال',
     'Moonsighting Committee',
   ),
-  northAmerica('northAmerica', 'أمريكا الشمالية (ISNA)', 'North America (ISNA)'),
+  northAmerica(
+    'northAmerica',
+    'أمريكا الشمالية (ISNA)',
+    'North America (ISNA)',
+  ),
   kuwait('kuwait', 'الكويت', 'Kuwait'),
   qatar('qatar', 'قطر', 'Qatar'),
   singapore('singapore', 'سنغافورة', 'Singapore'),
@@ -36,9 +40,9 @@ enum PrayerMethod {
   final String englishName;
 
   static PrayerMethod byId(String id) => PrayerMethod.values.firstWhere(
-        (method) => method.id == id,
-        orElse: () => PrayerMethod.ummAlQura,
-      );
+    (method) => method.id == id,
+    orElse: () => PrayerMethod.ummAlQura,
+  );
 }
 
 /// Asr shadow rule. Shafi (and the other three schools) use shadow length 1;

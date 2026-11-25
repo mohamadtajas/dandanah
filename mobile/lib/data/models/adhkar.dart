@@ -50,10 +50,10 @@ class AdhkarSource {
   final String copyright;
 
   factory AdhkarSource.fromJson(Map<String, dynamic> json) => AdhkarSource(
-        title: json['title'] as String,
-        author: json['author'] as String,
-        repository: json['repository'] as String,
-        license: json['license'] as String,
-        copyright: json['copyright'] as String,
-      );
+    title: json['title'] as String,
+    author: json['author'] as String,
+    repository: json['repository'] as String,
+    license: json['license'] as String,
+    copyright: json['copyright'] as String,
+  );
 }

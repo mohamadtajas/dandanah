@@ -25,10 +25,7 @@ class DashboardPage extends StatelessWidget {
             gradient: LinearGradient(
               begin: AlignmentDirectional.topStart,
               end: AlignmentDirectional.bottomEnd,
-              colors: [
-                scheme.primary.withValues(alpha: 0.15),
-                scheme.surface,
-              ],
+              colors: [scheme.primary.withValues(alpha: 0.15), scheme.surface],
             ),
           ),
           child: Column(
@@ -52,23 +49,24 @@ class DashboardPage extends StatelessWidget {
               Text(
                 l10n.dashboardWelcome,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
-                    ),
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 l10n.dashboardSubtitle,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      height: 1.7,
-                    ),
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: scheme.onSurfaceVariant, height: 1.7),
               ),
               const SizedBox(height: 18),
               Row(
                 children: [
-                  Icon(Icons.menu_book_rounded,
-                      size: 15, color: scheme.secondary),
+                  Icon(
+                    Icons.menu_book_rounded,
+                    size: 15,
+                    color: scheme.secondary,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -77,10 +75,7 @@ class DashboardPage extends StatelessWidget {
                       style: SakeenahTheme.quran(
                         Theme.of(context).textTheme.titleLarge!,
                         size: 24,
-                      ).copyWith(
-                        color: scheme.onSurface,
-                        height: 1.4,
-                      ),
+                      ).copyWith(color: scheme.onSurface, height: 1.4),
                     ),
                   ),
                 ],

@@ -43,9 +43,8 @@ class QuranPage extends StatelessWidget {
               Text(
                 'الفاتحة · أول آيتين',
                 textDirection: TextDirection.rtl,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(color: scheme.onSurfaceVariant),
               ),
             ],
           ),

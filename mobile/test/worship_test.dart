@@ -8,25 +8,25 @@ void main() {
   group('prayer methods', () {
     test('twelve offline methods match the desktop catalogue', () {
       expect(PrayerMethod.values, hasLength(12));
-      expect(
-        PrayerMethod.values.map((method) => method.id).toSet(),
-        {
-          'ummAlQura',
-          'muslimWorldLeague',
-          'egyptian',
-          'karachi',
-          'dubai',
-          'moonsightingCommittee',
-          'northAmerica',
-          'kuwait',
-          'qatar',
-          'singapore',
-          'tehran',
-          'turkey',
-        },
-      );
+      expect(PrayerMethod.values.map((method) => method.id).toSet(), {
+        'ummAlQura',
+        'muslimWorldLeague',
+        'egyptian',
+        'karachi',
+        'dubai',
+        'moonsightingCommittee',
+        'northAmerica',
+        'kuwait',
+        'qatar',
+        'singapore',
+        'tehran',
+        'turkey',
+      });
       expect(PrayerMethod.values.every((m) => m.arabicName.isNotEmpty), isTrue);
-      expect(PrayerMethod.values.every((m) => m.englishName.isNotEmpty), isTrue);
+      expect(
+        PrayerMethod.values.every((m) => m.englishName.isNotEmpty),
+        isTrue,
+      );
       expect(PrayerMethod.byId('dubai'), PrayerMethod.dubai);
       expect(PrayerMethod.byId('unknown'), PrayerMethod.ummAlQura);
     });
@@ -70,7 +70,10 @@ void main() {
         method: PrayerMethod.muslimWorldLeague,
         utcOffset: const Duration(hours: 2),
       );
-      expect(times[PrayerName.fajr].isBefore(times[PrayerName.sunrise]), isTrue);
+      expect(
+        times[PrayerName.fajr].isBefore(times[PrayerName.sunrise]),
+        isTrue,
+      );
       expect(times[PrayerName.isha].isAfter(times[PrayerName.maghrib]), isTrue);
       expect(times[PrayerName.fajr].day, 21);
     });
@@ -86,20 +89,17 @@ void main() {
 
     test('adjustment moves the Hijri day and wraps at month end', () {
       final base = HijriDate.fromGregorian(DateTime(2026, 11, 26));
-      final plus = HijriDate.fromGregorian(DateTime(2026, 11, 26), adjustment: 1);
+      final plus = HijriDate.fromGregorian(
+        DateTime(2026, 11, 26),
+        adjustment: 1,
+      );
       final minus = HijriDate.fromGregorian(
         DateTime(2026, 11, 26),
         adjustment: -1,
       );
 
-      expect(
-        plus.toGregorian().difference(DateTime(2026, 11, 26)).inDays,
-        1,
-      );
-      expect(
-        minus.toGregorian().difference(DateTime(2026, 11, 26)).inDays,
-        -1,
-      );
+      expect(plus.toGregorian().difference(DateTime(2026, 11, 26)).inDays, 1);
+      expect(minus.toGregorian().difference(DateTime(2026, 11, 26)).inDays, -1);
       expect(plus.day, isNot(base.day));
       expect(minus.day, isNot(base.day));
       expect(base.year, greaterThan(1400));

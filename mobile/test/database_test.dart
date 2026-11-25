@@ -5,45 +5,48 @@ import 'package:sakeenah_mobile/data/db/app_database.dart';
 import 'generated_migrations/schema.dart';
 
 void main() {
-  test('fresh database contains content and user tables at version 2', () async {
-    final db = AppDatabase.memory();
-    addTearDown(db.close);
+  test(
+    'fresh database contains content and user tables at version 2',
+    () async {
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
 
-    final tables = await db
-        .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
-        .map((row) => row.read<String>('name'))
-        .get();
+      final tables = await db
+          .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
+          .map((row) => row.read<String>('name'))
+          .get();
 
-    expect(
-      tables,
-      containsAll([
-        'surahs',
-        'ayahs',
-        'juzs',
-        'quran_pages',
-        'adhkar_categories',
-        'adhkar_items',
-        'settings',
-        'bookmarks',
-        'reader_state',
-        'adhkar_progress',
-        'adhkar_logs',
-        'prayer_logs',
-      ]),
-    );
+      expect(
+        tables,
+        containsAll([
+          'surahs',
+          'ayahs',
+          'juzs',
+          'quran_pages',
+          'adhkar_categories',
+          'adhkar_items',
+          'settings',
+          'bookmarks',
+          'reader_state',
+          'adhkar_progress',
+          'adhkar_logs',
+          'prayer_logs',
+        ]),
+      );
 
-    final version = await db
-        .customSelect('PRAGMA user_version')
-        .map((row) => row.read<int>('user_version'))
-        .getSingle();
-    expect(version, 2);
+      final version = await db
+          .customSelect('PRAGMA user_version')
+          .map((row) => row.read<int>('user_version'))
+          .getSingle();
+      expect(version, 2);
 
-    final foreignKeys = await db
-        .customSelect('PRAGMA foreign_keys')
-        .map((row) => row.read<int>('foreign_keys'))
-        .getSingle();
-    expect(foreignKeys, 1);
-  });
+      final foreignKeys = await db
+          .customSelect('PRAGMA foreign_keys')
+          .map((row) => row.read<int>('foreign_keys'))
+          .getSingle();
+      expect(foreignKeys, 1);
+    },
+  );
 
   test('upgrade from v1 keeps Quran content and adds user tables', () async {
     final verifier = SchemaVerifier(GeneratedHelper());

@@ -16,8 +16,10 @@ void main() {
     final raw = await File('assets/data/adhkar.json').readAsString();
     final data = jsonDecode(raw) as Map<String, dynamic>;
     sourceTexts = {
-      for (final category in (data['categories'] as List).cast<Map<String, dynamic>>())
-        for (final item in (category['items'] as List).cast<Map<String, dynamic>>())
+      for (final category
+          in (data['categories'] as List).cast<Map<String, dynamic>>())
+        for (final item
+            in (category['items'] as List).cast<Map<String, dynamic>>())
           item['id'] as String: item['text'] as String,
     };
     await AdhkarSeeder.seed(db, raw);
@@ -58,22 +60,25 @@ void main() {
     expect(hundred.repeatCount, 100);
   });
 
-  test('every item has a positive repeat count and belongs to a category', () async {
-    final categories = await adhkar.categories();
-    var total = 0;
-    for (final category in categories) {
-      final items = await adhkar.itemsFor(category.id);
-      expect(items, hasLength(category.itemCount));
-      for (final item in items) {
-        expect(item.categoryId, category.id);
-        expect(item.repeatCount, greaterThan(0));
-        expect(item.text, isNotEmpty);
-        expect(item.text, sourceTexts[item.id]);
-        total++;
+  test(
+    'every item has a positive repeat count and belongs to a category',
+    () async {
+      final categories = await adhkar.categories();
+      var total = 0;
+      for (final category in categories) {
+        final items = await adhkar.itemsFor(category.id);
+        expect(items, hasLength(category.itemCount));
+        for (final item in items) {
+          expect(item.categoryId, category.id);
+          expect(item.repeatCount, greaterThan(0));
+          expect(item.text, isNotEmpty);
+          expect(item.text, sourceTexts[item.id]);
+          total++;
+        }
       }
-    }
-    expect(total, 302);
-  });
+      expect(total, 302);
+    },
+  );
 
   test('missing categories are empty rather than throwing', () async {
     expect(await adhkar.category('does-not-exist'), isNull);

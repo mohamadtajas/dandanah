@@ -29,25 +29,29 @@ class DriftAdhkarRepository implements AdhkarRepository {
 
   @override
   Future<AdhkarCategory?> category(String id) async {
-    final rows = await (_categoryQuery()..where(_db.adhkarCategories.id.equals(id)))
-        .getSingleOrNull();
+    final rows =
+        await (_categoryQuery()..where(_db.adhkarCategories.id.equals(id)))
+            .getSingleOrNull();
     return rows == null ? null : _category(rows);
   }
 
   @override
   Future<List<AdhkarItem>> itemsFor(String categoryId) async {
-    final rows = await (_db.select(_db.adhkarItems)
-          ..where((t) => t.categoryId.equals(categoryId))
-          ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
-        .get();
+    final rows =
+        await (_db.select(_db.adhkarItems)
+              ..where((t) => t.categoryId.equals(categoryId))
+              ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+            .get();
     return rows
-        .map((row) => AdhkarItem(
-              id: row.id,
-              categoryId: row.categoryId,
-              text: row.body,
-              repeatCount: row.repeatCount,
-              reference: row.source,
-            ))
+        .map(
+          (row) => AdhkarItem(
+            id: row.id,
+            categoryId: row.categoryId,
+            text: row.body,
+            repeatCount: row.repeatCount,
+            reference: row.source,
+          ),
+        )
         .toList(growable: false);
   }
 
@@ -62,15 +66,16 @@ class DriftAdhkarRepository implements AdhkarRepository {
     bool featuredOnly = false,
   }) {
     final count = _db.adhkarItems.id.count();
-    final query = _db.select(_db.adhkarCategories).join([
-      leftOuterJoin(
-        _db.adhkarItems,
-        _db.adhkarItems.categoryId.equalsExp(_db.adhkarCategories.id),
-      ),
-    ])
-      ..addColumns([count])
-      ..groupBy([_db.adhkarCategories.id])
-      ..orderBy([OrderingTerm.asc(_db.adhkarCategories.sortOrder)]);
+    final query =
+        _db.select(_db.adhkarCategories).join([
+            leftOuterJoin(
+              _db.adhkarItems,
+              _db.adhkarItems.categoryId.equalsExp(_db.adhkarCategories.id),
+            ),
+          ])
+          ..addColumns([count])
+          ..groupBy([_db.adhkarCategories.id])
+          ..orderBy([OrderingTerm.asc(_db.adhkarCategories.sortOrder)]);
     if (featuredOnly) {
       query.where(_db.adhkarCategories.featured.equals(true));
     }

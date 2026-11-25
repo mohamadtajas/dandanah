@@ -58,10 +58,7 @@ void main() {
     final kursi = await quran.ayah(2, 255);
     expect(kursi, isNotNull);
     expect(kursi!.text, source[(2, 255)]);
-    expect(
-      _bare(kursi.text),
-      startsWith('الله لا إله إلا هو الحي القيوم'),
-    );
+    expect(_bare(kursi.text), startsWith('الله لا إله إلا هو الحي القيوم'));
     expect(kursi.juz, 3);
     expect(kursi.page, 42);
 
@@ -93,7 +90,10 @@ void main() {
 
     final pages = await quran.pages();
     expect(pages, hasLength(604));
-    expect((pages.first.number, pages.first.surah, pages.first.ayah), (1, 1, 1));
+    expect(
+      (pages.first.number, pages.first.surah, pages.first.ayah),
+      (1, 1, 1),
+    );
     expect(pages.last.number, 604);
   });
 

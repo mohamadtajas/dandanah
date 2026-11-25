@@ -30,9 +30,7 @@ class FeaturePlaceholder extends StatelessWidget {
             decoration: BoxDecoration(
               color: scheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(26),
-              border: Border.all(
-                color: scheme.primary.withValues(alpha: 0.22),
-              ),
+              border: Border.all(color: scheme.primary.withValues(alpha: 0.22)),
             ),
             child: Icon(icon, size: 34, color: scheme.primary),
           ),
@@ -41,19 +39,15 @@ class FeaturePlaceholder extends StatelessWidget {
         Text(
           title,
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurface,
-              ),
+          style: Theme.of(context).textTheme.headlineSmall
+              ?.copyWith(fontWeight: FontWeight.w700, color: scheme.onSurface),
         ),
         const SizedBox(height: 8),
         Text(
           body,
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                height: 1.7,
-              ),
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: scheme.onSurfaceVariant, height: 1.7),
         ),
         const SizedBox(height: 16),
         Center(
@@ -73,10 +67,7 @@ class FeaturePlaceholder extends StatelessWidget {
             ),
           ),
         ),
-        if (child != null) ...[
-          const SizedBox(height: 24),
-          child!,
-        ],
+        if (child != null) ...[const SizedBox(height: 24), child!],
       ],
     );
   }

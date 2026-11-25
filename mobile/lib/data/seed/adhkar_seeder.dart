@@ -12,13 +12,15 @@ abstract final class AdhkarSeeder {
     if (await db.adhkarCategories.count().getSingle() > 0) return;
 
     final data = jsonDecode(json) as Map<String, dynamic>;
-    final categories =
-        (data['categories'] as List).cast<Map<String, dynamic>>();
+    final categories = (data['categories'] as List)
+        .cast<Map<String, dynamic>>();
     final itemRows = <AdhkarItemsCompanion>[];
 
-    for (var categoryIndex = 0;
-        categoryIndex < categories.length;
-        categoryIndex++) {
+    for (
+      var categoryIndex = 0;
+      categoryIndex < categories.length;
+      categoryIndex++
+    ) {
       final category = categories[categoryIndex];
       final items = (category['items'] as List).cast<Map<String, dynamic>>();
       for (var itemIndex = 0; itemIndex < items.length; itemIndex++) {

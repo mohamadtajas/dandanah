@@ -37,17 +37,15 @@ class _SettingsPageState extends State<SettingsPage> {
                   Text(
                     l10n.settingsOverview,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface,
-                        ),
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     l10n.settingsPlaceholder,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                          height: 1.6,
-                        ),
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: scheme.onSurfaceVariant, height: 1.6),
                   ),
                 ],
               ),
@@ -63,9 +61,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   Text(
                     l10n.themeSection,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface,
-                        ),
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   SegmentedButton<ThemeMode>(
@@ -96,9 +94,8 @@ class _SettingsPageState extends State<SettingsPage> {
           Center(
             child: Text(
               l10n.versionLine('0.1.0'),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+              style: Theme.of(context).textTheme.labelSmall
+                  ?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
         ],

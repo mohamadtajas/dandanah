@@ -8,6 +8,7 @@ double qiblaBearing(double latitude, double longitude) {
       (longitude - kaabaLongitude).abs() < 0.0001) {
     return 0;
   }
-  final direction = adhan.Qibla(adhan.Coordinates(latitude, longitude)).direction;
+  final direction = adhan.Qibla(adhan.Coordinates(latitude, longitude))
+      .direction;
   return direction % 360;
 }

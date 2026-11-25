@@ -24,24 +24,25 @@ abstract final class SakeenahColors {
 
 abstract final class SakeenahTheme {
   static ThemeData dark() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: SakeenahColors.gold,
-      brightness: Brightness.dark,
-    ).copyWith(
-      primary: SakeenahColors.gold,
-      onPrimary: SakeenahColors.ink950,
-      primaryContainer: SakeenahColors.ink800,
-      onPrimaryContainer: SakeenahColors.goldSoft,
-      secondary: SakeenahColors.teal,
-      onSecondary: SakeenahColors.ink950,
-      surface: SakeenahColors.ink900,
-      onSurface: SakeenahColors.cream,
-      onSurfaceVariant: SakeenahColors.muted,
-      outline: SakeenahColors.line,
-      outlineVariant: SakeenahColors.ink800,
-      error: const Color(0xFFEF6B6B),
-      onError: SakeenahColors.ink950,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: SakeenahColors.gold,
+          brightness: Brightness.dark,
+        ).copyWith(
+          primary: SakeenahColors.gold,
+          onPrimary: SakeenahColors.ink950,
+          primaryContainer: SakeenahColors.ink800,
+          onPrimaryContainer: SakeenahColors.goldSoft,
+          secondary: SakeenahColors.teal,
+          onSecondary: SakeenahColors.ink950,
+          surface: SakeenahColors.ink900,
+          onSurface: SakeenahColors.cream,
+          onSurfaceVariant: SakeenahColors.muted,
+          outline: SakeenahColors.line,
+          outlineVariant: SakeenahColors.ink800,
+          error: const Color(0xFFEF6B6B),
+          onError: SakeenahColors.ink950,
+        );
     return _base(
       scheme: scheme,
       scaffold: SakeenahColors.ink950,
@@ -51,23 +52,24 @@ abstract final class SakeenahTheme {
   }
 
   static ThemeData light() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: SakeenahColors.goldInk,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: SakeenahColors.goldInk,
-      onPrimary: Colors.white,
-      primaryContainer: SakeenahColors.paperDeep,
-      onPrimaryContainer: SakeenahColors.goldInk,
-      secondary: SakeenahColors.tealInk,
-      onSecondary: Colors.white,
-      surface: SakeenahColors.paper,
-      onSurface: SakeenahColors.paperInk,
-      onSurfaceVariant: SakeenahColors.paperMuted,
-      outline: SakeenahColors.paperLine,
-      outlineVariant: SakeenahColors.paperDeep,
-      error: const Color(0xFFB3261E),
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: SakeenahColors.goldInk,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: SakeenahColors.goldInk,
+          onPrimary: Colors.white,
+          primaryContainer: SakeenahColors.paperDeep,
+          onPrimaryContainer: SakeenahColors.goldInk,
+          secondary: SakeenahColors.tealInk,
+          onSecondary: Colors.white,
+          surface: SakeenahColors.paper,
+          onSurface: SakeenahColors.paperInk,
+          onSurfaceVariant: SakeenahColors.paperMuted,
+          outline: SakeenahColors.paperLine,
+          outlineVariant: SakeenahColors.paperDeep,
+          error: const Color(0xFFB3261E),
+        );
     return _base(
       scheme: scheme,
       scaffold: SakeenahColors.paper,
@@ -148,9 +150,6 @@ abstract final class SakeenahTheme {
   }
 
   /// Large Quran text uses the dedicated Amiri Quran face.
-  static TextStyle quran(TextStyle base, {double size = 28}) => base.copyWith(
-        fontFamily: 'AmiriQuran',
-        fontSize: size,
-        height: 1.9,
-      );
+  static TextStyle quran(TextStyle base, {double size = 28}) =>
+      base.copyWith(fontFamily: 'AmiriQuran', fontSize: size, height: 1.9);
 }

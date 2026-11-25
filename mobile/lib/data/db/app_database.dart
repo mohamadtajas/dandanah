@@ -68,8 +68,7 @@ class AdhkarCategories extends Table {
 @TableIndex(name: 'adhkar_items_category', columns: {#categoryId})
 class AdhkarItems extends Table {
   TextColumn get id => text()();
-  TextColumn get categoryId =>
-      text().references(AdhkarCategories, #id)();
+  TextColumn get categoryId => text().references(AdhkarCategories, #id)();
   TextColumn get body => text()();
   IntColumn get repeatCount => integer()();
   TextColumn get source => text()();
@@ -113,26 +112,26 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (migrator) async {
-          await migrator.createAll();
-        },
-        onUpgrade: (migrator, from, to) async {
-          if (from < 2) {
-            await migrator.createTable(settings);
-            await migrator.createTable(bookmarks);
-            await migrator.createIndex(bookmarksAyah);
-            await migrator.createTable(readerState);
-            await migrator.createTable(adhkarProgress);
-            await migrator.createTable(adhkarLogs);
-            await migrator.createIndex(adhkarLogsStreak);
-            await migrator.createTable(prayerLogs);
-            await migrator.createIndex(prayerLogsDate);
-          }
-        },
-        beforeOpen: (details) async {
-          await customStatement('PRAGMA foreign_keys = ON');
-        },
-      );
+    onCreate: (migrator) async {
+      await migrator.createAll();
+    },
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.createTable(settings);
+        await migrator.createTable(bookmarks);
+        await migrator.createIndex(bookmarksAyah);
+        await migrator.createTable(readerState);
+        await migrator.createTable(adhkarProgress);
+        await migrator.createTable(adhkarLogs);
+        await migrator.createIndex(adhkarLogsStreak);
+        await migrator.createTable(prayerLogs);
+        await migrator.createIndex(prayerLogsDate);
+      }
+    },
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
 }
 
 class Settings extends Table {
