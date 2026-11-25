@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:drift/drift.dart';
+import 'package:material_ui/material_ui.dart' show ThemeMode;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sakeenah_mobile/data/app_services.dart';
@@ -97,6 +98,12 @@ void main() {
 
     expect(() => AppServices.current, throwsStateError);
     await expectLater(db.customSelect('SELECT 1').get(), throwsA(anything));
+  });
+
+  test('theme mode defaults to dark and parses persisted light', () {
+    expect(AppServices.themeModeFrom(null), ThemeMode.dark);
+    expect(AppServices.themeModeFrom('dark'), ThemeMode.dark);
+    expect(AppServices.themeModeFrom('light'), ThemeMode.light);
   });
 }
 

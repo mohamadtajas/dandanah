@@ -32,7 +32,7 @@ class _AppShellState extends State<AppShell> {
     final pages = [
       DashboardPage(onSelectTab: _select),
       const QuranPage(),
-      const AdhkarPage(),
+      AdhkarPage(onSelectTab: _select),
       const AudioPage(),
     ];
     final titles = [

@@ -649,6 +649,18 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تعذر حفظ التقدم.'**
   String get adhkarActionError;
+
+  /// No description provided for @adhkarClearSearch.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسح البحث'**
+  String get adhkarClearSearch;
+
+  /// No description provided for @adhkarGoHome.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرئيسية'**
+  String get adhkarGoHome;
 }
 
 class _AppLocalizationsDelegate

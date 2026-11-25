@@ -143,5 +143,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "adhkarClearSearch": "Clear search",
+  "adhkarGoHome": "Home"
 }

@@ -96,6 +96,28 @@ void main() {
             sortOrder: 0,
           ),
         );
+    await db
+        .into(db.adhkarCategories)
+        .insert(
+          AdhkarCategoriesCompanion.insert(
+            id: 'test-long',
+            title: 'اختبار طويل',
+            featured: false,
+            sortOrder: 1003,
+          ),
+        );
+    await db
+        .into(db.adhkarItems)
+        .insert(
+          AdhkarItemsCompanion.insert(
+            id: 'test-long-1',
+            categoryId: 'test-long',
+            body: List.filled(120, 'ذكر طويل.').join(' '),
+            repeatCount: 1,
+            source: 'اختبار',
+            sortOrder: 0,
+          ),
+        );
   });
 
   tearDownAll(AppServices.shutdown);
@@ -257,7 +279,7 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 200));
 
-    await tester.tap(find.byIcon(Icons.chevron_left_rounded));
+    await tester.tap(find.byIcon(Icons.chevron_right_rounded));
     await tester.pumpAndSettle();
     expect(find.text('الثاني'), findsOneWidget);
 
@@ -281,6 +303,72 @@ void main() {
 
     expect(find.text('دُعَاءُ الاختبار'), findsOneWidget);
     expect(find.text('لا توجد نتائج'), findsNothing);
+  });
+
+  testWidgets('search keeps the typed query and can be cleared', (
+    tester,
+  ) async {
+    await pumpPage(tester, Scaffold(body: AdhkarPage(clock: () => _clock)));
+
+    await tester.enterText(find.byType(TextField), 'د');
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller?.text, 'د');
+    expect(find.text('أذكار مختارة'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('أذكار مختارة'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      isEmpty,
+    );
+  });
+
+  testWidgets('long dhikr keeps the counter pinned on screen', (tester) async {
+    final category = makeCategory('test-long', 'اختبار طويل', 1);
+    await pumpPage(
+      tester,
+      AdhkarCategoryPage(category: category, clock: () => _clock),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+
+    final counter = find.byKey(const ValueKey('adhkar-counter-test-long-1'));
+    expect(counter, findsOneWidget);
+    final rect = tester.getRect(counter);
+    expect(rect.top, greaterThanOrEqualTo(0));
+    expect(rect.bottom, lessThanOrEqualTo(844));
+  });
+
+  testWidgets('completion offers a home action', (tester) async {
+    var home = false;
+    final category = makeCategory(
+      'test-streak',
+      'اختبار السلسلة',
+      1,
+      streakKey: 'morning',
+    );
+    await pumpPage(
+      tester,
+      AdhkarCategoryPage(
+        category: category,
+        clock: () => _clock,
+        onGoHome: () => home = true,
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+
+    await tester.tap(
+      find.byKey(const ValueKey('adhkar-counter-test-streak-1')),
+    );
+    await tester.pump(const Duration(milliseconds: 450));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('الرئيسية'));
+    await tester.pumpAndSettle();
+
+    expect(home, isTrue);
   });
 
   testWidgets('resetting a completed section clears its streak log', (

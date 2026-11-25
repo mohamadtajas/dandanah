@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sakeenah_mobile/app.dart';
 import 'package:sakeenah_mobile/data/app_services.dart';
 import 'package:sakeenah_mobile/data/db/app_database.dart';
+import 'package:sakeenah_mobile/data/settings_store.dart';
 import 'package:sakeenah_mobile/features/settings/settings_page.dart';
 
 void main() {
@@ -63,6 +64,14 @@ void main() {
 
     final context = tester.element(find.byType(SettingsPage));
     expect(Theme.of(context).brightness, Brightness.light);
+    expect(AppServices.current.themeMode.value, ThemeMode.light);
+    expect(
+      await SettingsStore.read(
+        AppServices.current.database,
+        AppServices.themeKey,
+      ),
+      'light',
+    );
   });
 }
 

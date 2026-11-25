@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import 'db/app_database.dart';
@@ -80,7 +80,10 @@ class AppServices {
     this.prayerLog,
     this.prayerSettingsRepository,
     this.prayerSettings,
+    this.themeMode,
   );
+
+  static const themeKey = 'ui.theme';
 
   final AppDatabase database;
   final QuranRepository quran;
@@ -89,6 +92,10 @@ class AppServices {
   final PrayerLogRepository prayerLog;
   final PrayerSettingsRepository prayerSettingsRepository;
   final ValueNotifier<PrayerSettings> prayerSettings;
+  final ValueNotifier<ThemeMode> themeMode;
+
+  static ThemeMode themeModeFrom(String? raw) =>
+      raw == 'light' ? ThemeMode.light : ThemeMode.dark;
 
   static AppServices? _current;
 
@@ -109,6 +116,7 @@ class AppServices {
       await ContentBootstrap.seed(db, bundle ?? rootBundle);
       final settingsRepository = PrayerSettingsRepository(db);
       final settings = await settingsRepository.load();
+      final theme = themeModeFrom(await SettingsStore.read(db, themeKey));
       final services = AppServices._(
         db,
         DriftQuranRepository(db),
@@ -117,6 +125,7 @@ class AppServices {
         DriftPrayerLogRepository(db),
         settingsRepository,
         ValueNotifier(settings),
+        ValueNotifier(theme),
       );
       _current = services;
       return services;
@@ -131,10 +140,20 @@ class AppServices {
     prayerSettings.value = settings.sanitized();
   }
 
+  Future<void> updateThemeMode(ThemeMode mode) async {
+    themeMode.value = mode;
+    await SettingsStore.write(
+      database,
+      themeKey,
+      mode == ThemeMode.light ? 'light' : 'dark',
+    );
+  }
+
   static Future<void> shutdown() async {
     final services = _current;
     _current = null;
     services?.prayerSettings.dispose();
+    services?.themeMode.dispose();
     await services?.database.close();
   }
 }

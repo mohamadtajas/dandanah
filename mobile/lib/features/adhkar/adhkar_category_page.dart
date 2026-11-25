@@ -10,12 +10,18 @@ import '../../data/worship/timezone_bootstrap.dart';
 import '../../l10n/app_localizations.dart';
 
 class AdhkarCategoryPage extends StatefulWidget {
-  const AdhkarCategoryPage({super.key, required this.category, this.clock});
+  const AdhkarCategoryPage({
+    super.key,
+    required this.category,
+    this.clock,
+    this.onGoHome,
+  });
 
   final AdhkarCategory category;
 
   /// Test seam; defaults to [DateTime.now].
   final DateTime Function()? clock;
+  final VoidCallback? onGoHome;
 
   @override
   State<AdhkarCategoryPage> createState() => _AdhkarCategoryPageState();
@@ -207,6 +213,16 @@ class _AdhkarCategoryPageState extends State<AdhkarCategoryPage> {
               : l10n.adhkarCompletedBodyGeneric,
         ),
         actions: [
+          if (widget.onGoHome != null)
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                final navigator = Navigator.of(this.context);
+                if (navigator.canPop()) navigator.pop();
+                widget.onGoHome!();
+              },
+              child: Text(l10n.adhkarGoHome),
+            ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(l10n.adhkarClose),
@@ -362,40 +378,42 @@ class _AdhkarCategoryPageState extends State<AdhkarCategoryPage> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 18),
-                  child: Row(
-                    children: [
-                      IconButton.filledTonal(
-                        tooltip: l10n.adhkarPrevious,
-                        onPressed: _index == 0
-                            ? null
-                            : () => _pages.previousPage(
-                                duration: const Duration(milliseconds: 220),
-                                curve: Curves.easeOut,
-                              ),
-                        icon: const Icon(Icons.chevron_right_rounded),
-                      ),
-                      Expanded(
-                        child: Text(
-                          '${_index + 1} / ${_items.length}',
-                          textAlign: TextAlign.center,
-                          textDirection: TextDirection.ltr,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: scheme.onSurfaceVariant,
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Row(
+                      children: [
+                        IconButton.filledTonal(
+                          tooltip: l10n.adhkarPrevious,
+                          onPressed: _index == 0
+                              ? null
+                              : () => _pages.previousPage(
+                                  duration: const Duration(milliseconds: 220),
+                                  curve: Curves.easeOut,
+                                ),
+                          icon: const Icon(Icons.chevron_left_rounded),
+                        ),
+                        Expanded(
+                          child: Text(
+                            '${_index + 1} / ${_items.length}',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
-                      ),
-                      IconButton.filledTonal(
-                        tooltip: l10n.adhkarNext,
-                        onPressed: _index >= _items.length - 1
-                            ? null
-                            : () => _pages.nextPage(
-                                duration: const Duration(milliseconds: 220),
-                                curve: Curves.easeOut,
-                              ),
-                        icon: const Icon(Icons.chevron_left_rounded),
-                      ),
-                    ],
+                        IconButton.filledTonal(
+                          tooltip: l10n.adhkarNext,
+                          onPressed: _index >= _items.length - 1
+                              ? null
+                              : () => _pages.nextPage(
+                                  duration: const Duration(milliseconds: 220),
+                                  curve: Curves.easeOut,
+                                ),
+                          icon: const Icon(Icons.chevron_right_rounded),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -423,115 +441,133 @@ class _AdhkarItemPage extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final done = count >= item.repeatCount;
     final remaining = (item.repeatCount - count).clamp(0, item.repeatCount);
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(22),
-              child: Text(
-                item.text,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 20,
-                  height: 1.9,
-                  color: scheme.onSurface,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (item.reference.isNotEmpty)
-            Text(
-              item.reference,
-              style: TextStyle(
-                fontSize: 10,
-                height: 1.6,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          const SizedBox(height: 22),
-          Center(
-            child: Semantics(
-              button: true,
-              enabled: !done,
-              excludeSemantics: true,
-              label: done ? l10n.adhkarDone : l10n.adhkarTapToCount,
-              value: l10n.adhkarRemaining('$remaining'),
-              child: InkWell(
-                key: ValueKey('adhkar-counter-${item.id}'),
-                onTap: done ? null : onTap,
-                borderRadius: BorderRadius.circular(999),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 150,
-                  height: 150,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: done
-                        ? scheme.primary.withValues(alpha: 0.16)
-                        : scheme.surface,
-                    border: Border.all(
-                      color: done ? scheme.primary : scheme.outline,
-                      width: 2,
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Text(
+                      item.text,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 20,
+                        height: 1.9,
+                        color: scheme.onSurface,
+                      ),
                     ),
                   ),
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (done)
-                              Icon(
-                                Icons.check_circle_rounded,
-                                size: 42,
-                                color: scheme.primary,
-                              )
-                            else
-                              Text(
-                                '$remaining',
-                                style: TextStyle(
-                                  fontSize: 46,
-                                  fontWeight: FontWeight.w800,
-                                  color: scheme.primary,
-                                  height: 1,
+                ),
+                const SizedBox(height: 12),
+                if (item.reference.isNotEmpty)
+                  Text(
+                    item.reference,
+                    style: TextStyle(
+                      fontSize: 10,
+                      height: 1.6,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: scheme.surface.withValues(alpha: 0.92),
+            border: Border(top: BorderSide(color: scheme.outline)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Semantics(
+                  button: true,
+                  enabled: !done,
+                  excludeSemantics: true,
+                  label: done ? l10n.adhkarDone : l10n.adhkarTapToCount,
+                  value: l10n.adhkarRemaining('$remaining'),
+                  child: InkWell(
+                    key: ValueKey('adhkar-counter-${item.id}'),
+                    onTap: done ? null : onTap,
+                    borderRadius: BorderRadius.circular(999),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 150,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: done
+                            ? scheme.primary.withValues(alpha: 0.16)
+                            : scheme.surface,
+                        border: Border.all(
+                          color: done ? scheme.primary : scheme.outline,
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (done)
+                                  Icon(
+                                    Icons.check_circle_rounded,
+                                    size: 42,
+                                    color: scheme.primary,
+                                  )
+                                else
+                                  Text(
+                                    '$remaining',
+                                    style: TextStyle(
+                                      fontSize: 46,
+                                      fontWeight: FontWeight.w800,
+                                      color: scheme.primary,
+                                      height: 1,
+                                    ),
+                                  ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  done
+                                      ? l10n.adhkarDone
+                                      : l10n.adhkarTapToCount,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: scheme.onSurfaceVariant,
+                                  ),
                                 ),
-                              ),
-                            const SizedBox(height: 8),
-                            Text(
-                              done ? l10n.adhkarDone : l10n.adhkarTapToCount,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: scheme.onSurfaceVariant,
-                              ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
-          if (done)
-            Center(
-              child: TextButton.icon(
-                onPressed: onReset,
-                icon: const Icon(Icons.restart_alt_rounded, size: 16),
-                label: Text(
-                  l10n.adhkarResetItem,
-                  style: const TextStyle(fontSize: 10),
+              if (done)
+                TextButton.icon(
+                  onPressed: onReset,
+                  icon: const Icon(Icons.restart_alt_rounded, size: 16),
+                  label: Text(
+                    l10n.adhkarResetItem,
+                    style: const TextStyle(fontSize: 10),
+                  ),
                 ),
-              ),
-            ),
-        ],
-      ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

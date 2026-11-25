@@ -12,10 +12,11 @@ import '../../l10n/app_localizations.dart';
 import 'adhkar_category_page.dart';
 
 class AdhkarPage extends StatefulWidget {
-  const AdhkarPage({super.key, this.clock});
+  const AdhkarPage({super.key, this.clock, this.onSelectTab});
 
   /// Test seam; defaults to [DateTime.now].
   final DateTime Function()? clock;
+  final ValueChanged<int>? onSelectTab;
 
   @override
   State<AdhkarPage> createState() => _AdhkarPageState();
@@ -23,6 +24,7 @@ class AdhkarPage extends StatefulWidget {
 
 class _AdhkarPageState extends State<AdhkarPage> {
   late final AppServices _services = AppServices.current;
+  final TextEditingController _search = TextEditingController();
   Timer? _dateTimer;
   AppLifecycleListener? _lifecycle;
   List<AdhkarCategory> _categories = const [];
@@ -31,7 +33,6 @@ class _AdhkarPageState extends State<AdhkarPage> {
   AdhkarStreak? _streak;
   bool _loading = true;
   bool _failed = false;
-  String _query = '';
   late String _date = _todayKey();
   int _loadToken = 0;
 
@@ -49,6 +50,7 @@ class _AdhkarPageState extends State<AdhkarPage> {
 
   @override
   void dispose() {
+    _search.dispose();
     _dateTimer?.cancel();
     _lifecycle?.dispose();
     _services.prayerSettings.removeListener(_checkDate);
@@ -74,18 +76,13 @@ class _AdhkarPageState extends State<AdhkarPage> {
         today,
       );
       final streak = await _services.adhkarPractice.streak(today);
-      final itemText = await _services.adhkar.itemTextByCategory();
+      final searchIndex = await _services.adhkar.searchIndex();
       if (!mounted || token != _loadToken) return;
       setState(() {
         _categories = categories;
         _progress = progress;
         _streak = streak;
-        _searchIndex = {
-          for (final category in categories)
-            category.id: normalizeArabic(
-              '${category.title} ${itemText[category.id] ?? ''}',
-            ),
-        };
+        _searchIndex = searchIndex;
         _date = today;
         _loading = false;
         _failed = false;
@@ -111,11 +108,19 @@ class _AdhkarPageState extends State<AdhkarPage> {
     _haptic(HapticFeedback.selectionClick);
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            AdhkarCategoryPage(category: category, clock: widget.clock),
+        builder: (_) => AdhkarCategoryPage(
+          category: category,
+          clock: widget.clock,
+          onGoHome: widget.onSelectTab == null
+              ? null
+              : () => widget.onSelectTab!(0),
+        ),
       ),
     );
-    if (mounted) _load();
+    if (!mounted) return;
+    _search.clear();
+    setState(() {});
+    _load();
   }
 
   void _haptic(Future<void> Function() action) {
@@ -158,7 +163,7 @@ class _AdhkarPageState extends State<AdhkarPage> {
     final featured = _categories
         .where((category) => category.featured)
         .toList();
-    final query = normalizeArabic(_query);
+    final query = normalizeArabic(_search.text);
     final filtered = query.isEmpty
         ? _categories.where((category) => !category.featured).toList()
         : _categories
@@ -172,31 +177,12 @@ class _AdhkarPageState extends State<AdhkarPage> {
       padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
       children: [
         _StreakHeader(streak: _streak),
-        if (query.isEmpty) ...[
-          const SizedBox(height: 18),
-          _SectionTitle(text: l10n.adhkarFeatured),
-          const SizedBox(height: 10),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final width = (constraints.maxWidth - 12) / 2;
-              return Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  for (final category in featured)
-                    SizedBox(
-                      width: width,
-                      child: _FeaturedCard(
-                        category: category,
-                        progress: _progress[category.id],
-                        onTap: () => _open(category),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-        ],
+        _FeaturedSection(
+          visible: query.isEmpty,
+          categories: featured,
+          progress: _progress,
+          onOpen: _open,
+        ),
         const SizedBox(height: 18),
         Row(
           children: [
@@ -210,11 +196,23 @@ class _AdhkarPageState extends State<AdhkarPage> {
         ),
         const SizedBox(height: 8),
         TextField(
-          onChanged: (value) => setState(() => _query = value),
+          key: const ValueKey('adhkar-search'),
+          controller: _search,
+          onChanged: (_) => setState(() {}),
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
             hintText: l10n.adhkarSearch,
             prefixIcon: const Icon(Icons.search_rounded, size: 19),
+            suffixIcon: _search.text.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: l10n.adhkarClearSearch,
+                    onPressed: () {
+                      _search.clear();
+                      setState(() {});
+                    },
+                    icon: const Icon(Icons.close_rounded, size: 18),
+                  ),
           ),
         ),
         const SizedBox(height: 8),
@@ -414,6 +412,54 @@ class _SectionTitle extends StatelessWidget {
       color: Theme.of(context).colorScheme.onSurface,
     ),
   );
+}
+
+class _FeaturedSection extends StatelessWidget {
+  const _FeaturedSection({
+    required this.visible,
+    required this.categories,
+    required this.progress,
+    required this.onOpen,
+  });
+
+  final bool visible;
+  final List<AdhkarCategory> categories;
+  final Map<String, AdhkarCategoryProgress> progress;
+  final ValueChanged<AdhkarCategory> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!visible) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 18),
+        _SectionTitle(text: l10n.adhkarFeatured),
+        const SizedBox(height: 10),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = (constraints.maxWidth - 12) / 2;
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                for (final category in categories)
+                  SizedBox(
+                    width: width,
+                    child: _FeaturedCard(
+                      category: category,
+                      progress: progress[category.id],
+                      onTap: () => onOpen(category),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
 }
 
 class _FeaturedCard extends StatelessWidget {

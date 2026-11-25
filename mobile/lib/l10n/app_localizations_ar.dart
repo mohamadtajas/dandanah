@@ -307,4 +307,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get adhkarActionError => 'تعذر حفظ التقدم.';
+
+  @override
+  String get adhkarClearSearch => 'مسح البحث';
+
+  @override
+  String get adhkarGoHome => 'الرئيسية';
 }

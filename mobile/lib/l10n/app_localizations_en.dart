@@ -307,4 +307,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adhkarActionError => 'Could not save progress.';
+
+  @override
+  String get adhkarClearSearch => 'Clear search';
+
+  @override
+  String get adhkarGoHome => 'Home';
 }
