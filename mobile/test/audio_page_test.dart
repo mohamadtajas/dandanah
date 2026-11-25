@@ -115,6 +115,33 @@ void main() {
     expect(playback.repeat, AudioRepeatMode.one);
   });
 
+  testWidgets('unknown duration disables seek and shows a placeholder', (
+    tester,
+  ) async {
+    await playback.playQueue(tracks());
+    await pump(tester, PlayerPage(playback: playback));
+
+    final slider = tester.widget<Slider>(
+      find.byKey(const ValueKey('audio-seek')),
+    );
+    expect(slider.onChanged, isNull);
+    expect(find.text('--:--'), findsOneWidget);
+
+    engine.emit(
+      engine.current.copyWith(
+        duration: const Duration(seconds: 10),
+        position: const Duration(seconds: 2),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final ready = tester.widget<Slider>(
+      find.byKey(const ValueKey('audio-seek')),
+    );
+    expect(ready.onChanged, isNotNull);
+    expect(find.text('0:10'), findsOneWidget);
+  });
+
   testWidgets('mini player stays hidden until something plays', (tester) async {
     await pump(tester, MiniPlayer(playback: playback));
     expect(find.text('الفاتحة'), findsNothing);

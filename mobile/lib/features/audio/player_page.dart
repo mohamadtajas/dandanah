@@ -29,8 +29,16 @@ class PlayerPage extends StatelessWidget {
             return Center(child: Text(l10n.audioQueueEmpty));
           }
           final duration = playback.duration;
-          final seconds = playback.position.inMilliseconds / 1000.0;
-          final maxSeconds = duration.inMilliseconds / 1000.0;
+          final hasDuration = duration > Duration.zero;
+          final maxSeconds = hasDuration
+              ? duration.inMilliseconds / 1000.0
+              : 1.0;
+          final seconds = hasDuration
+              ? (playback.position.inMilliseconds / 1000.0).clamp(
+                  0.0,
+                  maxSeconds,
+                )
+              : 0.0;
           return ListView(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
             children: [
@@ -69,11 +77,13 @@ class PlayerPage extends StatelessWidget {
               const SizedBox(height: 18),
               Slider(
                 key: const ValueKey('audio-seek'),
-                value: seconds.clamp(0, maxSeconds <= 0 ? 1 : maxSeconds),
-                max: maxSeconds <= 0 ? 1 : maxSeconds,
-                onChanged: (value) => playback.seek(
-                  Duration(milliseconds: (value * 1000).round()),
-                ),
+                value: seconds,
+                max: maxSeconds,
+                onChanged: hasDuration
+                    ? (value) => playback.seek(
+                        Duration(milliseconds: (value * 1000).round()),
+                      )
+                    : null,
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -86,7 +96,7 @@ class PlayerPage extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    _time(duration),
+                    hasDuration ? _time(duration) : '--:--',
                     style: TextStyle(
                       fontSize: 10,
                       color: scheme.onSurfaceVariant,
