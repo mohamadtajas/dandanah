@@ -87,5 +87,7 @@
       }
     }
   },
-  "prayerInvalidCoordinates": "Enter valid coordinates."
+  "prayerInvalidCoordinates": "Enter valid coordinates.",
+  "prayerTimesUnavailable": "Prayer times are not available for this location and date. Try another location or a lower latitude.",
+  "settingsSaveFailed": "Could not save settings. Try again."
 }

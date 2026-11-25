@@ -46,13 +46,20 @@ class PrayerTimesService {
     PrayerMadhab madhab = PrayerMadhab.shafi,
     PrayerHighLatitude highLatitude = PrayerHighLatitude.recommended,
   }) {
-    final parameters = _calculationMethod(method).getParameters()
+    final parameters = _calculationMethod(method).getParameters();
+    var rule = highLatitude.effectiveFor(latitude);
+    if (rule == PrayerHighLatitude.twilightAngle &&
+        parameters.ishaAngle == null) {
+      // Interval-based methods (Umm al-Qura, Qatar) have no Isha angle, so the
+      // adhan port cannot apply the twilight-angle rule. Middle-of-the-night is
+      // the safe desktop-compatible fallback.
+      rule = PrayerHighLatitude.middleOfTheNight;
+    }
+    parameters
       ..madhab = madhab == PrayerMadhab.hanafi
           ? adhan.Madhab.hanafi
           : adhan.Madhab.shafi
-      ..highLatitudeRule = _highLatitudeRule(
-        highLatitude.effectiveFor(latitude),
-      );
+      ..highLatitudeRule = _highLatitudeRule(rule);
 
     final raw = adhan.PrayerTimes.utc(
       adhan.Coordinates(latitude, longitude),

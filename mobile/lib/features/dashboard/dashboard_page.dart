@@ -27,6 +27,7 @@ class _DashboardPageState extends State<DashboardPage> {
   DateTime _now = DateTime.now().toUtc();
   PrayerDay? _day;
   PrayerStreak? _streak;
+  bool _unavailable = false;
   int _loadToken = 0;
 
   @override
@@ -57,12 +58,26 @@ class _DashboardPageState extends State<DashboardPage> {
 
   void _refresh({bool loadDay = true}) {
     _now = _nowUtc();
-    final schedule = const PrayerScheduleService().build(
+    final schedule = const PrayerScheduleService().tryBuild(
       _services.prayerSettings.value,
       nowUtc: _now,
     );
+    if (schedule == null) {
+      if (mounted) {
+        setState(() {
+          _schedule = null;
+          _unavailable = true;
+        });
+      }
+      return;
+    }
     final dateChanged = _schedule?.dateKey != schedule.dateKey;
-    if (mounted) setState(() => _schedule = schedule);
+    if (mounted) {
+      setState(() {
+        _schedule = schedule;
+        _unavailable = false;
+      });
+    }
     if (loadDay || dateChanged) _loadDay(schedule.dateKey);
   }
 
@@ -77,17 +92,21 @@ class _DashboardPageState extends State<DashboardPage> {
     });
   }
 
-  Future<void> _setStatus(PrayerName prayer, PrayerStatus? status) async {
-    final date = _schedule?.dateKey;
-    if (date == null) return;
-    await _services.prayerLog.setStatus(date, prayer, status);
-    await _loadDay(date);
+  Future<void> _setStatus(PrayerSlot slot, PrayerStatus? status) async {
+    final schedule = _schedule;
+    if (schedule == null) return;
+    if (status != null && !schedule.passedAt(slot.name, _now)) return;
+    await _services.prayerLog.setStatus(slot.ownerDate, slot.name, status);
+    final today = _schedule?.dateKey;
+    if (today != null) await _loadDay(today);
   }
 
-  Future<void> _togglePrayer(PrayerName prayer) async {
-    final current = _day?.statusOf(prayer);
+  Future<void> _togglePrayer(PrayerSlot slot) async {
+    final current = slot.ownerDate == _schedule?.dateKey
+        ? _day?.statusOf(slot.name)
+        : null;
     await _setStatus(
-      prayer,
+      slot,
       current?.countsAsDone == true ? null : PrayerStatus.onTime,
     );
   }
@@ -102,6 +121,7 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final schedule = _schedule;
+    if (_unavailable) return _UnavailableView();
     if (schedule == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -123,7 +143,10 @@ class _DashboardPageState extends State<DashboardPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       l10n.prayerToday,
@@ -132,7 +155,6 @@ class _DashboardPageState extends State<DashboardPage> {
                         color: scheme.onSurface,
                       ),
                     ),
-                    const Spacer(),
                     Text(
                       schedule.hijri.formatAr(),
                       style: Theme.of(context).textTheme.labelSmall
@@ -141,25 +163,31 @@ class _DashboardPageState extends State<DashboardPage> {
                   ],
                 ),
                 const SizedBox(height: 10),
-                for (final slot in schedule.today) ...[
+                for (final slot in schedule.displayAt(_now)) ...[
                   if (slot.name == PrayerName.sunrise)
                     _SunriseRow(slot: slot, label: l10n.sunrise)
                   else
                     _PrayerRow(
-                      key: ValueKey('prayer-${slot.name.id}'),
+                      key: ValueKey('prayer-${slot.ownerDate}-${slot.name.id}'),
                       slot: slot,
-                      status: _day?.statusOf(slot.name),
+                      status: slot.ownerDate == schedule.dateKey
+                          ? _day?.statusOf(slot.name)
+                          : null,
                       excused: _day?.excused ?? false,
                       passed: schedule.passedAt(slot.name, _now),
-                      onTap: () => _togglePrayer(slot.name),
-                      onAction: (action) =>
-                          _setStatus(slot.name, switch (action) {
-                            PrayerAction.onTime => PrayerStatus.onTime,
-                            PrayerAction.late => PrayerStatus.late,
-                            PrayerAction.qada => PrayerStatus.qada,
-                            PrayerAction.missed => PrayerStatus.missed,
-                            PrayerAction.clear => null,
-                          }),
+                      enabled:
+                          schedule.passedAt(slot.name, _now) ||
+                          (slot.ownerDate == schedule.dateKey &&
+                              _day?.statusOf(slot.name) != null) ||
+                          (_day?.excused ?? false),
+                      onTap: () => _togglePrayer(slot),
+                      onAction: (action) => _setStatus(slot, switch (action) {
+                        PrayerAction.onTime => PrayerStatus.onTime,
+                        PrayerAction.late => PrayerStatus.late,
+                        PrayerAction.qada => PrayerStatus.qada,
+                        PrayerAction.missed => PrayerStatus.missed,
+                        PrayerAction.clear => null,
+                      }),
                     ),
                   if (slot.name != PrayerName.isha)
                     Divider(
@@ -221,6 +249,35 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 }
 
+class _UnavailableView extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.explore_off_outlined, size: 36, color: scheme.primary),
+            const SizedBox(height: 12),
+            Text(
+              l10n.prayerTimesUnavailable,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.7,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _PrayerHero extends StatelessWidget {
   const _PrayerHero({
     required this.schedule,
@@ -265,12 +322,15 @@ class _PrayerHero extends StatelessWidget {
                           color: scheme.primary,
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          l10n.prayerNext,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w500,
+                        Flexible(
+                          child: Text(
+                            l10n.prayerNext,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: scheme.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
@@ -423,6 +483,7 @@ class _PrayerRow extends StatelessWidget {
     required this.status,
     required this.excused,
     required this.passed,
+    required this.enabled,
     required this.onTap,
     required this.onAction,
   });
@@ -431,6 +492,7 @@ class _PrayerRow extends StatelessWidget {
   final PrayerStatus? status;
   final bool excused;
   final bool passed;
+  final bool enabled;
   final VoidCallback onTap;
   final ValueChanged<PrayerAction> onAction;
 
@@ -441,7 +503,7 @@ class _PrayerRow extends StatelessWidget {
     final done = status?.countsAsDone ?? false;
     final muted = !passed && status == null;
     return InkWell(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -492,6 +554,7 @@ class _PrayerRow extends StatelessWidget {
               ),
             ),
             PopupMenuButton<PrayerAction>(
+              enabled: enabled,
               tooltip: MaterialLocalizations.of(context).showMenuTooltip,
               icon: Icon(
                 Icons.more_vert_rounded,
@@ -570,7 +633,7 @@ class _SunriseRow extends StatelessWidget {
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
-          const SizedBox(width: 30),
+          const SizedBox(width: 48),
         ],
       ),
     );

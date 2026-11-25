@@ -14,39 +14,44 @@ class QiblaDial extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final degrees = bearing.round();
+    final degrees = bearing.round() % 360;
     return Semantics(
       label: l10n.qiblaBearing('$degrees'),
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: CustomPaint(
-          painter: _QiblaPainter(
-            bearing: bearing,
-            line: scheme.outline,
-            accent: scheme.primary,
-            muted: scheme.onSurfaceVariant,
-            surface: scheme.surface,
-            textStyle: Theme.of(context).textTheme.labelSmall!,
-          ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.mosque_rounded, size: 18, color: scheme.primary),
-                const SizedBox(height: 2),
-                Text(
-                  '$degrees°',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.primary,
-                  ),
+      excludeSemantics: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: size,
+            height: size,
+            child: CustomPaint(
+              painter: _QiblaPainter(
+                bearing: degrees.toDouble(),
+                line: scheme.outline,
+                accent: scheme.primary,
+                muted: scheme.onSurfaceVariant,
+                surface: scheme.surface,
+                textStyle: Theme.of(context).textTheme.labelSmall!,
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.mosque_rounded,
+                  size: 17,
+                  color: scheme.primary,
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+          const SizedBox(height: 2),
+          Text(
+            '$degrees°',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: scheme.primary,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -95,7 +100,7 @@ class _QiblaPainter extends CustomPainter {
     const directions = ['N', 'E', 'S', 'W'];
     for (var i = 0; i < 4; i++) {
       final angle = i * math.pi / 2 - math.pi / 2;
-      final offset = Offset(math.cos(angle), math.sin(angle)) * (radius - 16);
+      final offset = Offset(math.cos(angle), math.sin(angle)) * (radius - 14);
       final painter = TextPainter(
         text: TextSpan(
           text: directions[i],
@@ -116,17 +121,19 @@ class _QiblaPainter extends CustomPainter {
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(bearing * math.pi / 180);
+    final start = -radius * 0.3;
+    final tip = -(radius - 30);
     final arrow = Path()
-      ..moveTo(0, -radius + 24)
-      ..lineTo(6, 4)
-      ..lineTo(0, 0)
-      ..lineTo(-6, 4)
+      ..moveTo(0, start)
+      ..lineTo(4.5, tip + 9)
+      ..lineTo(0, tip)
+      ..lineTo(-4.5, tip + 9)
       ..close();
     canvas.drawPath(arrow, Paint()..color = accent);
-    final kaaba = Paint()..color = surface;
-    canvas.drawRect(Rect.fromLTWH(-6, -radius + 18, 12, 12), kaaba);
+    final marker = Rect.fromLTWH(-5, -(radius - 22), 10, 10);
+    canvas.drawRect(marker, Paint()..color = surface);
     canvas.drawRect(
-      Rect.fromLTWH(-6, -radius + 18, 12, 12),
+      marker,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.4

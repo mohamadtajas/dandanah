@@ -1,4 +1,3 @@
-import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../models/local_date.dart';
@@ -6,17 +5,23 @@ import 'hijri_date.dart';
 import 'prayer_settings.dart';
 import 'prayer_times_service.dart';
 import 'qibla.dart';
+import 'timezone_bootstrap.dart';
 
 class PrayerSlot {
   const PrayerSlot({
     required this.name,
     required this.local,
     required this.instant,
+    required this.ownerDate,
   });
 
   final PrayerName name;
   final DateTime local;
   final DateTime instant;
+
+  /// Local `YYYY-MM-DD` day this reading belongs to. A late Isha may belong to
+  /// yesterday while still being the next prayer after midnight.
+  final String ownerDate;
 
   String get timeLabel =>
       '${local.hour.toString().padLeft(2, '0')}:'
@@ -28,6 +33,7 @@ class PrayerSchedule {
     required this.settings,
     required this.nowUtc,
     required this.nowLocal,
+    required this.previous,
     required this.today,
     required this.tomorrow,
     required this.hijri,
@@ -37,6 +43,7 @@ class PrayerSchedule {
   final PrayerSettings settings;
   final DateTime nowUtc;
   final DateTime nowLocal;
+  final List<PrayerSlot> previous;
   final List<PrayerSlot> today;
   final List<PrayerSlot> tomorrow;
   final HijriDate hijri;
@@ -47,11 +54,11 @@ class PrayerSchedule {
   PrayerSlot get next => nextAt(nowUtc);
 
   PrayerSlot nextAt(DateTime now) {
-    for (final slot in today) {
-      if (slot.name != PrayerName.sunrise && slot.instant.isAfter(now)) {
-        return slot;
-      }
-    }
+    final candidates = [
+      for (final slot in [...previous, ...today, ...tomorrow])
+        if (slot.name != PrayerName.sunrise && slot.instant.isAfter(now)) slot,
+    ]..sort((a, b) => a.instant.compareTo(b.instant));
+    if (candidates.isNotEmpty) return candidates.first;
     return tomorrow.firstWhere((slot) => slot.name == PrayerName.fajr);
   }
 
@@ -65,15 +72,26 @@ class PrayerSchedule {
   bool passed(PrayerName name) => passedAt(name, nowUtc);
 
   bool passedAt(PrayerName name, DateTime now) {
-    for (final slot in today) {
-      if (slot.name == name) return !slot.instant.isAfter(now);
-    }
-    return false;
+    final slots =
+        [...previous, ...today].where((slot) => slot.name == name).toList()
+          ..sort((a, b) => b.instant.compareTo(a.instant));
+    if (slots.isEmpty) return false;
+    return !slots.first.instant.isAfter(now);
+  }
+
+  /// Previous-day late prayers that are still upcoming, followed by today.
+  List<PrayerSlot> displayAt(DateTime now) {
+    final late = previous
+        .where(
+          (slot) =>
+              slot.name != PrayerName.sunrise && slot.instant.isAfter(now),
+        )
+        .toList();
+    return [...late, ...today]..sort((a, b) => a.instant.compareTo(b.instant));
   }
 
   bool isSameLocalDate(DateTime now) {
-    _ensureTimezones();
-    final location = _safeLocation(settings.timezone);
+    final location = locationFor(settings.timezone);
     final local = tz.TZDateTime.from(now, location);
     return localDateKey(local) == dateKey;
   }
@@ -86,18 +104,25 @@ class PrayerSchedule {
 class PrayerScheduleService {
   const PrayerScheduleService();
 
+  PrayerSchedule? tryBuild(PrayerSettings settings, {DateTime? nowUtc}) {
+    try {
+      return build(settings, nowUtc: nowUtc);
+    } catch (_) {
+      return null;
+    }
+  }
+
   PrayerSchedule build(PrayerSettings settings, {DateTime? nowUtc}) {
-    _ensureTimezones();
-    final location = _safeLocation(settings.timezone);
+    final location = locationFor(settings.timezone);
     final now = (nowUtc ?? DateTime.now().toUtc()).toUtc();
     final localNow = tz.TZDateTime.from(now, location);
 
-    final today = _day(
-      settings,
+    final previousDate = tz.TZDateTime(
       location,
       localNow.year,
       localNow.month,
-      localNow.day,
+      localNow.day - 1,
+      12,
     );
     final nextDate = tz.TZDateTime(
       location,
@@ -105,6 +130,21 @@ class PrayerScheduleService {
       localNow.month,
       localNow.day + 1,
       12,
+    );
+
+    final previous = _day(
+      settings,
+      location,
+      previousDate.year,
+      previousDate.month,
+      previousDate.day,
+    );
+    final today = _day(
+      settings,
+      location,
+      localNow.year,
+      localNow.month,
+      localNow.day,
     );
     final tomorrow = _day(
       settings,
@@ -118,6 +158,7 @@ class PrayerScheduleService {
       settings: settings,
       nowUtc: now,
       nowLocal: localNow,
+      previous: previous,
       today: today,
       tomorrow: tomorrow,
       hijri: HijriDate.fromGregorian(
@@ -146,6 +187,7 @@ class PrayerScheduleService {
       madhab: settings.madhab,
       highLatitude: settings.highLatitude,
     );
+    final ownerDate = localDateKey(DateTime(year, month, day));
 
     return [
       for (final entry in times.all.entries)
@@ -160,23 +202,8 @@ class PrayerScheduleService {
             entry.value.minute,
             entry.value.second,
           ).subtract(offset),
+          ownerDate: ownerDate,
         ),
     ];
-  }
-}
-
-bool _timezonesReady = false;
-
-void _ensureTimezones() {
-  if (_timezonesReady) return;
-  tzdata.initializeTimeZones();
-  _timezonesReady = true;
-}
-
-tz.Location _safeLocation(String name) {
-  try {
-    return tz.getLocation(name);
-  } catch (_) {
-    return tz.getLocation('Asia/Riyadh');
   }
 }

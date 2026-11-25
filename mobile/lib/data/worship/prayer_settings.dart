@@ -1,11 +1,10 @@
 import 'dart:convert';
 
-import 'package:timezone/data/latest.dart' as tzdata;
-import 'package:timezone/timezone.dart' as tz;
-
+import '../cities.dart';
 import '../db/app_database.dart';
 import '../settings_store.dart';
 import 'prayer_method.dart';
+import 'timezone_bootstrap.dart';
 
 /// Persisted calculation and location preferences.
 class PrayerSettings {
@@ -97,13 +96,13 @@ class PrayerSettings {
     return PrayerSettings(
       latitude: safeLatitude,
       longitude: safeLongitude,
-      timezone: _validTimezone(timezone) ? timezone : 'Asia/Riyadh',
+      timezone: isValidTimezone(timezone) ? timezone : 'UTC',
       method: method,
       madhab: madhab,
       highLatitude: highLatitude,
       hijriAdjustment: hijriAdjustment.clamp(-3, 3),
       configured: configured,
-      cityId: cityId,
+      cityId: cityId != null && cityById(cityId!) != null ? cityId : null,
     );
   }
 }
@@ -117,10 +116,9 @@ class PrayerSettingsRepository {
     final raw = await SettingsStore.read(_db, PrayerSettings.storageKey);
     if (raw != null) {
       try {
-        final decoded = PrayerSettings.fromJson(
+        return PrayerSettings.fromJson(
           Map<String, dynamic>.from(const JsonCodec().decode(raw) as Map),
         );
-        if (_validTimezone(decoded.timezone)) return decoded;
       } catch (_) {
         // Corrupt settings fall back to the defaults below.
       }
@@ -135,23 +133,5 @@ class PrayerSettingsRepository {
       PrayerSettings.storageKey,
       const JsonCodec().encode(safe.toJson()),
     );
-  }
-}
-
-bool _timezonesReady = false;
-
-void _ensureTimezones() {
-  if (_timezonesReady) return;
-  tzdata.initializeTimeZones();
-  _timezonesReady = true;
-}
-
-bool _validTimezone(String name) {
-  try {
-    _ensureTimezones();
-    tz.getLocation(name);
-    return true;
-  } catch (_) {
-    return false;
   }
 }

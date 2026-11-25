@@ -499,6 +499,18 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'أدخل إحداثيات صحيحة.'**
   String get prayerInvalidCoordinates;
+
+  /// No description provided for @prayerTimesUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر حساب مواقيت الصلاة لهذا الموقع والتاريخ. جرّب موقعًا آخر أو خط عرض أقل.'**
+  String get prayerTimesUnavailable;
+
+  /// No description provided for @settingsSaveFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر حفظ الإعدادات. حاول مرة أخرى.'**
+  String get settingsSaveFailed;
 }
 
 class _AppLocalizationsDelegate

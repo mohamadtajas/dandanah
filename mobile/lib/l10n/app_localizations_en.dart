@@ -223,4 +223,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get prayerInvalidCoordinates => 'Enter valid coordinates.';
+
+  @override
+  String get prayerTimesUnavailable =>
+      'Prayer times are not available for this location and date. Try another location or a lower latitude.';
+
+  @override
+  String get settingsSaveFailed => 'Could not save settings. Try again.';
 }

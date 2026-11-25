@@ -16,6 +16,8 @@ abstract interface class PrayerLogRepository {
   Future<PrayerStreak> streak(String todayKey);
 }
 
+const _excusedMarker = '__excused';
+
 class DriftPrayerLogRepository implements PrayerLogRepository {
   DriftPrayerLogRepository(this._db);
 
@@ -50,9 +52,11 @@ class DriftPrayerLogRepository implements PrayerLogRepository {
     await _db.transaction(() async {
       final current = await day(date);
       if (current.excused) {
-        await (_db.delete(
-          _db.prayerLogs,
-        )..where((row) => row.date.equals(date))).go();
+        await (_db.delete(_db.prayerLogs)..where(
+              (row) =>
+                  row.date.equals(date) & row.prayer.equals(_excusedMarker),
+            ))
+            .go();
       }
 
       if (status == null) {
@@ -78,21 +82,23 @@ class DriftPrayerLogRepository implements PrayerLogRepository {
   @override
   Future<void> setExcused(String date, bool excused) async {
     await _db.transaction(() async {
-      await (_db.delete(
-        _db.prayerLogs,
-      )..where((row) => row.date.equals(date))).go();
-      if (!excused) return;
-
-      await _db.batch((batch) {
-        batch.insertAll(_db.prayerLogs, [
-          for (final prayer in obligatoryPrayers)
+      if (!excused) {
+        await (_db.delete(_db.prayerLogs)..where(
+              (row) =>
+                  row.date.equals(date) & row.prayer.equals(_excusedMarker),
+            ))
+            .go();
+        return;
+      }
+      await _db
+          .into(_db.prayerLogs)
+          .insertOnConflictUpdate(
             db.PrayerLogsCompanion.insert(
               date: date,
-              prayer: prayer.id,
+              prayer: _excusedMarker,
               status: PrayerStatus.excused.id,
             ),
-        ]);
-      });
+          );
     });
   }
 
@@ -102,7 +108,12 @@ class DriftPrayerLogRepository implements PrayerLogRepository {
 
   PrayerDay _dayFromRows(String date, List<db.PrayerLog> rows) {
     final statuses = <PrayerName, PrayerStatus>{};
+    var excused = false;
     for (final row in rows) {
+      if (row.prayer == _excusedMarker) {
+        excused = true;
+        continue;
+      }
       PrayerName? prayer;
       for (final candidate in PrayerName.values) {
         if (candidate.id == row.prayer) {
@@ -113,6 +124,6 @@ class DriftPrayerLogRepository implements PrayerLogRepository {
       if (prayer == null) continue;
       statuses[prayer] = PrayerStatus.byId(row.status);
     }
-    return PrayerDay(date: date, statuses: statuses);
+    return PrayerDay(date: date, statuses: statuses, excused: excused);
   }
 }

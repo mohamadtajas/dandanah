@@ -45,7 +45,7 @@ void main() {
         home: Scaffold(
           body: DashboardPage(
             onSelectTab: (_) {},
-            clock: () => DateTime.utc(2026, 11, 26, 2),
+            clock: () => DateTime.utc(2026, 11, 26, 3),
           ),
         ),
       ),
@@ -55,6 +55,17 @@ void main() {
     }
   }
 
+  testWidgets('dashboard fits a narrow phone without overflow', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpDashboard(tester);
+
+    expect(find.text('الصلاة القادمة'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('shows the next prayer, times, streak and location hint', (
     tester,
   ) async {
@@ -70,8 +81,14 @@ void main() {
     expect(find.text('مواقيت اليوم'), findsOneWidget);
     expect(find.textContaining('سلسلة الصلوات'), findsWidgets);
     expect(find.textContaining('لم يتم ضبط موقعك'), findsOneWidget);
-    expect(find.byKey(const ValueKey('prayer-fajr')), findsOneWidget);
-    expect(find.byKey(const ValueKey('prayer-isha')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('prayer-2026-11-26-fajr')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('prayer-2026-11-26-isha')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('tapping a prayer logs it and updates the streak', (
@@ -85,7 +102,7 @@ void main() {
     await pumpDashboard(tester);
 
     expect(find.byIcon(Icons.check_circle_rounded), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('prayer-fajr')));
+    await tester.tap(find.byKey(const ValueKey('prayer-2026-11-26-fajr')));
     for (var i = 0; i < 8; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
@@ -94,13 +111,26 @@ void main() {
     final streak = await AppServices.current.prayerLog.streak('2026-11-26');
     expect(streak.todayCount, 1);
 
-    await tester.tap(find.byKey(const ValueKey('prayer-fajr')));
+    await tester.tap(find.byKey(const ValueKey('prayer-2026-11-26-fajr')));
     for (var i = 0; i < 8; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
     expect((await AppServices.current.prayerLog.day('2026-11-26')).count, 0);
   });
 
+  testWidgets('cannot log a prayer before its time', (tester) async {
+    tester.view.physicalSize = const Size(900, 2200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpDashboard(tester);
+    await tester.tap(find.byKey(const ValueKey('prayer-2026-11-26-dhuhr')));
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect((await AppServices.current.prayerLog.day('2026-11-26')).count, 0);
+  });
   testWidgets('can mark the day excused and undo it', (tester) async {
     tester.view.physicalSize = const Size(900, 2200);
     tester.view.devicePixelRatio = 1;

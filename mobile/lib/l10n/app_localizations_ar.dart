@@ -223,4 +223,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get prayerInvalidCoordinates => 'أدخل إحداثيات صحيحة.';
+
+  @override
+  String get prayerTimesUnavailable =>
+      'تعذّر حساب مواقيت الصلاة لهذا الموقع والتاريخ. جرّب موقعًا آخر أو خط عرض أقل.';
+
+  @override
+  String get settingsSaveFailed => 'تعذّر حفظ الإعدادات. حاول مرة أخرى.';
 }

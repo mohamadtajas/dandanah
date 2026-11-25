@@ -87,5 +87,7 @@
       }
     }
   },
-  "prayerInvalidCoordinates": "أدخل إحداثيات صحيحة."
+  "prayerInvalidCoordinates": "أدخل إحداثيات صحيحة.",
+  "prayerTimesUnavailable": "تعذّر حساب مواقيت الصلاة لهذا الموقع والتاريخ. جرّب موقعًا آخر أو خط عرض أقل.",
+  "settingsSaveFailed": "تعذّر حفظ الإعدادات. حاول مرة أخرى."
 }

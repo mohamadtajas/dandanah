@@ -3,7 +3,9 @@ import 'package:material_ui/material_ui.dart';
 import '../../data/app_services.dart';
 import '../../data/cities.dart';
 import '../../data/worship/prayer_method.dart';
+import '../../data/worship/coordinate_input.dart';
 import '../../data/worship/prayer_settings.dart';
+import '../../data/worship/timezone_bootstrap.dart';
 import '../../l10n/app_localizations.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -48,13 +50,9 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   List<String> _buildTimezones() {
-    final values = <String>{
-      for (final city in cities) city.timezone,
-      _settings.timezone,
-      'UTC',
-    };
-    final list = values.toList()..sort();
-    return list;
+    final values = allTimezoneNames();
+    if (!values.contains(_timezone)) values.add(_timezone);
+    return values..sort();
   }
 
   void _pickCity(String? value) {
@@ -73,9 +71,12 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _save() async {
-    final latitude = double.tryParse(_latitude.text.trim());
-    final longitude = double.tryParse(_longitude.text.trim());
-    if (latitude == null || longitude == null) {
+    final latitude = parseCoordinate(_latitude.text);
+    final longitude = parseCoordinate(_longitude.text);
+    if (latitude == null ||
+        longitude == null ||
+        !isValidLatitude(latitude) ||
+        !isValidLongitude(longitude)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.prayerInvalidCoordinates),
@@ -83,28 +84,44 @@ class _SettingsPageState extends State<SettingsPage> {
       );
       return;
     }
+
     setState(() => _saving = true);
-    final updated = _settings.copyWith(
-      latitude: latitude,
-      longitude: longitude,
-      timezone: _timezone,
-      method: _method,
-      madhab: _madhab,
-      highLatitude: _highLatitude,
-      hijriAdjustment: _hijriAdjustment,
-      configured: true,
-      cityId: _cityId,
-      clearCity: _cityId == null,
-    );
-    await _services.updatePrayerSettings(updated);
-    if (!mounted) return;
-    setState(() {
-      _settings = updated.sanitized();
-      _saving = false;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context)!.settingsSaved)),
-    );
+    final updated = _settings
+        .copyWith(
+          latitude: latitude,
+          longitude: longitude,
+          timezone: _timezone,
+          method: _method,
+          madhab: _madhab,
+          highLatitude: _highLatitude,
+          hijriAdjustment: _hijriAdjustment,
+          configured: true,
+          cityId: _cityId,
+          clearCity: _cityId == null,
+        )
+        .sanitized();
+    try {
+      await _services.updatePrayerSettings(updated);
+      if (!mounted) return;
+      setState(() {
+        _settings = updated;
+        _latitude.text = updated.latitude.toStringAsFixed(4);
+        _longitude.text = updated.longitude.toStringAsFixed(4);
+        _timezone = updated.timezone;
+        _saving = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.settingsSaved)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.settingsSaveFailed),
+        ),
+      );
+    }
   }
 
   @override
@@ -177,16 +194,24 @@ class _SettingsPageState extends State<SettingsPage> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _timezone,
-                  isExpanded: true,
-                  decoration: InputDecoration(labelText: l10n.timezoneLabel),
-                  items: [
+                DropdownMenu<String>(
+                  initialSelection: _timezone,
+                  enableFilter: true,
+                  requestFocusOnTap: true,
+                  expandedInsets: EdgeInsets.zero,
+                  menuHeight: 360,
+                  label: Text(l10n.timezoneLabel),
+                  dropdownMenuEntries: [
                     for (final zone in _timezones)
-                      DropdownMenuItem(value: zone, child: Text(zone)),
+                      DropdownMenuEntry(value: zone, label: zone),
                   ],
-                  onChanged: (value) {
-                    if (value != null) setState(() => _timezone = value);
+                  onSelected: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _timezone = value;
+                        _cityId = null;
+                      });
+                    }
                   },
                 ),
                 const SizedBox(height: 12),

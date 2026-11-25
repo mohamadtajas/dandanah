@@ -34,10 +34,15 @@ const obligatoryPrayers = [
 ];
 
 class PrayerDay {
-  const PrayerDay({required this.date, this.statuses = const {}});
+  const PrayerDay({
+    required this.date,
+    this.statuses = const {},
+    this.excused = false,
+  });
 
   final String date;
   final Map<PrayerName, PrayerStatus> statuses;
+  final bool excused;
 
   PrayerStatus? statusOf(PrayerName prayer) => statuses[prayer];
 
@@ -46,12 +51,6 @@ class PrayerDay {
       .length;
 
   bool get complete => count == 5;
-
-  bool get excused =>
-      statuses.length == 5 &&
-      obligatoryPrayers.every(
-        (prayer) => statuses[prayer] == PrayerStatus.excused,
-      );
 
   bool get qualifies => complete || excused;
 }

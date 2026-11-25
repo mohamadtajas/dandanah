@@ -29,16 +29,7 @@ void main() {
     test('excused days preserve the chain and gaps break it', () {
       final days = [
         complete('2026-11-25'),
-        const PrayerDay(
-          date: '2026-11-24',
-          statuses: {
-            PrayerName.fajr: PrayerStatus.excused,
-            PrayerName.dhuhr: PrayerStatus.excused,
-            PrayerName.asr: PrayerStatus.excused,
-            PrayerName.maghrib: PrayerStatus.excused,
-            PrayerName.isha: PrayerStatus.excused,
-          },
-        ),
+        const PrayerDay(date: '2026-11-24', excused: true),
         complete('2026-11-23'),
         complete('2026-11-21'),
       ];
@@ -125,6 +116,19 @@ void main() {
       expect(day.excused, isFalse);
       expect(day.count, 1);
       expect((await logs.streak('2026-11-26')).todayCount, 1);
+    });
+
+    test('excusing and unexcusing preserves logged prayers', () async {
+      await completeAll('2026-11-26');
+      await logs.setExcused('2026-11-26', true);
+      expect((await logs.day('2026-11-26')).count, 5);
+      expect((await logs.day('2026-11-26')).excused, isTrue);
+
+      await logs.setExcused('2026-11-26', false);
+      final day = await logs.day('2026-11-26');
+      expect(day.excused, isFalse);
+      expect(day.count, 5);
+      expect(day.complete, isTrue);
     });
 
     test('streak reads persisted days', () async {
