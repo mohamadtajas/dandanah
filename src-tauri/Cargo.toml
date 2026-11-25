@@ -1,6 +1,6 @@
 [package]
 name = "sakeenah"
-version = "0.4.1"
+version = "0.5.0"
 description = "Sakeenah — Quran, adhkar, prayer times and free audio"
 authors = ["Sakeenah"]
 edition = "2021"
