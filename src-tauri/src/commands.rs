@@ -17,6 +17,9 @@ use tauri::{AppHandle, Emitter, Manager, State};
 pub struct AppState {
     pub db: Arc<Database>,
     pub http: reqwest::Client,
+    /// Audio downloads may take far longer than a metadata request; this
+    /// client has no total deadline, only idle/connect limits.
+    pub download_http: reqwest::Client,
     /// Bounded bulk download queue shared by every command.
     pub queue: Arc<downloads::DownloadQueue>,
 }
@@ -927,7 +930,7 @@ fn enqueue_tracks(app: &AppHandle, state: &AppState, tracks: Vec<Track>) -> Resu
         .queue
         .submit(
             app.clone(),
-            state.http.clone(),
+            state.download_http.clone(),
             state.db.clone(),
             tracks,
         )
@@ -940,8 +943,11 @@ pub fn cancel_download(app: AppHandle, state: State<'_, AppState>, track_id: Str
         return false;
     }
     // A job waiting for a slot has not touched the filesystem yet, so reflect
-    // the cancellation in the row and the UI immediately.
-    let _ = state.db.mark_cancelled(&track_id);
+    // the cancellation in the row and the UI immediately. If the row already
+    // finished, the conditional update refuses and the UI keeps `done`.
+    if !state.db.mark_cancelled(&track_id).unwrap_or(false) {
+        return false;
+    }
     if let Ok(rows) = state.db.downloads() {
         if let Some(row) = rows.into_iter().find(|row| row.track.id == track_id) {
             let _ = app.emit(
@@ -967,10 +973,17 @@ pub fn get_downloads(state: State<'_, AppState>) -> Result<Vec<DownloadRow>, Str
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct DeleteFailure {
+    pub track_id: String,
+    pub reason: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DeleteSummary {
     pub deleted: usize,
     pub freed_bytes: u64,
-    pub failed: Vec<String>,
+    pub failed: Vec<DeleteFailure>,
 }
 
 #[tauri::command]
@@ -979,12 +992,19 @@ pub fn delete_download(
     state: State<'_, AppState>,
     track_id: String,
 ) -> Result<u64, String> {
-    remove_download(
-        &app,
-        &state.db,
-        state.queue.is_active(&track_id),
-        &track_id,
-    )
+    if state.queue.is_active(&track_id) {
+        return Err("active".into());
+    }
+    let rows = state.db.downloads().map_err(|e| e.to_string())?;
+    let Some(row) = rows.iter().find(|row| row.track.id == track_id) else {
+        return Ok(0);
+    };
+    let freed = remove_download_files(&app, row).map_err(|error| error.to_string())?;
+    state
+        .db
+        .delete_downloads(std::slice::from_ref(&track_id))
+        .map_err(|e| e.to_string())?;
+    Ok(freed)
 }
 
 #[tauri::command]
@@ -998,63 +1018,87 @@ pub fn delete_downloads(
         freed_bytes: 0,
         failed: Vec::new(),
     };
+    let rows = match state.db.downloads() {
+        Ok(rows) => rows,
+        Err(error) => {
+            summary.failed.push(DeleteFailure {
+                track_id: "*".into(),
+                reason: error.to_string(),
+            });
+            return summary;
+        }
+    };
+    // One pass over the table, then only the ids the user selected.
+    let by_id: std::collections::HashMap<&str, &DownloadRow> =
+        rows.iter().map(|row| (row.track.id.as_str(), row)).collect();
+
+    let mut removed: Vec<String> = Vec::new();
     for track_id in track_ids {
-        match remove_download(
-            &app,
-            &state.db,
-            state.queue.is_active(&track_id),
-            &track_id,
-        ) {
+        if state.queue.is_active(&track_id) {
+            summary.failed.push(DeleteFailure {
+                track_id,
+                reason: "active".into(),
+            });
+            continue;
+        }
+        let Some(row) = by_id.get(track_id.as_str()) else {
+            continue;
+        };
+        match remove_download_files(&app, row) {
             Ok(freed) => {
-                summary.deleted += 1;
                 summary.freed_bytes += freed;
+                removed.push(track_id);
             }
-            Err(error) => summary.failed.push(format!("{track_id}: {error}")),
+            Err(error) => summary.failed.push(DeleteFailure {
+                track_id,
+                reason: error.to_string(),
+            }),
         }
     }
+
+    summary.deleted = state.db.delete_downloads(&removed).unwrap_or(0);
     summary
 }
 
-/// Removes the file(s) first and only then the DB row, so a failed delete
-/// never hides a file the user still has on disk.
-fn remove_download(
-    app: &AppHandle,
-    db: &Database,
-    active: bool,
-    track_id: &str,
-) -> Result<u64, String> {
-    if active {
-        return Err("still downloading".into());
-    }
-    let rows = db.downloads().map_err(|e| e.to_string())?;
-    let Some(row) = rows.into_iter().find(|row| row.track.id == track_id) else {
-        return Ok(0);
-    };
-    if matches!(row.status.as_str(), "queued" | "downloading") {
-        return Err("still downloading".into());
-    }
+/// Deletes the final file, the exact `.part` recorded in the row (and its
+/// validator sidecar), plus any path the deterministic naming would produce.
+fn remove_download_files(app: &AppHandle, row: &DownloadRow) -> anyhow::Result<u64> {
+    let mut finals: std::collections::HashSet<std::path::PathBuf> =
+        std::collections::HashSet::new();
+    let mut parts: std::collections::HashSet<std::path::PathBuf> =
+        std::collections::HashSet::new();
 
-    let mut candidates: Vec<(std::path::PathBuf, Option<std::path::PathBuf>)> = Vec::new();
     if let Some(path) = row.file_path.as_deref() {
         let path = std::path::PathBuf::from(path);
-        let part = downloads::sibling_part(&path);
-        candidates.push((path, Some(part)));
+        parts.insert(downloads::sibling_part(&path));
+        finals.insert(path);
+    }
+    if let Some(path) = row.part_path.as_deref() {
+        parts.insert(std::path::PathBuf::from(path));
     }
     if let Ok((final_path, part_path)) = downloads::paths_for(app, &row.track) {
-        candidates.push((final_path, Some(part_path)));
+        finals.insert(final_path);
+        parts.insert(part_path);
     }
 
-    let mut seen = std::collections::HashSet::new();
     let mut freed = 0;
-    for (final_path, part_path) in candidates {
-        if !seen.insert(final_path.clone()) {
-            continue;
-        }
-        freed += downloads::remove_files(Some(&final_path.to_string_lossy()), part_path.as_deref())
-            .map_err(|error| error.to_string())?;
+    for final_path in finals {
+        freed += downloads::remove_files(Some(&final_path.to_string_lossy()), None)?;
+    }
+    for part_path in parts {
+        freed += downloads::remove_files(None, Some(&part_path))?;
     }
 
-    db.delete_download(track_id).map_err(|e| e.to_string())?;
+    // Extracted covers are derived from the download; do not leave them behind.
+    if let Some(artwork) = row.track.artwork_url.as_deref() {
+        if let Ok(dir) = app.path().app_data_dir().map(|dir| dir.join("artwork")) {
+            let path = std::path::Path::new(artwork);
+            if path.starts_with(&dir) {
+                freed += downloads::remove_files(Some(artwork), None)?;
+            }
+        }
+    }
+
     Ok(freed)
 }
 
@@ -1064,7 +1108,7 @@ pub fn get_storage_totals(
 ) -> Result<downloads::StorageTotals, String> {
     let rows = state.db.downloads().map_err(|e| e.to_string())?;
     let local = state.db.local_tracks().map_err(|e| e.to_string())?;
-    Ok(downloads::totals(&rows, &local, state.queue.active()))
+    Ok(downloads::totals(&rows, &local, state.queue.running()))
 }
 
 // ---------------------------------------------------------------------------

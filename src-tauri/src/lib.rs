@@ -44,6 +44,11 @@ pub fn run() {
                     eprintln!("{interrupted} interrupted downloads marked for retry");
                 }
             }
+            if let Ok(repaired) = db.reconcile_downloads() {
+                if repaired > 0 {
+                    eprintln!("{repaired} download rows repaired against the filesystem");
+                }
+            }
 
             let http = reqwest::Client::builder()
                 .user_agent(concat!(
@@ -55,9 +60,22 @@ pub fn run() {
                 .timeout(std::time::Duration::from_secs(30))
                 .build()?;
 
+            // Downloads stream for minutes on a slow line: no total deadline,
+            // only a connect timeout and a generous idle timeout.
+            let download_http = reqwest::Client::builder()
+                .user_agent(concat!(
+                    "Sakeenah/",
+                    env!("CARGO_PKG_VERSION"),
+                    " (+https://github.com/mohamadtajas/sakeenah)"
+                ))
+                .connect_timeout(std::time::Duration::from_secs(10))
+                .read_timeout(std::time::Duration::from_secs(90))
+                .build()?;
+
             app.manage(AppState {
                 db: Arc::new(db),
                 http,
+                download_http,
                 queue: Arc::new(downloads::DownloadQueue::new()),
             });
 

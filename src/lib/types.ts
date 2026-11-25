@@ -125,14 +125,20 @@ export interface DownloadRow {
   bytesTotal: number;
   bytesDone: number;
   filePath?: string;
+  partPath?: string;
   error?: string;
   createdAt: number;
+}
+
+export interface DeleteFailure {
+  trackId: string;
+  reason: string;
 }
 
 export interface DeleteSummary {
   deleted: number;
   freedBytes: number;
-  failed: string[];
+  failed: DeleteFailure[];
 }
 
 export interface StorageTotals {
@@ -144,6 +150,7 @@ export interface StorageTotals {
   localCount: number;
   totalBytes: number;
   active: number;
+  queued: number;
 }
 
 export interface ImportSummary {

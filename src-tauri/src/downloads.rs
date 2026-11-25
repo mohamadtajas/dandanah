@@ -2,13 +2,11 @@ use crate::db::{Database, DownloadRow};
 use crate::providers::Track;
 use anyhow::{anyhow, Context, Result};
 use parking_lot::Mutex;
-use reqwest::header::RANGE;
+use reqwest::header::{CONTENT_RANGE, ETAG, IF_RANGE, LAST_MODIFIED, RANGE};
 use reqwest::StatusCode;
-use serde::Serialize;
-use std::collections::hash_map::DefaultHasher;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
-use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -25,11 +23,19 @@ pub const MAX_CONCURRENT: usize = 3;
 /// with several moshafs can be a few hundred).
 pub const MAX_BATCH: usize = 700;
 
+/// One admitted download. `started` tells cancellation whether the worker is
+/// already streaming (the file handle must be allowed to close) or still
+/// waiting for a slot (the entry can be dropped immediately).
+pub struct Job {
+    cancel: AtomicBool,
+    started: AtomicBool,
+}
+
 /// A deliberately small queue around the streaming downloader: every job gets
 /// a cancellation flag, and a semaphore limits how many sockets are open.
 pub struct DownloadQueue {
     semaphore: Arc<tokio::sync::Semaphore>,
-    cancels: Mutex<HashMap<String, Arc<AtomicBool>>>,
+    jobs: Mutex<HashMap<String, Arc<Job>>>,
     /// Serialises batch admission so two clicks cannot create two workers (or
     /// a `queued` row with no worker) for the same track.
     submission: Mutex<()>,
@@ -45,25 +51,48 @@ impl DownloadQueue {
     pub fn new() -> Self {
         Self {
             semaphore: Arc::new(tokio::sync::Semaphore::new(MAX_CONCURRENT)),
-            cancels: Mutex::new(HashMap::new()),
+            jobs: Mutex::new(HashMap::new()),
             submission: Mutex::new(()),
         }
     }
 
-    /// Number of jobs enqueued or running right now.
-    pub fn active(&self) -> usize {
-        self.cancels.lock().len()
+    /// Jobs that hold a concurrency slot right now.
+    pub fn running(&self) -> usize {
+        MAX_CONCURRENT.saturating_sub(self.semaphore.available_permits())
     }
 
     pub fn is_active(&self, track_id: &str) -> bool {
-        self.cancels.lock().contains_key(track_id)
+        self.jobs.lock().contains_key(track_id)
     }
 
-    /// Flags a queued or running job. Returns `None` when it already finished.
-    pub fn cancel(&self, track_id: &str) -> Option<Arc<AtomicBool>> {
-        let flag = self.cancels.lock().get(track_id).cloned()?;
-        flag.store(true, Ordering::Relaxed);
-        Some(flag)
+    fn owns(&self, track_id: &str, job: &Arc<Job>) -> bool {
+        self.jobs
+            .lock()
+            .get(track_id)
+            .is_some_and(|current| Arc::ptr_eq(current, job))
+    }
+
+    fn release(&self, track_id: &str, job: &Arc<Job>) {
+        let mut jobs = self.jobs.lock();
+        if jobs
+            .get(track_id)
+            .is_some_and(|current| Arc::ptr_eq(current, job))
+        {
+            jobs.remove(track_id);
+        }
+    }
+
+    /// Flags a queued or running job. A job still waiting for a slot is
+    /// removed immediately so it can be retried or deleted without waiting
+    /// for unrelated downloads. Returns `None` when it already finished.
+    pub fn cancel(&self, track_id: &str) -> Option<Arc<Job>> {
+        let mut jobs = self.jobs.lock();
+        let job = jobs.get(track_id)?.clone();
+        job.cancel.store(true, Ordering::Relaxed);
+        if !job.started.load(Ordering::Relaxed) {
+            jobs.remove(track_id);
+        }
+        Some(job)
     }
 
     /// Applies the queue policy, persists the batch in one transaction and
@@ -92,7 +121,7 @@ impl DownloadQueue {
 
     /// Queues tracks that the caller already persisted as `queued` and spawns
     /// one task per track; the semaphore decides when each one actually runs.
-    pub fn enqueue(
+    fn enqueue(
         self: &Arc<Self>,
         app: AppHandle,
         http: reqwest::Client,
@@ -108,14 +137,19 @@ impl DownloadQueue {
 
         let mut queued = 0;
         for track in tracks {
-            let cancel = Arc::new(AtomicBool::new(false));
+            let job = Arc::new(Job {
+                cancel: AtomicBool::new(false),
+                started: AtomicBool::new(false),
+            });
             {
                 // A rapid double-click must not start the same track twice.
-                let mut flags = self.cancels.lock();
-                if flags.contains_key(&track.id) {
-                    continue;
+                let mut jobs = self.jobs.lock();
+                if let Some(existing) = jobs.get(&track.id) {
+                    if !existing.cancel.load(Ordering::Relaxed) {
+                        continue;
+                    }
                 }
-                flags.insert(track.id.clone(), cancel.clone());
+                jobs.insert(track.id.clone(), job.clone());
             }
             queued += 1;
 
@@ -130,36 +164,35 @@ impl DownloadQueue {
                 // the number of concurrent downloads bounded.
                 let acquired = permit.acquire_owned().await;
                 if acquired.is_err() {
-                    queue.cancels.lock().remove(&track.id);
+                    queue.release(&track.id, &job);
                     return;
                 }
 
-                if cancel.load(Ordering::Relaxed) {
-                    let _ = db.set_download_progress(&track.id, 0, 0, "cancelled");
-                    emit(
-                        &app,
-                        Progress {
-                            track_id: track.id.clone(),
-                            status: "cancelled".into(),
-                            received: 0,
-                            total: 0,
-                            path: None,
-                            error: None,
-                        },
-                    );
-                } else {
+                let claimed = {
+                    let jobs = queue.jobs.lock();
+                    let owner = jobs
+                        .get(&track.id)
+                        .is_some_and(|current| Arc::ptr_eq(current, &job));
+                    if owner && !job.cancel.load(Ordering::Relaxed) {
+                        job.started.store(true, Ordering::Relaxed);
+                        true
+                    } else {
+                        false
+                    }
+                };
+                if claimed {
                     let _ = run(
                         app.clone(),
                         http,
                         db.clone(),
+                        queue.clone(),
                         track.clone(),
-                        cancel,
+                        job.clone(),
                         artwork_dir,
                     )
                     .await;
                 }
-
-                queue.cancels.lock().remove(&track.id);
+                queue.release(&track.id, &job);
                 drop(acquired);
             });
         }
@@ -176,7 +209,16 @@ pub fn select_for_queue(
 ) -> Vec<Track> {
     let blocked: HashSet<&str> = existing
         .iter()
-        .filter(|row| matches!(row.status.as_str(), "queued" | "downloading" | "done"))
+        .filter(|row| match row.status.as_str() {
+            "queued" | "downloading" => true,
+            // A `done` row whose file vanished is repairable, not blocked.
+            "done" => row
+                .file_path
+                .as_deref()
+                .map(|path| Path::new(path).exists())
+                .unwrap_or(false),
+            _ => false,
+        })
         .map(|row| row.track.id.as_str())
         .collect();
     let mut seen = HashSet::new();
@@ -205,10 +247,18 @@ pub fn sibling_part(path: &Path) -> PathBuf {
 /// deleted after this succeeds, so a failure leaves the library consistent.
 pub fn remove_files(final_path: Option<&str>, part_path: Option<&Path>) -> Result<u64> {
     let mut freed = 0;
-    for path in [final_path.map(Path::new), part_path].into_iter().flatten() {
-        match std::fs::metadata(path) {
+    let mut paths: Vec<PathBuf> = Vec::new();
+    if let Some(path) = final_path {
+        paths.push(PathBuf::from(path));
+    }
+    if let Some(part) = part_path {
+        paths.push(part.to_path_buf());
+        paths.push(meta_path(part));
+    }
+    for path in paths {
+        match std::fs::metadata(&path) {
             Ok(meta) => {
-                std::fs::remove_file(path)
+                std::fs::remove_file(&path)
                     .with_context(|| format!("removing {}", path.display()))?;
                 freed += meta.len();
             }
@@ -221,9 +271,9 @@ pub fn remove_files(final_path: Option<&str>, part_path: Option<&Path>) -> Resul
     Ok(freed)
 }
 
-/// What the storage panel shows. Completed files use the size recorded at
-/// download time (falling back to the file), partial rows use the bytes that
-/// actually reached disk, and imported files are measured directly.
+/// What the storage panel shows. Sizes come from the files themselves so the
+/// panel never counts a file that was deleted outside the app; recorded bytes
+/// are only a fallback for older rows without a path.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StorageTotals {
@@ -235,9 +285,10 @@ pub struct StorageTotals {
     pub local_count: usize,
     pub total_bytes: u64,
     pub active: usize,
+    pub queued: usize,
 }
 
-pub fn totals(rows: &[DownloadRow], local: &[Track], active: usize) -> StorageTotals {
+pub fn totals(rows: &[DownloadRow], local: &[Track], running: usize) -> StorageTotals {
     let mut totals = StorageTotals {
         downloaded_bytes: 0,
         downloaded_count: 0,
@@ -246,25 +297,34 @@ pub fn totals(rows: &[DownloadRow], local: &[Track], active: usize) -> StorageTo
         local_bytes: 0,
         local_count: 0,
         total_bytes: 0,
-        active,
+        active: running,
+        queued: 0,
     };
 
     for row in rows {
         if row.status == "done" {
-            let size = if row.bytes_total > 0 {
-                row.bytes_total
-            } else {
-                row.file_path
-                    .as_deref()
-                    .and_then(|path| std::fs::metadata(path).ok())
-                    .map(|meta| meta.len())
-                    .unwrap_or(0)
+            let size = match row.file_path.as_deref() {
+                Some(path) => std::fs::metadata(path).ok().map(|meta| meta.len()),
+                None if row.bytes_total > 0 => Some(row.bytes_total),
+                None => None,
             };
-            totals.downloaded_bytes += size;
-            totals.downloaded_count += 1;
-        } else if row.bytes_done > 0 {
-            totals.partial_bytes += row.bytes_done;
-            totals.partial_count += 1;
+            if let Some(size) = size {
+                totals.downloaded_bytes += size;
+                totals.downloaded_count += 1;
+            }
+        } else {
+            let size = match row.part_path.as_deref() {
+                Some(path) => std::fs::metadata(path).ok().map(|meta| meta.len()),
+                None if row.bytes_done > 0 => Some(row.bytes_done),
+                None => None,
+            };
+            if let Some(size) = size {
+                totals.partial_bytes += size;
+                totals.partial_count += 1;
+            }
+        }
+        if row.status == "queued" {
+            totals.queued += 1;
         }
     }
 
@@ -273,10 +333,11 @@ pub fn totals(rows: &[DownloadRow], local: &[Track], active: usize) -> StorageTo
             .local_path
             .as_deref()
             .and_then(|path| std::fs::metadata(path).ok())
-            .map(|meta| meta.len())
-            .unwrap_or(0);
-        totals.local_bytes += size;
-        totals.local_count += 1;
+            .map(|meta| meta.len());
+        if let Some(size) = size {
+            totals.local_bytes += size;
+            totals.local_count += 1;
+        }
     }
 
     totals.total_bytes = totals.downloaded_bytes + totals.partial_bytes + totals.local_bytes;
@@ -326,8 +387,9 @@ pub async fn run(
     app: AppHandle,
     http: reqwest::Client,
     db: Arc<Database>,
+    queue: Arc<DownloadQueue>,
     track: Track,
-    cancel: Arc<AtomicBool>,
+    job: Arc<Job>,
     artwork_dir: PathBuf,
 ) -> Result<Option<String>> {
     let url = track
@@ -335,6 +397,10 @@ pub async fn run(
         .clone()
         .ok_or_else(|| anyhow!("track has no stream URL"))?;
     let (final_path, part_path) = paths_for(&app, &track)?;
+    db.set_download_part(&track.id, &part_path.to_string_lossy())?;
+
+    let cancelled = || job.cancel.load(Ordering::Relaxed);
+    let owner = || queue.owns(&track.id, &job);
 
     let _ = db.set_download_progress(&track.id, 0, 0, "downloading");
     emit(
@@ -354,8 +420,12 @@ pub async fn run(
         &url,
         &final_path,
         &part_path,
-        &cancel,
+        &job.cancel,
         |received, total| {
+            // A stale worker must never overwrite a retry's progress.
+            if cancelled() || !owner() {
+                return;
+            }
             let _ = db.set_download_progress(&track.id, received, total, "downloading");
             emit(
                 &app,
@@ -371,9 +441,18 @@ pub async fn run(
         },
     )
     .await;
+    // A network failure that raced the cancel flag is a cancellation, not a
+    // user-facing error.
+    let result = match result {
+        Err(_) if cancelled() => Ok(None),
+        other => other,
+    };
 
     match result {
         Ok(Some((received, total))) => {
+            // Once the body is complete the file is final: a cancel that
+            // raced the rename must not turn a finished download into a
+            // cancelled row.
             db.finish_download(&track.id, &final_path.to_string_lossy())?;
             if let Some(artwork) = crate::library::extract_artwork(&final_path, &artwork_dir) {
                 let _ = db.set_track_artwork(&track.id, &artwork);
@@ -392,6 +471,9 @@ pub async fn run(
             Ok(Some(final_path.to_string_lossy().to_string()))
         }
         Ok(None) => {
+            if !owner() {
+                return Ok(None);
+            }
             let received = file_size(&part_path);
             let _ = db.set_download_progress(&track.id, received, 0, "cancelled");
             emit(
@@ -408,22 +490,101 @@ pub async fn run(
             Ok(None)
         }
         Err(error) => {
-            let message = error.to_string();
-            let _ = db.fail_download(&track.id, &message);
-            emit(
-                &app,
-                Progress {
-                    track_id: track.id.clone(),
-                    status: "error".into(),
-                    received: file_size(&part_path),
-                    total: 0,
-                    path: None,
-                    error: Some(message.clone()),
-                },
-            );
+            let code = error_code(&error);
+            eprintln!("download {} failed ({code}): {error:#}", track.id);
+            if owner() {
+                let _ = db.fail_download(&track.id, code);
+                emit(
+                    &app,
+                    Progress {
+                        track_id: track.id.clone(),
+                        status: "error".into(),
+                        received: file_size(&part_path),
+                        total: 0,
+                        path: None,
+                        error: Some(code.into()),
+                    },
+                );
+            }
             Err(error)
         }
     }
+}
+
+/// Stable codes persisted in the DB; the UI maps them to translated copy and
+/// the raw English detail only goes to the log.
+fn error_code(error: &anyhow::Error) -> &'static str {
+    let message = format!("{error:#}").to_ascii_lowercase();
+    if message.contains("unexpected range") {
+        "resume-mismatch"
+    } else if message.contains("cannot be resumed") {
+        "range-invalid"
+    } else if message.contains("empty file") {
+        "empty-file"
+    } else if message.contains("ended before") {
+        "truncated"
+    } else if message.contains("no stream url") {
+        "no-url"
+    } else if message.contains("requesting")
+        || message.contains("server returned")
+        || message.contains("reading audio stream")
+        || message.contains("request")
+    {
+        "network"
+    } else {
+        "file"
+    }
+}
+
+/// Validators recorded next to a `.part` file. `If-Range` ensures the server
+/// only appends when the remote file is the same one the prefix came from.
+#[derive(Serialize, Deserialize, Default)]
+struct PartMeta {
+    url: String,
+    etag: Option<String>,
+    last_modified: Option<String>,
+}
+
+fn meta_path(part_path: &Path) -> PathBuf {
+    let mut value = part_path.as_os_str().to_owned();
+    value.push(".meta");
+    PathBuf::from(value)
+}
+
+fn read_meta(part_path: &Path) -> Option<PartMeta> {
+    let payload = std::fs::read_to_string(meta_path(part_path)).ok()?;
+    serde_json::from_str(&payload).ok()
+}
+
+fn write_meta(part_path: &Path, meta: &PartMeta) {
+    if let Ok(payload) = serde_json::to_string(meta) {
+        let _ = std::fs::write(meta_path(part_path), payload);
+    }
+}
+
+fn remove_meta(part_path: &Path) {
+    let _ = std::fs::remove_file(meta_path(part_path));
+}
+
+fn header_value(response: &reqwest::Response, header: reqwest::header::HeaderName) -> Option<String> {
+    response
+        .headers()
+        .get(header)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_string)
+}
+
+/// `bytes 100-199/2000` or `bytes */2000`.
+fn parse_content_range(value: &str) -> Option<(Option<u64>, Option<u64>)> {
+    let rest = value.strip_prefix("bytes ")?;
+    let (range, total) = rest.split_once('/')?;
+    let total = total.parse::<u64>().ok();
+    let start = if range == "*" {
+        None
+    } else {
+        range.split('-').next().and_then(|value| value.parse::<u64>().ok())
+    };
+    Some((start, total))
 }
 
 /// Downloads `url` into `part_path`, resuming a non-empty partial file with a
@@ -441,9 +602,20 @@ where
     F: Fn(u64, u64),
 {
     let existing = file_size(part_path);
+    let resume_meta = if existing > 0 {
+        read_meta(part_path).filter(|meta| meta.url == url)
+    } else {
+        None
+    };
     let mut request = http.get(url);
     if existing > 0 {
         request = request.header(RANGE, format!("bytes={existing}-"));
+        if let Some(validator) = resume_meta
+            .as_ref()
+            .and_then(|meta| meta.etag.clone().or_else(|| meta.last_modified.clone()))
+        {
+            request = request.header(IF_RANGE, validator);
+        }
     }
     let response = request
         .send()
@@ -451,7 +623,23 @@ where
         .context("requesting audio stream")?;
 
     if existing > 0 && response.status() == StatusCode::RANGE_NOT_SATISFIABLE {
+        // The server may be telling us the part is already the whole file
+        // (e.g. the app stopped after the last byte, before the rename).
+        let total = response
+            .headers()
+            .get(CONTENT_RANGE)
+            .and_then(|value| value.to_str().ok())
+            .and_then(parse_content_range)
+            .and_then(|(_, total)| total);
+        if total == Some(existing) {
+            let _ = std::fs::remove_file(final_path);
+            std::fs::rename(part_path, final_path).context("finalising download")?;
+            remove_meta(part_path);
+            progress(existing, existing);
+            return Ok(Some((existing, existing)));
+        }
         let _ = std::fs::remove_file(part_path);
+        remove_meta(part_path);
         return Err(anyhow!("the partial download cannot be resumed; retry to start it again"));
     }
 
@@ -459,15 +647,47 @@ where
         .error_for_status()
         .context("audio server returned an error")?;
     let resuming = existing > 0 && response.status() == StatusCode::PARTIAL_CONTENT;
+    if resuming {
+        // A 206 for a different start offset would corrupt the file; only
+        // append when the server honoured exactly the requested offset.
+        let start = response
+            .headers()
+            .get(CONTENT_RANGE)
+            .and_then(|value| value.to_str().ok())
+            .and_then(parse_content_range)
+            .and_then(|(start, _)| start);
+        if start != Some(existing) {
+            let _ = std::fs::remove_file(part_path);
+            remove_meta(part_path);
+            return Err(anyhow!(
+                "the server sent an unexpected range; retry to start the download again"
+            ));
+        }
+    }
     let response_total = response.content_length().unwrap_or(0);
     let total = if resuming {
         existing.saturating_add(response_total)
     } else {
         response_total
     };
-    let mut received = if resuming { existing } else { 0 };
+    let start = if resuming { existing } else { 0 };
+    let mut received = start;
     if !resuming {
         let _ = std::fs::remove_file(part_path);
+        remove_meta(part_path);
+    }
+
+    // Record the validator for the next attempt. Only a fresh 200 replaces an
+    // existing meta file; a 206 keeps the validator that made it valid.
+    if !resuming {
+        write_meta(
+            part_path,
+            &PartMeta {
+                url: url.to_string(),
+                etag: header_value(&response, ETAG),
+                last_modified: header_value(&response, LAST_MODIFIED),
+            },
+        );
     }
 
     if cancel.load(Ordering::Relaxed) {
@@ -508,11 +728,20 @@ where
 
     if received == 0 {
         let _ = std::fs::remove_file(part_path);
+        remove_meta(part_path);
         return Err(anyhow!("the server sent an empty file"));
+    }
+    // A 206 with no body, or a stream that closed before Content-Length, must
+    // never be renamed into a final file.
+    if received == start || (total > 0 && received < total) {
+        return Err(anyhow!(
+            "the download ended before the full file arrived; retry to resume"
+        ));
     }
 
     let _ = std::fs::remove_file(final_path);
     std::fs::rename(part_path, final_path).context("finalising download")?;
+    remove_meta(part_path);
     progress(received, total.max(received));
     Ok(Some((received, total.max(received))))
 }
@@ -521,10 +750,19 @@ fn file_size(path: &Path) -> u64 {
     std::fs::metadata(path).map(|meta| meta.len()).unwrap_or(0)
 }
 
+/// Stable across releases, unlike `DefaultHasher`, so an app update can still
+/// resume the same `.part` file.
+fn stable_hash(value: &str) -> u64 {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for byte in value.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    hash
+}
+
 fn file_name(track: &Track, extension: &str) -> String {
-    let mut hasher = DefaultHasher::new();
-    track.id.hash(&mut hasher);
-    let hash = format!("{:08x}", hasher.finish() as u32);
+    let hash = format!("{:08x}", stable_hash(&track.id) as u32);
 
     let mut slug: String = format!("{} - {}", track.artist, track.title)
         .chars()
@@ -634,6 +872,117 @@ mod tests {
         format!("http://{address}/track.mp3")
     }
 
+    /// A one-shot HTTP server that always answers with a 206 whose range does
+    /// not match the requested offset.
+    async fn serve_wrong_range() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut buffer = [0u8; 2048];
+            let _ = socket.read(&mut buffer).await.unwrap();
+            let response = "HTTP/1.1 206 Partial Content\r\nContent-Length: 5\r\nContent-Range: bytes 0-4/11\r\nConnection: close\r\n\r\nworld";
+            socket.write_all(response.as_bytes()).await.unwrap();
+        });
+        format!("http://{address}/track.mp3")
+    }
+
+    /// A one-shot server that claims a 206 but sends no body.
+    async fn serve_empty_range() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut buffer = [0u8; 2048];
+            let _ = socket.read(&mut buffer).await.unwrap();
+            let response = "HTTP/1.1 206 Partial Content\r\nContent-Length: 0\r\nContent-Range: bytes 6-5/11\r\nConnection: close\r\n\r\n";
+            socket.write_all(response.as_bytes()).await.unwrap();
+        });
+        format!("http://{address}/track.mp3")
+    }
+
+    /// A one-shot server that reports the partial file is already complete.
+    async fn serve_range_not_satisfiable() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut buffer = [0u8; 2048];
+            let _ = socket.read(&mut buffer).await.unwrap();
+            let response = "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Length: 0\r\nContent-Range: bytes */6\r\nConnection: close\r\n\r\n";
+            socket.write_all(response.as_bytes()).await.unwrap();
+        });
+        format!("http://{address}/track.mp3")
+    }
+
+    #[tokio::test]
+    async fn rejects_a_mismatched_range_instead_of_corrupting() {
+        let url = serve_wrong_range().await;
+        let (final_path, part_path) = temp_paths("wrong-range");
+        std::fs::write(&part_path, b"hello ").unwrap();
+        let cancel = AtomicBool::new(false);
+        let error = download_to_paths(
+            &reqwest::Client::new(),
+            &url,
+            &final_path,
+            &part_path,
+            &cancel,
+            |_, _| {},
+        )
+        .await
+        .unwrap_err();
+        assert!(format!("{error:#}").contains("unexpected range"));
+        assert!(!part_path.exists(), "the untrustworthy partial is discarded");
+        assert!(!final_path.exists());
+        let _ = std::fs::remove_dir_all(final_path.parent().unwrap());
+    }
+
+    #[tokio::test]
+    async fn empty_partial_response_is_not_treated_as_complete() {
+        let url = serve_empty_range().await;
+        let (final_path, part_path) = temp_paths("empty-range");
+        std::fs::write(&part_path, b"hello ").unwrap();
+        let cancel = AtomicBool::new(false);
+        let error = download_to_paths(
+            &reqwest::Client::new(),
+            &url,
+            &final_path,
+            &part_path,
+            &cancel,
+            |_, _| {},
+        )
+        .await
+        .unwrap_err();
+        assert!(format!("{error:#}").contains("ended before"));
+        assert!(part_path.exists(), "the resumable part is kept");
+        assert_eq!(std::fs::read(&part_path).unwrap(), b"hello ");
+        assert!(!final_path.exists());
+        let _ = std::fs::remove_dir_all(final_path.parent().unwrap());
+    }
+
+    #[tokio::test]
+    async fn a_complete_partial_is_finalised_when_the_server_returns_416() {
+        let url = serve_range_not_satisfiable().await;
+        let (final_path, part_path) = temp_paths("range-complete");
+        std::fs::write(&part_path, b"hello ").unwrap();
+        let cancel = AtomicBool::new(false);
+        let (received, total) = download_to_paths(
+            &reqwest::Client::new(),
+            &url,
+            &final_path,
+            &part_path,
+            &cancel,
+            |_, _| {},
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!((received, total), (6, 6));
+        assert_eq!(std::fs::read(&final_path).unwrap(), b"hello ");
+        assert!(!part_path.exists());
+        let _ = std::fs::remove_dir_all(final_path.parent().unwrap());
+    }
+
     #[tokio::test]
     async fn downloads_and_finalises_a_file() {
         let url = serve_once(b"hello world", None).await;
@@ -690,32 +1039,45 @@ mod tests {
         retry.stream_url = Some("https://x/3.mp3".into());
         let mut cancelled = Track::new("mp3quran", "4", "النساء", TrackKind::Quran);
         cancelled.stream_url = Some("https://x/4.mp3".into());
+        let mut stale = Track::new("mp3quran", "6", "المائدة", TrackKind::Quran);
+        stale.stream_url = Some("https://x/6.mp3".into());
         let missing = Track::new("mp3quran", "5", "بلا رابط", TrackKind::Quran);
 
-        let row = |track: &Track, status: &str| DownloadRow {
+        let (final_path, _) = temp_paths("queue-done");
+        std::fs::write(&final_path, b"done").unwrap();
+        let stored = final_path.to_string_lossy().to_string();
+
+        let row = |track: &Track, status: &str, path: Option<String>| DownloadRow {
             track: track.clone(),
             status: status.into(),
             bytes_total: 0,
             bytes_done: 0,
-            file_path: None,
+            file_path: path,
+            part_path: None,
             error: None,
             created_at: 0,
         };
         let existing = vec![
-            row(&done, "done"),
-            row(&queued, "downloading"),
-            row(&retry, "error"),
-            row(&cancelled, "cancelled"),
+            row(&done, "done", Some(stored)),
+            row(&queued, "downloading", None),
+            row(&retry, "error", None),
+            row(&cancelled, "cancelled", None),
+            // A done row whose file vanished must be downloadable again.
+            row(&stale, "done", Some("C:/sakeenah-missing/6.mp3".into())),
         ];
 
-        let expected = vec![retry.id.clone(), cancelled.id.clone()];
+        let expected = vec![retry.id.clone(), cancelled.id.clone(), stale.id.clone()];
         let selected = select_for_queue(
             &existing,
-            vec![done, queued, retry, cancelled, missing],
+            vec![done, queued, retry, cancelled, stale, missing],
             MAX_BATCH,
         );
         let ids: Vec<&str> = selected.iter().map(|track| track.id.as_str()).collect();
-        assert_eq!(ids, expected, "only failed jobs are retried, and duplicates collapse");
+        assert_eq!(
+            ids, expected,
+            "only failed/missing jobs are retried, and duplicates collapse"
+        );
+        let _ = std::fs::remove_dir_all(final_path.parent().unwrap());
     }
 
     #[test]
@@ -731,15 +1093,50 @@ mod tests {
     }
 
     #[test]
-    fn delete_removes_finished_and_partial_files() {
+    fn cancelling_a_waiting_job_releases_it_but_a_running_job_does_not() {
+        let queue = DownloadQueue::new();
+
+        let waiting = Arc::new(Job {
+            cancel: AtomicBool::new(false),
+            started: AtomicBool::new(false),
+        });
+        queue
+            .jobs
+            .lock()
+            .insert("waiting".into(), waiting.clone());
+        assert!(queue.cancel("waiting").is_some());
+        assert!(waiting.cancel.load(Ordering::Relaxed));
+        assert!(!queue.is_active("waiting"), "a queued cancel frees the id");
+        // The old worker must see that it no longer owns the id.
+        assert!(!queue.owns("waiting", &waiting));
+
+        let running = Arc::new(Job {
+            cancel: AtomicBool::new(false),
+            started: AtomicBool::new(true),
+        });
+        queue
+            .jobs
+            .lock()
+            .insert("running".into(), running.clone());
+        assert!(queue.cancel("running").is_some());
+        assert!(queue.owns("running", &running));
+        assert!(queue.is_active("running"));
+        queue.release("running", &running);
+        assert!(!queue.is_active("running"));
+    }
+
+    #[test]
+    fn delete_removes_finished_partial_and_sidecar_files() {
         let (final_path, part_path) = temp_paths("delete");
         std::fs::write(&final_path, b"done").unwrap();
         std::fs::write(&part_path, b"partial").unwrap();
+        std::fs::write(meta_path(&part_path), b"{}").unwrap();
 
         let freed = remove_files(Some(&final_path.to_string_lossy()), Some(&part_path)).unwrap();
-        assert_eq!(freed, 11);
+        assert_eq!(freed, 13);
         assert!(!final_path.exists());
         assert!(!part_path.exists());
+        assert!(!meta_path(&part_path).exists());
         // A second delete is a no-op rather than an error, so retrying is safe.
         assert_eq!(
             remove_files(Some(&final_path.to_string_lossy()), Some(&part_path)).unwrap(),
@@ -760,31 +1157,50 @@ mod tests {
     fn storage_totals_match_completed_partial_and_local_files() {
         let (final_path, _) = temp_paths("totals");
         std::fs::write(&final_path, b"1234567").unwrap();
+        let part_path = final_path.with_extension("mp3.part");
+        std::fs::write(&part_path, b"abcdefghijklm").unwrap();
         let stored = final_path.to_string_lossy().to_string();
+        let stored_part = part_path.to_string_lossy().to_string();
 
         let track = |id: &str| {
             let mut track = Track::new("mp3quran", id, "سورة", TrackKind::Quran);
             track.stream_url = Some(format!("https://x/{id}.mp3"));
             track
         };
-        let row = |track: Track, status: &str, total: u64, done: u64, path: Option<String>| {
+        let row = |track: Track,
+                   status: &str,
+                   total: u64,
+                   done: u64,
+                   path: Option<String>,
+                   part: Option<String>| {
             DownloadRow {
                 track,
                 status: status.into(),
                 bytes_total: total,
                 bytes_done: done,
                 file_path: path,
+                part_path: part,
                 error: None,
                 created_at: 0,
             }
         };
 
         let rows = vec![
-            row(track("1"), "done", 100, 100, None),
-            // Older rows may have no recorded size; the file is the fallback.
-            row(track("2"), "done", 0, 0, Some(stored.clone())),
-            row(track("3"), "error", 500, 30, None),
-            row(track("4"), "queued", 0, 0, None),
+            // A legacy row without a path falls back to its recorded size.
+            row(track("1"), "done", 100, 100, None, None),
+            row(track("2"), "done", 0, 0, Some(stored.clone()), None),
+            // Partial rows use the bytes actually on disk, not the stale DB count.
+            row(track("3"), "error", 500, 30, None, Some(stored_part)),
+            // A file deleted outside the app must not be counted.
+            row(
+                track("9"),
+                "done",
+                50,
+                50,
+                Some("C:/sakeenah-missing/file.mp3".into()),
+                None,
+            ),
+            row(track("4"), "queued", 0, 0, None, None),
         ];
         let mut local = Track::new("local", stored.clone(), "ملف", TrackKind::Local);
         local.local_path = Some(stored.clone());
@@ -792,12 +1208,13 @@ mod tests {
         let totals = totals(&rows, &[local], 1);
         assert_eq!(totals.downloaded_bytes, 107);
         assert_eq!(totals.downloaded_count, 2);
-        assert_eq!(totals.partial_bytes, 30);
+        assert_eq!(totals.partial_bytes, 13);
         assert_eq!(totals.partial_count, 1);
         assert_eq!(totals.local_bytes, 7);
         assert_eq!(totals.local_count, 1);
-        assert_eq!(totals.total_bytes, 144);
+        assert_eq!(totals.total_bytes, 127);
         assert_eq!(totals.active, 1);
+        assert_eq!(totals.queued, 1);
         let _ = std::fs::remove_dir_all(final_path.parent().unwrap());
     }
 }

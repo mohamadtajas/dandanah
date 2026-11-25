@@ -237,6 +237,9 @@ class LibraryStore {
       if (accepted > 0) {
         ui.notify(i18n.t("library.downloadQueued", { count: accepted }));
       }
+      if (accepted < allowed.length) {
+        ui.notify(i18n.t("library.downloadBusy"));
+      }
       this.ensurePolling();
       return accepted;
     } catch {
@@ -285,7 +288,7 @@ class LibraryStore {
     const selected = new Set(trackIds);
     try {
       const summary = await api.deleteDownloads(trackIds);
-      const failedIds = new Set(summary.failed.map((entry) => entry.split(": ")[0]));
+      const failedIds = new Set(summary.failed.map((entry) => entry.trackId));
       this.downloads = this.downloads.filter(
         (row) => !selected.has(row.track.id) || failedIds.has(row.track.id),
       );

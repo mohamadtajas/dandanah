@@ -9,6 +9,7 @@ import type {
   AppInfo,
   Ayah,
   AyahReciter,
+  DeleteFailure,
   DeleteSummary,
   DownloadRow,
   HijriDate,
@@ -1211,6 +1212,52 @@ const adhkarDayStore = new Map<string, AdhkarDay>();
 const quranBookmarkStore = new Map<string, QuranBookmark>();
 let readerPositionStore: ReaderPosition | null = null;
 
+/** Browser mock mirrors the desktop queue's three-worker limit. */
+const MOCK_DOWNLOAD_WORKERS = 3;
+let mockDownloadActive = 0;
+
+function pumpMockDownloads() {
+  while (mockDownloadActive < MOCK_DOWNLOAD_WORKERS) {
+    const next = [...downloadsStore.values()].find((row) => row.status === "queued");
+    if (!next) return;
+    mockDownloadActive += 1;
+    const trackId = next.track.id;
+    const total = next.bytesTotal;
+    const started = Date.now();
+    downloadsStore.set(trackId, { ...next, status: "downloading" });
+
+    const timer = setInterval(() => {
+      const current = downloadsStore.get(trackId);
+      const release = () => {
+        clearInterval(timer);
+        mockDownloadActive = Math.max(0, mockDownloadActive - 1);
+        pumpMockDownloads();
+      };
+      if (!current || current.status === "cancelled" || current.status === "error") {
+        release();
+        return;
+      }
+      const progress = Math.min(1, (Date.now() - started) / 2_500);
+      if (progress >= 1) {
+        downloadsStore.set(trackId, {
+          ...current,
+          status: "done",
+          bytesDone: total,
+          bytesTotal: total,
+          filePath: `C:/mock/downloads/${trackId.replace(/[^a-z0-9]+/gi, "-")}.mp3`,
+        });
+        release();
+      } else {
+        downloadsStore.set(trackId, {
+          ...current,
+          status: "downloading",
+          bytesDone: Math.round(total * progress),
+        });
+      }
+    }, 200);
+  }
+}
+
 const JUZS: Juz[] = [
   { number: 1, surah: 1, ayah: 1, ayahs: 148 },
   { number: 2, surah: 2, ayah: 142, ayahs: 111 },
@@ -1851,39 +1898,15 @@ export function mockApi() {
           createdAt: Date.now(),
         });
         accepted += 1;
-
-        const started = Date.now();
-        const timer = setInterval(() => {
-          const current = downloadsStore.get(track.id);
-          if (!current || current.status === "cancelled") {
-            clearInterval(timer);
-            return;
-          }
-          const progress = Math.min(1, (Date.now() - started) / 2_500);
-          if (progress >= 1) {
-            downloadsStore.set(track.id, {
-              ...current,
-              status: "done",
-              bytesDone: total,
-              bytesTotal: total,
-              filePath: `C:/mock/downloads/${track.id.replace(/[^a-z0-9]+/gi, "-")}.mp3`,
-            });
-            clearInterval(timer);
-          } else {
-            downloadsStore.set(track.id, {
-              ...current,
-              status: "downloading",
-              bytesDone: Math.round(total * progress),
-            });
-          }
-        }, 200);
       }
+      pumpMockDownloads();
       return accepted;
     },
     async cancelDownload(trackId: string) {
       const row = downloadsStore.get(trackId);
       if (!row || (row.status !== "queued" && row.status !== "downloading")) return false;
       downloadsStore.set(trackId, { ...row, status: "cancelled", error: undefined });
+      if (row.status === "queued") pumpMockDownloads();
       return true;
     },
     async getHotkeys(): Promise<HotkeyMap> {
@@ -1901,17 +1924,18 @@ export function mockApi() {
     },
     async deleteDownload(trackId: string) {
       const row = downloadsStore.get(trackId);
+      if (row && (row.status === "queued" || row.status === "downloading")) return 0;
       downloadsStore.delete(trackId);
       return row?.bytesDone ?? 0;
     },
     async deleteDownloads(trackIds: string[]): Promise<DeleteSummary> {
       let deleted = 0;
       let freedBytes = 0;
-      const failed: string[] = [];
+      const failed: DeleteFailure[] = [];
       for (const trackId of trackIds) {
         const row = downloadsStore.get(trackId);
         if (row && (row.status === "queued" || row.status === "downloading")) {
-          failed.push(`${trackId}: still downloading`);
+          failed.push({ trackId, reason: "active" });
           continue;
         }
         downloadsStore.delete(trackId);
@@ -1930,6 +1954,7 @@ export function mockApi() {
         localCount: 0,
         totalBytes: 0,
         active: 0,
+        queued: 0,
       };
       for (const row of downloadsStore.values()) {
         if (row.status === "done") {
@@ -1939,7 +1964,8 @@ export function mockApi() {
           totals.partialBytes += row.bytesDone;
           totals.partialCount += 1;
         }
-        if (row.status === "queued" || row.status === "downloading") totals.active += 1;
+        if (row.status === "downloading") totals.active += 1;
+        if (row.status === "queued") totals.queued += 1;
       }
       totals.totalBytes = totals.downloadedBytes + totals.partialBytes + totals.localBytes;
       return totals;

@@ -82,6 +82,11 @@
       playlistTracks = [];
       return;
     }
+    if (id === "downloads") {
+      tab = "downloads";
+      playlistTracks = [];
+      return;
+    }
     // Wait until the store knows this playlist, then load its contents.
     if (!library.playlists.some((p) => p.id === id)) return;
     tab = "playlists";
@@ -159,6 +164,28 @@
     return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
   }
 
+  /** Stable backend codes → translated copy; raw English stays in the log. */
+  function downloadError(code?: string): string {
+    switch (code) {
+      case "interrupted":
+        return i18n.t("library.downloadInterrupted");
+      case "missing":
+        return i18n.t("library.downloadMissing");
+      case "resume-mismatch":
+      case "range-invalid":
+        return i18n.t("library.downloadResumeFailed");
+      case "empty-file":
+      case "truncated":
+        return i18n.t("library.downloadIncomplete");
+      case "no-url":
+        return i18n.t("library.downloadUnavailable");
+      case "active":
+        return i18n.t("library.downloadBusy");
+      default:
+        return i18n.t("library.downloadFailed");
+    }
+  }
+
   function toggleSelected(trackId: string) {
     selectedDownloads = selectedDownloads.includes(trackId)
       ? selectedDownloads.filter((id) => id !== trackId)
@@ -176,9 +203,22 @@
       removableDownloads.some((row) => row.track.id === id),
     );
     if (ids.length === 0) return;
+    if (ids.length > 20) {
+      const message = i18n.t("library.deleteSelectedConfirm", {
+        count: fmtNumber(ids.length),
+      });
+      let confirmed = false;
+      if (isTauri) {
+        const { ask } = await import("@tauri-apps/plugin-dialog");
+        confirmed = await ask(message, { kind: "warning" });
+      } else {
+        confirmed = window.confirm(message);
+      }
+      if (!confirmed) return;
+    }
     const summary = await library.removeDownloads(ids);
     if (summary) {
-      const failed = new Set(summary.failed.map((entry) => entry.split(": ")[0]));
+      const failed = new Set(summary.failed.map((entry) => entry.trackId));
       selectedDownloads = ids.filter((id) => failed.has(id));
     }
   }
@@ -405,6 +445,9 @@
                   {#if st.active}
                     <span class="text-gold">{i18n.t("library.storageActive")}: {fmtNumber(st.active)}</span>
                   {/if}
+                  {#if st.queued}
+                    <span>{i18n.t("library.storageQueued")}: {fmtNumber(st.queued)}</span>
+                  {/if}
                 </div>
               </div>
               <div class="flex flex-wrap items-center gap-2">
@@ -461,7 +504,7 @@
                     ? 'border-gold/50 bg-gold/15 text-gold'
                     : 'border-line text-transparent hover:border-gold/40'}
                          disabled:opacity-30"
-                  aria-label={i18n.t("library.selectedCount", { count: 1 })}
+                  aria-label={row.track.title}
                 >
                   <Icon name="check" size={11} />
                 </button>
@@ -485,10 +528,19 @@
                   <div class="truncate text-[11px] text-muted">{row.track.artist}</div>
                   {#if busy}
                     <div class="mt-1.5 flex items-center gap-2">
-                      <span class="h-1 flex-1 overflow-hidden rounded-full bg-ink-800">
+                      <span
+                        class="h-1 flex-1 overflow-hidden rounded-full bg-ink-800"
+                        role="progressbar"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        aria-valuenow={pct}
+                        aria-label={row.track.title}
+                      >
                         <span class="block h-full rounded-full bg-gold transition-[width]" style="width: {pct}%"></span>
                       </span>
-                      <span class="shrink-0 text-[10px] tabular-nums text-muted">{pct}%</span>
+                      <span class="shrink-0 text-[10px] tabular-nums text-muted">
+                        {row.status === "queued" ? i18n.t("library.storageQueued") : `${pct}%`}
+                      </span>
                     </div>
                   {:else if row.status === "done"}
                     <div class="mt-0.5 text-[10px] text-teal">
@@ -501,9 +553,7 @@
                     </div>
                   {:else if row.status === "error"}
                     <div class="mt-0.5 truncate text-[10px] text-red-400">
-                      {row.error === "interrupted"
-                        ? i18n.t("library.downloadInterrupted")
-                        : (row.error ?? i18n.t("library.downloadFailed"))}
+                      {downloadError(row.error)}
                     </div>
                   {/if}
                 </div>

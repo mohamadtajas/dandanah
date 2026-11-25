@@ -160,6 +160,10 @@ const MIGRATIONS: &[&str] = &[
     ALTER TABLE reader_state ADD COLUMN mode TEXT NOT NULL DEFAULT 'surah';
     ALTER TABLE reader_state ADD COLUMN juz INTEGER NOT NULL DEFAULT 1;
     "#,
+    // --- v8 : exact partial file path for resume, storage and deletion ------
+    r#"
+    ALTER TABLE downloads ADD COLUMN part_path TEXT;
+    "#,
 ];
 
 /// Memorisation state for one surah. Ayah numbers are 1-based.
@@ -200,6 +204,10 @@ pub struct DownloadRow {
     pub bytes_done: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file_path: Option<String>,
+    /// Partial file while a download is running, so resume, totals and delete
+    /// all point at the same bytes.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub part_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     pub created_at: i64,
@@ -931,9 +939,20 @@ impl Database {
         Ok(())
     }
 
-    pub fn finish_download(&self, track_id: &str, path: &str) -> Result<()> {        let conn = self.conn.lock();
+    pub fn set_download_part(&self, track_id: &str, part_path: &str) -> Result<()> {
+        let conn = self.conn.lock();
         conn.execute(
-            "UPDATE downloads SET status = 'done', file_path = ?2, error = NULL
+            "UPDATE downloads SET part_path = ?2 WHERE track_id = ?1",
+            params![track_id, part_path],
+        )?;
+        Ok(())
+    }
+
+    pub fn finish_download(&self, track_id: &str, path: &str) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "UPDATE downloads SET status = 'done', file_path = ?2, part_path = NULL,
+                    error = NULL
              WHERE track_id = ?1",
             params![track_id, path],
         )?;
@@ -949,15 +968,16 @@ impl Database {
         Ok(())
     }
 
-    /// Marks a job cancelled immediately, even while it is still waiting for a
-    /// concurrency slot (before the worker has touched it).
-    pub fn mark_cancelled(&self, track_id: &str) -> Result<()> {
+    /// Marks a job cancelled only while it is still cancellable. A row that
+    /// just finished must stay `done`, even if the cancel request raced it.
+    pub fn mark_cancelled(&self, track_id: &str) -> Result<bool> {
         let conn = self.conn.lock();
-        conn.execute(
-            "UPDATE downloads SET status = 'cancelled', error = NULL WHERE track_id = ?1",
+        let changed = conn.execute(
+            "UPDATE downloads SET status = 'cancelled', error = NULL
+             WHERE track_id = ?1 AND status IN ('queued', 'downloading')",
             [track_id],
         )?;
-        Ok(())
+        Ok(changed > 0)
     }
 
     /// Runs at startup: a process that stopped mid-download leaves no worker,
@@ -974,8 +994,9 @@ impl Database {
     pub fn downloads(&self) -> Result<Vec<DownloadRow>> {
         let conn = self.conn.lock();
         let mut stmt = conn.prepare(
-            "SELECT payload, status, bytes_total, bytes_done, file_path, error, created_at
-             FROM downloads ORDER BY created_at DESC",
+            "SELECT payload, status, bytes_total, bytes_done, file_path, part_path,
+                    error, created_at
+             FROM downloads ORDER BY created_at DESC, rowid DESC",
         )?;
         let rows = stmt
             .query_map([], |r| {
@@ -986,20 +1007,22 @@ impl Database {
                     r.get::<_, i64>(3)? as u64,
                     r.get::<_, Option<String>>(4)?,
                     r.get::<_, Option<String>>(5)?,
-                    r.get::<_, i64>(6)?,
+                    r.get::<_, Option<String>>(6)?,
+                    r.get::<_, i64>(7)?,
                 ))
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows
             .into_iter()
             .filter_map(
-                |(payload, status, bytes_total, bytes_done, file_path, error, created_at)| {
+                |(payload, status, bytes_total, bytes_done, file_path, part_path, error, created_at)| {
                     Some(DownloadRow {
                         track: serde_json::from_str(&payload).ok()?,
                         status,
                         bytes_total,
                         bytes_done,
                         file_path,
+                        part_path,
                         error,
                         created_at,
                     })
@@ -1025,6 +1048,64 @@ impl Database {
         let conn = self.conn.lock();
         conn.execute("DELETE FROM downloads WHERE track_id = ?1", [track_id])?;
         Ok(path)
+    }
+
+    /// Deletes several rows in one transaction after the caller has removed
+    /// their files. Returns how many rows actually existed.
+    pub fn delete_downloads(&self, track_ids: &[String]) -> Result<usize> {
+        if track_ids.is_empty() {
+            return Ok(0);
+        }
+        let conn = self.conn.lock();
+        let tx = conn.unchecked_transaction()?;
+        let mut deleted = 0;
+        for track_id in track_ids {
+            deleted += tx.execute("DELETE FROM downloads WHERE track_id = ?1", [track_id])?;
+        }
+        tx.commit()?;
+        Ok(deleted)
+    }
+
+    /// Repairs rows whose files disappeared outside the app. Called at startup
+    /// so storage totals, retry and playback agree with the disk.
+    pub fn reconcile_downloads(&self) -> Result<usize> {
+        let rows = self.downloads()?;
+        let mut repaired = 0;
+        let conn = self.conn.lock();
+        for row in rows {
+            match row.status.as_str() {
+                "done" => {
+                    let exists = row
+                        .file_path
+                        .as_deref()
+                        .map(|path| std::path::Path::new(path).exists())
+                        .unwrap_or(false);
+                    if !exists {
+                        conn.execute(
+                            "UPDATE downloads SET status = 'error', error = 'missing',
+                                    file_path = NULL, bytes_done = 0
+                             WHERE track_id = ?1",
+                            [&row.track.id],
+                        )?;
+                        repaired += 1;
+                    }
+                }
+                "error" | "cancelled" => {
+                    if let Some(part) = row.part_path.as_deref() {
+                        if !std::path::Path::new(part).exists() {
+                            conn.execute(
+                                "UPDATE downloads SET part_path = NULL, bytes_done = 0
+                                 WHERE track_id = ?1",
+                                [&row.track.id],
+                            )?;
+                            repaired += 1;
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(repaired)
     }
 
     /// Stores an extracted cover path on every stored copy of a track: the
@@ -1357,6 +1438,56 @@ mod tests {
                 .and_then(|row| row.error.as_deref()),
             Some("interrupted")
         );
+
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn cancel_is_conditional_and_missing_files_are_reconciled() {
+        use crate::providers::TrackKind;
+        let (dir, db) = temp_db();
+        let mut track = Track::new("mp3quran", "1", "الفاتحة", TrackKind::Quran);
+        track.stream_url = Some("https://x/1.mp3".into());
+
+        db.queue_download(&track).unwrap();
+        db.finish_download(&track.id, "C:/sakeenah-missing/1.mp3")
+            .unwrap();
+        // A cancel that races the finalize must leave `done` intact.
+        assert!(!db.mark_cancelled(&track.id).unwrap());
+        assert_eq!(db.downloads().unwrap()[0].status, "done");
+
+        // Startup reconciliation notices the file disappeared.
+        assert_eq!(db.reconcile_downloads().unwrap(), 1);
+        let row = &db.downloads().unwrap()[0];
+        assert_eq!(row.status, "error");
+        assert_eq!(row.error.as_deref(), Some("missing"));
+        assert!(row.file_path.is_none());
+
+        // A running row is cancellable.
+        db.queue_download(&track).unwrap();
+        db.set_download_progress(&track.id, 5, 10, "downloading")
+            .unwrap();
+        assert!(db.mark_cancelled(&track.id).unwrap());
+        assert_eq!(db.downloads().unwrap()[0].status, "cancelled");
+
+        drop(db);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn batch_delete_counts_only_rows_that_existed() {
+        use crate::providers::TrackKind;
+        let (dir, db) = temp_db();
+        let mut a = Track::new("mp3quran", "1", "الفاتحة", TrackKind::Quran);
+        a.stream_url = Some("https://x/1.mp3".into());
+        let mut b = Track::new("mp3quran", "2", "البقرة", TrackKind::Quran);
+        b.stream_url = Some("https://x/2.mp3".into());
+        db.queue_downloads(&[a.clone(), b.clone()]).unwrap();
+
+        let ids = vec![a.id.clone(), b.id.clone(), "mp3quran:missing".into()];
+        assert_eq!(db.delete_downloads(&ids).unwrap(), 2);
+        assert!(db.downloads().unwrap().is_empty());
 
         drop(db);
         let _ = std::fs::remove_dir_all(&dir);
