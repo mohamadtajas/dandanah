@@ -129,11 +129,6 @@ fn track_from_file(path: &Path, artwork_dir: Option<&Path>) -> Option<Track> {
         }
     }
 
-    if track.artist.is_empty() {
-        // UI supplies the localized "My files" label when this is empty.
-        track.artist = String::new();
-    }
-
     if let Some(dir) = artwork_dir {
         if let Some(artwork) = extract_artwork(&absolute, dir) {
             track.artwork_url = Some(artwork);
