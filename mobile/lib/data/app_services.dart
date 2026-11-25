@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
+import 'audio/just_audio_engine.dart';
+import 'audio/playback_controller.dart';
 import 'db/app_database.dart';
 import 'location/location_service.dart';
 import 'repositories/adhkar_practice_repository.dart';
@@ -99,6 +101,10 @@ class AppServices {
   final ValueNotifier<PrayerSettings> prayerSettings;
   final ValueNotifier<ThemeMode> themeMode;
   final LocationService location;
+  PlaybackController? _playback;
+
+  PlaybackController get playback =>
+      _playback ??= PlaybackController(JustAudioEngine());
 
   static ThemeMode themeModeFrom(String? raw) =>
       raw == 'light' ? ThemeMode.light : ThemeMode.dark;
@@ -117,6 +123,7 @@ class AppServices {
     AssetBundle? bundle,
     AppDatabase? database,
     LocationService? location,
+    PlaybackController? playback,
   }) async {
     final db = database ?? await AppDatabase.open();
     try {
@@ -137,6 +144,7 @@ class AppServices {
         location ?? LocationService(),
       );
       _current = services;
+      services._playback = playback;
       return services;
     } catch (_) {
       await db.close();
@@ -163,6 +171,7 @@ class AppServices {
     _current = null;
     services?.prayerSettings.dispose();
     services?.themeMode.dispose();
+    services?._playback?.dispose();
     await services?.database.close();
   }
 }
