@@ -39,7 +39,7 @@ jobs:
           releaseBody: |
             سَكينة v__VERSION__ — المصحف العثماني كاملًا دون إنترنت، ومواقيت الصلاة، وأذكار حصن المسلم، والتاريخ الهجري والقبلة، والصوت الحر.
 
-            The full Uthmani Quran is bundled offline (114 surahs, 6236 ayahs) with surah and juz reading, bookmarks, last-position resume and the ayah of the day. Prayer times are calculated offline on your device (Umm al-Qura, Muslim World League, and more), with a prayer log, streak, excused days, Hijri date and a manual qibla dial. The full Hisn al-Muslim is bundled with tap counters, saved progress and a separate daily adhkar streak.
+            The full Uthmani Quran is bundled offline (114 surahs, 6236 ayahs) with surah and juz reading, bookmarks, last-position resume and the ayah of the day. A three-file download queue supports bulk surah and full-mushaf downloads with cancel, retry and resumable partial files, plus a storage panel with multi-select deletion. Prayer times are calculated offline on your device (Umm al-Qura, Muslim World League, and more), with a prayer log, streak, excused days, Hijri date and a manual qibla dial. The full Hisn al-Muslim is bundled with tap counters, saved progress and a separate daily adhkar streak.
 
             Updating from Dandanah 0.1.0? Your library and downloads migrate automatically on first launch. Uninstall the old app afterwards.
 
