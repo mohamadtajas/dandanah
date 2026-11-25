@@ -498,17 +498,26 @@ fn tick(app: &AppHandle, tracker: &mut AlertTracker) {
             match alert.kind {
                 AlertKind::Pre => {
                     let remaining = ((alert.prayer_at() - now).num_seconds() + 59) / 60;
+                    let remaining = remaining.max(1);
                     if english(&locale) {
+                        let unit = if remaining == 1 { "minute" } else { "minutes" };
                         notify(
                             app,
-                            &format!("In {} minutes: {name}", remaining.max(1)),
+                            &format!("In {remaining} {unit}: {name}"),
                             &format!("{name} is at {}", alert.time),
+                            false,
+                        );
+                    } else if remaining == 1 {
+                        notify(
+                            app,
+                            &format!("بعد دقيقة: {name}"),
+                            &format!("اقترب موعد صلاة {name} الساعة {}", alert.time),
                             false,
                         );
                     } else {
                         notify(
                             app,
-                            &format!("بعد {} دقائق: {name}", remaining.max(1)),
+                            &format!("بعد {remaining} دقائق: {name}"),
                             &format!("اقترب موعد صلاة {name} الساعة {}", alert.time),
                             false,
                         );

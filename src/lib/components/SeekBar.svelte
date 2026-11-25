@@ -64,7 +64,7 @@
     if (e.key === "Home") onseek(0);
     if (e.key === "End") onseek(max);
   }}
-  class="group relative h-2 w-full cursor-pointer touch-none select-none {disabled
+  class="group relative h-2 w-full cursor-pointer touch-none select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950 {disabled
     ? 'pointer-events-none opacity-50'
     : ''} {klass}"
 >
