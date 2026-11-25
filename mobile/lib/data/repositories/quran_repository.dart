@@ -15,6 +15,8 @@ abstract interface class QuranRepository {
 
   Future<Ayah?> ayah(int surah, int number);
 
+  Future<Ayah?> ayahByOrdinal(int ordinal);
+
   Future<List<Juz>> juzs();
 
   Future<List<QuranPage>> pages();
@@ -75,6 +77,20 @@ class DriftQuranRepository implements QuranRepository {
     final row =
         await (_db.select(_db.ayahs)
               ..where((t) => t.surah.equals(surah) & t.ayah.equals(number)))
+            .getSingleOrNull();
+    return row == null ? null : _ayah(row);
+  }
+
+  @override
+  Future<Ayah?> ayahByOrdinal(int ordinal) async {
+    if (ordinal < 1 || ordinal > 6236) return null;
+    final row =
+        await (_db.select(_db.ayahs)
+              ..orderBy([
+                (t) => OrderingTerm.asc(t.surah),
+                (t) => OrderingTerm.asc(t.ayah),
+              ])
+              ..limit(1, offset: ordinal - 1))
             .getSingleOrNull();
     return row == null ? null : _ayah(row);
   }

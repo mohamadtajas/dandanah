@@ -6,6 +6,7 @@ import 'location/location_service.dart';
 import 'repositories/adhkar_practice_repository.dart';
 import 'repositories/adhkar_repository.dart';
 import 'repositories/prayer_log_repository.dart';
+import 'repositories/quran_reader_repository.dart';
 import 'repositories/quran_repository.dart';
 import 'seed/adhkar_seeder.dart';
 import 'seed/quran_seeder.dart';
@@ -76,6 +77,7 @@ class AppServices {
   AppServices._(
     this.database,
     this.quran,
+    this.quranReader,
     this.adhkar,
     this.adhkarPractice,
     this.prayerLog,
@@ -89,6 +91,7 @@ class AppServices {
 
   final AppDatabase database;
   final QuranRepository quran;
+  final QuranReaderRepository quranReader;
   final AdhkarRepository adhkar;
   final AdhkarPracticeRepository adhkarPractice;
   final PrayerLogRepository prayerLog;
@@ -124,6 +127,7 @@ class AppServices {
       final services = AppServices._(
         db,
         DriftQuranRepository(db),
+        DriftQuranReaderRepository(db),
         DriftAdhkarRepository(db),
         DriftAdhkarPracticeRepository(db),
         DriftPrayerLogRepository(db),
