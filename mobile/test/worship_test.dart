@@ -31,6 +31,25 @@ void main() {
       expect(PrayerMethod.byId('unknown'), PrayerMethod.ummAlQura);
     });
 
+    test('recommended high-latitude rule follows the desktop threshold', () {
+      expect(
+        PrayerHighLatitude.recommended.effectiveFor(30),
+        PrayerHighLatitude.middleOfTheNight,
+      );
+      expect(
+        PrayerHighLatitude.recommended.effectiveFor(60),
+        PrayerHighLatitude.seventhOfTheNight,
+      );
+      expect(
+        PrayerHighLatitude.twilightAngle.effectiveFor(60),
+        PrayerHighLatitude.twilightAngle,
+      );
+      expect(
+        PrayerHighLatitude.byId('seventhOfTheNight'),
+        PrayerHighLatitude.seventhOfTheNight,
+      );
+    });
+
     test('Makkah times are ordered and fall in the expected hours', () {
       final times = PrayerTimesService().calculate(
         date: DateTime(2026, 11, 26),

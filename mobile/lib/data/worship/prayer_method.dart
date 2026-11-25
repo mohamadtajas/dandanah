@@ -48,3 +48,28 @@ enum PrayerMethod {
 /// Asr shadow rule. Shafi (and the other three schools) use shadow length 1;
 /// Hanafi uses 2.
 enum PrayerMadhab { shafi, hanafi }
+
+/// How Fajr and Isha are bounded when the sun misses the twilight angle.
+enum PrayerHighLatitude {
+  recommended('recommended', 'موصى به', 'Recommended'),
+  middleOfTheNight('middleOfTheNight', 'منتصف الليل', 'Middle of the night'),
+  seventhOfTheNight('seventhOfTheNight', 'سُبع الليل', 'Seventh of the night'),
+  twilightAngle('twilightAngle', 'زاوية الشفق', 'Twilight angle');
+
+  const PrayerHighLatitude(this.id, this.arabicName, this.englishName);
+
+  final String id;
+  final String arabicName;
+  final String englishName;
+
+  /// Desktop parity: seventh of the night above 48 degrees, middle otherwise.
+  PrayerHighLatitude effectiveFor(double latitude) {
+    if (this != PrayerHighLatitude.recommended) return this;
+    return latitude.abs() >= 48
+        ? PrayerHighLatitude.seventhOfTheNight
+        : PrayerHighLatitude.middleOfTheNight;
+  }
+
+  static PrayerHighLatitude byId(String id) => PrayerHighLatitude.values
+      .firstWhere((rule) => rule.id == id, orElse: () => recommended);
+}

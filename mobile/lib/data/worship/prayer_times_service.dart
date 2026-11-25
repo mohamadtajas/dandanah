@@ -44,12 +44,15 @@ class PrayerTimesService {
     required PrayerMethod method,
     required Duration utcOffset,
     PrayerMadhab madhab = PrayerMadhab.shafi,
+    PrayerHighLatitude highLatitude = PrayerHighLatitude.recommended,
   }) {
     final parameters = _calculationMethod(method).getParameters()
       ..madhab = madhab == PrayerMadhab.hanafi
           ? adhan.Madhab.hanafi
           : adhan.Madhab.shafi
-      ..highLatitudeRule = adhan.HighLatitudeRule.seventh_of_the_night;
+      ..highLatitudeRule = _highLatitudeRule(
+        highLatitude.effectiveFor(latitude),
+      );
 
     final raw = adhan.PrayerTimes.utc(
       adhan.Coordinates(latitude, longitude),
@@ -105,6 +108,18 @@ class PrayerTimesService {
       PrayerMethod.singapore => adhan.CalculationMethod.singapore,
       PrayerMethod.tehran => adhan.CalculationMethod.tehran,
       PrayerMethod.turkey => adhan.CalculationMethod.turkey,
+    };
+  }
+
+  adhan.HighLatitudeRule _highLatitudeRule(PrayerHighLatitude rule) {
+    return switch (rule) {
+      PrayerHighLatitude.middleOfTheNight =>
+        adhan.HighLatitudeRule.middle_of_the_night,
+      PrayerHighLatitude.seventhOfTheNight =>
+        adhan.HighLatitudeRule.seventh_of_the_night,
+      PrayerHighLatitude.twilightAngle => adhan.HighLatitudeRule.twilight_angle,
+      PrayerHighLatitude.recommended =>
+        adhan.HighLatitudeRule.middle_of_the_night,
     };
   }
 }

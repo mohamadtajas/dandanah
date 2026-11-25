@@ -1,11 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'db/app_database.dart';
 import 'repositories/adhkar_repository.dart';
+import 'repositories/prayer_log_repository.dart';
 import 'repositories/quran_repository.dart';
 import 'seed/adhkar_seeder.dart';
 import 'seed/quran_seeder.dart';
 import 'settings_store.dart';
+import 'worship/prayer_settings.dart';
 
 /// Loads the bundled Quran and adhkar assets into the local database.
 ///
@@ -68,11 +71,21 @@ abstract final class ContentBootstrap {
 
 /// Long-lived offline services created once at startup.
 class AppServices {
-  AppServices._(this.database, this.quran, this.adhkar);
+  AppServices._(
+    this.database,
+    this.quran,
+    this.adhkar,
+    this.prayerLog,
+    this.prayerSettingsRepository,
+    this.prayerSettings,
+  );
 
   final AppDatabase database;
   final QuranRepository quran;
   final AdhkarRepository adhkar;
+  final PrayerLogRepository prayerLog;
+  final PrayerSettingsRepository prayerSettingsRepository;
+  final ValueNotifier<PrayerSettings> prayerSettings;
 
   static AppServices? _current;
 
@@ -91,22 +104,33 @@ class AppServices {
     final db = database ?? await AppDatabase.open();
     try {
       await ContentBootstrap.seed(db, bundle ?? rootBundle);
+      final settingsRepository = PrayerSettingsRepository(db);
+      final settings = await settingsRepository.load();
+      final services = AppServices._(
+        db,
+        DriftQuranRepository(db),
+        DriftAdhkarRepository(db),
+        DriftPrayerLogRepository(db),
+        settingsRepository,
+        ValueNotifier(settings),
+      );
+      _current = services;
+      return services;
     } catch (_) {
       await db.close();
       rethrow;
     }
-    final services = AppServices._(
-      db,
-      DriftQuranRepository(db),
-      DriftAdhkarRepository(db),
-    );
-    _current = services;
-    return services;
+  }
+
+  Future<void> updatePrayerSettings(PrayerSettings settings) async {
+    await prayerSettingsRepository.save(settings);
+    prayerSettings.value = settings.sanitized();
   }
 
   static Future<void> shutdown() async {
     final services = _current;
     _current = null;
+    services?.prayerSettings.dispose();
     await services?.database.close();
   }
 }
