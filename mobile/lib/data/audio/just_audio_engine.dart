@@ -1,11 +1,14 @@
 import 'dart:async';
 
+import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../models/audio.dart';
 import 'audio_engine.dart';
 
-class JustAudioEngine implements AudioEngine {
+class JustAudioEngine extends BaseAudioHandler
+    with SeekHandler
+    implements AudioEngine {
   JustAudioEngine() {
     _subscriptions = [
       _player.playerStateStream.listen((_) => _emit()),
@@ -52,6 +55,40 @@ class JustAudioEngine implements AudioEngine {
       error: _error,
     );
     _states.add(_state);
+    final track = _state.current;
+    if (track != null) {
+      mediaItem.add(
+        MediaItem(
+          id: track.id,
+          title: track.surahName,
+          artist: track.reciterName,
+          album: track.subtitle,
+          duration: _player.duration,
+        ),
+      );
+    }
+    playbackState.add(
+      playbackState.value.copyWith(
+        controls: [
+          MediaControl.skipToPrevious,
+          _player.playing ? MediaControl.pause : MediaControl.play,
+          MediaControl.skipToNext,
+        ],
+        systemActions: const {MediaAction.seek},
+        androidCompactActionIndices: const [0, 1, 2],
+        processingState: switch (_player.processingState) {
+          ProcessingState.idle => AudioProcessingState.idle,
+          ProcessingState.loading => AudioProcessingState.loading,
+          ProcessingState.buffering => AudioProcessingState.buffering,
+          ProcessingState.ready => AudioProcessingState.ready,
+          ProcessingState.completed => AudioProcessingState.completed,
+        },
+        playing: _player.playing,
+        updatePosition: _player.position,
+        bufferedPosition: _player.bufferedPosition,
+        speed: _player.speed,
+      ),
+    );
   }
 
   @override
@@ -67,6 +104,15 @@ class JustAudioEngine implements AudioEngine {
       for (final track in tracks)
         AudioSource.uri(Uri.parse(track.url), tag: track),
     ];
+    queue.add([
+      for (final track in tracks)
+        MediaItem(
+          id: track.id,
+          title: track.surahName,
+          artist: track.reciterName,
+          album: track.subtitle,
+        ),
+    ]);
     await _player.setAudioSources(
       sources,
       initialIndex: initialIndex.clamp(0, sources.length - 1),
@@ -92,6 +138,12 @@ class JustAudioEngine implements AudioEngine {
   Future<void> previous() => _player.seekToPrevious();
 
   @override
+  Future<void> skipToNext() => next();
+
+  @override
+  Future<void> skipToPrevious() => previous();
+
+  @override
   Future<void> setSpeed(double speed) => _player.setSpeed(speed);
 
   @override
@@ -103,6 +155,16 @@ class JustAudioEngine implements AudioEngine {
       AudioRepeatMode.all => LoopMode.all,
     });
     _emit();
+  }
+
+  @override
+  Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) {
+    return setRepeat(switch (repeatMode) {
+      AudioServiceRepeatMode.none => AudioRepeatMode.off,
+      AudioServiceRepeatMode.one => AudioRepeatMode.one,
+      AudioServiceRepeatMode.all ||
+      AudioServiceRepeatMode.group => AudioRepeatMode.all,
+    });
   }
 
   @override
