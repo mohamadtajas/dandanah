@@ -110,7 +110,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -155,6 +155,19 @@ class AppDatabase extends _$AppDatabase {
             'FROM prayer_logs_v2',
           );
           await m.database.customStatement('DROP TABLE prayer_logs_v2');
+        },
+        from3To4: (m, schema) async {
+          // Adhkar counters reset each local day. Existing rows are assigned
+          // the day they were last touched; the repository only counts rows
+          // matching today's local date.
+          await m.addColumn(
+            schema.adhkarProgress,
+            schema.adhkarProgress.localDate,
+          );
+          await m.database.customStatement(
+            "UPDATE adhkar_progress "
+            "SET local_date = date(updated_at, 'unixepoch', 'localtime')",
+          );
         },
       );
 
@@ -203,6 +216,7 @@ class ReaderState extends Table {
 
 class AdhkarProgress extends Table {
   TextColumn get itemId => text()();
+  TextColumn get localDate => text().withDefault(const Constant(''))();
   IntColumn get completedCount => integer()();
   DateTimeColumn get updatedAt => dateTime()();
 

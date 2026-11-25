@@ -230,4 +230,81 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get settingsSaveFailed => 'تعذّر حفظ الإعدادات. حاول مرة أخرى.';
+
+  @override
+  String get adhkarToday => 'أذكار اليوم';
+
+  @override
+  String get adhkarMorning => 'الصباح';
+
+  @override
+  String get adhkarEvening => 'المساء';
+
+  @override
+  String get adhkarFeatured => 'أذكار مختارة';
+
+  @override
+  String get adhkarAll => 'كل الأذكار';
+
+  @override
+  String get adhkarSearch => 'ابحث في الأذكار';
+
+  @override
+  String get adhkarNoResults => 'لا توجد نتائج';
+
+  @override
+  String adhkarRemaining(String count) {
+    return 'متبقي $count';
+  }
+
+  @override
+  String get adhkarDone => 'تم';
+
+  @override
+  String get adhkarTapToCount => 'اضغط للعد';
+
+  @override
+  String get adhkarCompletedTitle => 'أتممت الأذكار';
+
+  @override
+  String get adhkarCompletedBody => 'أُضيفت إلى سلسلة اليوم.';
+
+  @override
+  String get adhkarResetItem => 'إعادة هذا الذكر';
+
+  @override
+  String adhkarCategoryProgress(int completed, int total) {
+    return 'التقدم: $completed من $total';
+  }
+
+  @override
+  String get adhkarClose => 'إغلاق';
+
+  @override
+  String get adhkarResetCategory => 'إعادة القسم';
+
+  @override
+  String get adhkarCompletedBodyGeneric => 'تم إكمال أذكار هذا القسم.';
+
+  @override
+  String adhkarStreakCount(int count) {
+    return 'سلسلة الأذكار: $count';
+  }
+
+  @override
+  String adhkarBestCount(int count) {
+    return 'أفضل سلسلة: $count';
+  }
+
+  @override
+  String get adhkarPrevious => 'السابق';
+
+  @override
+  String get adhkarNext => 'التالي';
+
+  @override
+  String get adhkarLoadError => 'تعذر تحميل الأذكار.';
+
+  @override
+  String get adhkarActionError => 'تعذر حفظ التقدم.';
 }

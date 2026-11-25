@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'db/app_database.dart';
+import 'repositories/adhkar_practice_repository.dart';
 import 'repositories/adhkar_repository.dart';
 import 'repositories/prayer_log_repository.dart';
 import 'repositories/quran_repository.dart';
@@ -75,6 +76,7 @@ class AppServices {
     this.database,
     this.quran,
     this.adhkar,
+    this.adhkarPractice,
     this.prayerLog,
     this.prayerSettingsRepository,
     this.prayerSettings,
@@ -83,6 +85,7 @@ class AppServices {
   final AppDatabase database;
   final QuranRepository quran;
   final AdhkarRepository adhkar;
+  final AdhkarPracticeRepository adhkarPractice;
   final PrayerLogRepository prayerLog;
   final PrayerSettingsRepository prayerSettingsRepository;
   final ValueNotifier<PrayerSettings> prayerSettings;
@@ -110,6 +113,7 @@ class AppServices {
         db,
         DriftQuranRepository(db),
         DriftAdhkarRepository(db),
+        DriftAdhkarPracticeRepository(db),
         DriftPrayerLogRepository(db),
         settingsRepository,
         ValueNotifier(settings),

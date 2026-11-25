@@ -230,4 +230,81 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsSaveFailed => 'Could not save settings. Try again.';
+
+  @override
+  String get adhkarToday => 'Today\'s adhkar';
+
+  @override
+  String get adhkarMorning => 'Morning';
+
+  @override
+  String get adhkarEvening => 'Evening';
+
+  @override
+  String get adhkarFeatured => 'Featured adhkar';
+
+  @override
+  String get adhkarAll => 'All adhkar';
+
+  @override
+  String get adhkarSearch => 'Search adhkar';
+
+  @override
+  String get adhkarNoResults => 'No results';
+
+  @override
+  String adhkarRemaining(String count) {
+    return '$count remaining';
+  }
+
+  @override
+  String get adhkarDone => 'Done';
+
+  @override
+  String get adhkarTapToCount => 'Tap to count';
+
+  @override
+  String get adhkarCompletedTitle => 'Adhkar completed';
+
+  @override
+  String get adhkarCompletedBody => 'Added to today\'s streak.';
+
+  @override
+  String get adhkarResetItem => 'Reset this dhikr';
+
+  @override
+  String adhkarCategoryProgress(int completed, int total) {
+    return 'Progress: $completed of $total';
+  }
+
+  @override
+  String get adhkarClose => 'Close';
+
+  @override
+  String get adhkarResetCategory => 'Reset section';
+
+  @override
+  String get adhkarCompletedBodyGeneric => 'This adhkar section is complete.';
+
+  @override
+  String adhkarStreakCount(int count) {
+    return 'Adhkar streak: $count';
+  }
+
+  @override
+  String adhkarBestCount(int count) {
+    return 'Best streak: $count';
+  }
+
+  @override
+  String get adhkarPrevious => 'Previous';
+
+  @override
+  String get adhkarNext => 'Next';
+
+  @override
+  String get adhkarLoadError => 'Could not load adhkar.';
+
+  @override
+  String get adhkarActionError => 'Could not save progress.';
 }

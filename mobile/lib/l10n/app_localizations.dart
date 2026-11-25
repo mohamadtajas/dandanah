@@ -511,6 +511,144 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تعذّر حفظ الإعدادات. حاول مرة أخرى.'**
   String get settingsSaveFailed;
+
+  /// No description provided for @adhkarToday.
+  ///
+  /// In ar, this message translates to:
+  /// **'أذكار اليوم'**
+  String get adhkarToday;
+
+  /// No description provided for @adhkarMorning.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصباح'**
+  String get adhkarMorning;
+
+  /// No description provided for @adhkarEvening.
+  ///
+  /// In ar, this message translates to:
+  /// **'المساء'**
+  String get adhkarEvening;
+
+  /// No description provided for @adhkarFeatured.
+  ///
+  /// In ar, this message translates to:
+  /// **'أذكار مختارة'**
+  String get adhkarFeatured;
+
+  /// No description provided for @adhkarAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل الأذكار'**
+  String get adhkarAll;
+
+  /// No description provided for @adhkarSearch.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث في الأذكار'**
+  String get adhkarSearch;
+
+  /// No description provided for @adhkarNoResults.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد نتائج'**
+  String get adhkarNoResults;
+
+  /// No description provided for @adhkarRemaining.
+  ///
+  /// In ar, this message translates to:
+  /// **'متبقي {count}'**
+  String adhkarRemaining(String count);
+
+  /// No description provided for @adhkarDone.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم'**
+  String get adhkarDone;
+
+  /// No description provided for @adhkarTapToCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط للعد'**
+  String get adhkarTapToCount;
+
+  /// No description provided for @adhkarCompletedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أتممت الأذكار'**
+  String get adhkarCompletedTitle;
+
+  /// No description provided for @adhkarCompletedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'أُضيفت إلى سلسلة اليوم.'**
+  String get adhkarCompletedBody;
+
+  /// No description provided for @adhkarResetItem.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة هذا الذكر'**
+  String get adhkarResetItem;
+
+  /// No description provided for @adhkarCategoryProgress.
+  ///
+  /// In ar, this message translates to:
+  /// **'التقدم: {completed} من {total}'**
+  String adhkarCategoryProgress(int completed, int total);
+
+  /// No description provided for @adhkarClose.
+  ///
+  /// In ar, this message translates to:
+  /// **'إغلاق'**
+  String get adhkarClose;
+
+  /// No description provided for @adhkarResetCategory.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة القسم'**
+  String get adhkarResetCategory;
+
+  /// No description provided for @adhkarCompletedBodyGeneric.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إكمال أذكار هذا القسم.'**
+  String get adhkarCompletedBodyGeneric;
+
+  /// No description provided for @adhkarStreakCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'سلسلة الأذكار: {count}'**
+  String adhkarStreakCount(int count);
+
+  /// No description provided for @adhkarBestCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'أفضل سلسلة: {count}'**
+  String adhkarBestCount(int count);
+
+  /// No description provided for @adhkarPrevious.
+  ///
+  /// In ar, this message translates to:
+  /// **'السابق'**
+  String get adhkarPrevious;
+
+  /// No description provided for @adhkarNext.
+  ///
+  /// In ar, this message translates to:
+  /// **'التالي'**
+  String get adhkarNext;
+
+  /// No description provided for @adhkarLoadError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تحميل الأذكار.'**
+  String get adhkarLoadError;
+
+  /// No description provided for @adhkarActionError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر حفظ التقدم.'**
+  String get adhkarActionError;
 }
 
 class _AppLocalizationsDelegate

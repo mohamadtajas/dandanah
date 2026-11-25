@@ -889,9 +889,221 @@ i1.GeneratedColumn<String> _column_36(String aliasedName) =>
       type: i1.DriftSqlType.string,
       $customConstraints: 'NOT NULL',
     );
+
+final class Schema4 extends i0.VersionedSchema {
+  Schema4({required super.database}) : super(version: 4);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    surahs,
+    ayahs,
+    juzs,
+    quranPages,
+    adhkarCategories,
+    adhkarItems,
+    settings,
+    bookmarks,
+    readerState,
+    adhkarProgress,
+    adhkarLogs,
+    prayerLogs,
+    ayahsJuz,
+    ayahsPage,
+    adhkarItemsCategory,
+    bookmarksAyah,
+    adhkarLogsStreak,
+  ];
+  late final Shape0 surahs = Shape0(
+    source: i0.VersionedTable(
+      entityName: 'surahs',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(number)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_2,
+        _column_3,
+        _column_4,
+        _column_5,
+        _column_6,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape1 ayahs = Shape1(
+    source: i0.VersionedTable(
+      entityName: 'ayahs',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(surah, ayah)'],
+      columns: [
+        _column_7,
+        _column_8,
+        _column_9,
+        _column_10,
+        _column_11,
+        _column_12,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape2 juzs = Shape2(
+    source: i0.VersionedTable(
+      entityName: 'juzs',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(number)'],
+      columns: [_column_0, _column_7, _column_8, _column_4],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape3 quranPages = Shape3(
+    source: i0.VersionedTable(
+      entityName: 'quran_pages',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(number)'],
+      columns: [_column_0, _column_7, _column_8],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape4 adhkarCategories = Shape4(
+    source: i0.VersionedTable(
+      entityName: 'adhkar_categories',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [_column_13, _column_14, _column_15, _column_16, _column_17],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape5 adhkarItems = Shape5(
+    source: i0.VersionedTable(
+      entityName: 'adhkar_items',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_13,
+        _column_18,
+        _column_9,
+        _column_19,
+        _column_20,
+        _column_17,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape6 settings = Shape6(
+    source: i0.VersionedTable(
+      entityName: 'settings',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY("key")'],
+      columns: [_column_21, _column_22, _column_23],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape7 bookmarks = Shape7(
+    source: i0.VersionedTable(
+      entityName: 'bookmarks',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [_column_24, _column_25, _column_8, _column_26],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape8 readerState = Shape8(
+    source: i0.VersionedTable(
+      entityName: 'reader_state',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [_column_27, _column_25, _column_8, _column_23],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape14 adhkarProgress = Shape14(
+    source: i0.VersionedTable(
+      entityName: 'adhkar_progress',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(item_id)'],
+      columns: [_column_28, _column_35, _column_29, _column_23],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape12 adhkarLogs = Shape12(
+    source: i0.VersionedTable(
+      entityName: 'adhkar_logs',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [_column_24, _column_30, _column_35, _column_31],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape13 prayerLogs = Shape13(
+    source: i0.VersionedTable(
+      entityName: 'prayer_logs',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(date, prayer)'],
+      columns: [_column_36, _column_33, _column_34],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index ayahsJuz = i1.Index(
+    'ayahs_juz',
+    'CREATE INDEX ayahs_juz ON ayahs (juz)',
+  );
+  final i1.Index ayahsPage = i1.Index(
+    'ayahs_page',
+    'CREATE INDEX ayahs_page ON ayahs (page)',
+  );
+  final i1.Index adhkarItemsCategory = i1.Index(
+    'adhkar_items_category',
+    'CREATE INDEX adhkar_items_category ON adhkar_items (category_id)',
+  );
+  final i1.Index bookmarksAyah = i1.Index(
+    'bookmarks_ayah',
+    'CREATE UNIQUE INDEX bookmarks_ayah ON bookmarks (surah, ayah)',
+  );
+  final i1.Index adhkarLogsStreak = i1.Index(
+    'adhkar_logs_streak',
+    'CREATE INDEX adhkar_logs_streak ON adhkar_logs (streak_key, local_date)',
+  );
+}
+
+class Shape14 extends i0.VersionedTable {
+  Shape14({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get itemId =>
+      columnsByName['item_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get localDate =>
+      columnsByName['local_date']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get completedCount =>
+      columnsByName['completed_count']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get updatedAt =>
+      columnsByName['updated_at']! as i1.GeneratedColumn<int>;
+}
+
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
+  required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
 }) {
   return (currentVersion, database) async {
     switch (currentVersion) {
@@ -905,6 +1117,11 @@ i0.MigrationStepWithVersion migrationSteps({
         final migrator = i1.Migrator(database, schema);
         await from2To3(migrator, schema);
         return 3;
+      case 3:
+        final schema = Schema4(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from3To4(migrator, schema);
+        return 4;
       default:
         throw ArgumentError.value('Unknown migration from $currentVersion');
     }
@@ -914,6 +1131,11 @@ i0.MigrationStepWithVersion migrationSteps({
 i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
+  required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
 }) => i0.VersionedSchema.stepByStepHelper(
-  step: migrationSteps(from1To2: from1To2, from2To3: from2To3),
+  step: migrationSteps(
+    from1To2: from1To2,
+    from2To3: from2To3,
+    from3To4: from3To4,
+  ),
 );

@@ -6,7 +6,7 @@ and prayer calculations but not the desktop runtime.
 
 ## Status
 
-Phase **M2** - dashboard, prayer, streaks and settings.
+Phase **M3** - adhkar catalog, counter, auto-advance and streak.
 
 - Arabic-first UI with `flutter_localizations` and generated ARB accessors.
 - Bottom navigation: Dashboard, Mushaf, Adhkar, Audio.
@@ -14,21 +14,24 @@ Phase **M2** - dashboard, prayer, streaks and settings.
 - Tajawal for UI text and Amiri Quran for Quranic text, both bundled offline.
 - Drift database with tested schema migrations and bundled content seeding.
 - Offline prayer methods, Hijri conversion and qibla bearings.
+- Adhkar catalog with featured sections, search, per-section progress and a
+  morning/evening streak, plus a full-screen counter with haptics,
+  auto-advance and persisted per-item progress.
 
 The full Uthmani Quran (114 surahs, 6236 ayahs) and Hisn al-Muslim (126
-categories, 302 items) are seeded from bundled assets on first launch. Screens
-that consume them arrive in M2–M4.
+categories, 302 items) are seeded from bundled assets on first launch. Adhkar
+screens consume them in M3; Quran screens arrive in M4.
 
 ## Data layer
 
 ```
 lib/data/
   cities.dart              59 offline city presets
-  db/app_database.dart      Drift schema v3 (content + user state)
+  db/app_database.dart      Drift schema v4 (content + user state)
   models/                   Surah, Ayah, Adhkar, local date keys
-  repositories/             content, prayer log
+  repositories/             content, prayer log, adhkar practice
   seed/                     QuranSeeder, AdhkarSeeder
-  worship/                  settings, schedule, prayer log, Hijri, qibla
+  worship/                  settings, schedule, prayer/practice logs, Hijri, qibla
   app_services.dart         startup seeding and shared repositories
 ```
 
@@ -39,8 +42,9 @@ lib/data/
   user state.
 - Schema v1 held Quran/adkhar content; v2 added settings, bookmarks, reader
   position, adhkar progress/logs and the prayer log; v3 stores prayer and
-  adhkar streak days as `YYYY-MM-DD` local dates. Step-by-step migrations and
-  a generated schema test cover v1 → v2 → v3.
+  adhkar streak days as `YYYY-MM-DD` local dates; v4 scopes adhkar counters to
+  a local day so sections reset each morning. Step-by-step migrations and a
+  generated schema test cover v1 → v4.
 - Quran text is inserted verbatim; tests compare every stored row against the
   bundled source, verify the asset is byte-identical to the desktop bundle,
   and check the Tanzil XML hash.
@@ -73,8 +77,9 @@ writes both the desktop and mobile Quran bundles from the same XML.
   1.7 MB Quran asset on every launch.
 - Tests use in-memory databases, real bundled assets and generated migration
   snapshots. M2 adds schedule/timezone matrices, prayer logging and streak
-  tests, plus dashboard and settings widget tests.
-
+  tests, plus dashboard and settings widget tests. M3 adds adhkar repeat,
+  auto-advance, resume, morning/evening streak, Arabic search, reset and
+  2x-text layout tests.
 
 ## Requirements
 
@@ -122,6 +127,10 @@ Captured on an Android 16 (API 36) emulator at 1080x2400 in Arabic RTL.
 | Audio | Settings (dark) | Settings (light) |
 |---|---|---|
 | ![Audio](../docs/screenshots/mobile/03-audio.png) | ![Settings dark](../docs/screenshots/mobile/04-settings-dark.png) | ![Settings light](../docs/screenshots/mobile/05-settings-light.png) |
+
+| Adhkar counter |
+|---|
+| ![Adhkar counter](../docs/screenshots/mobile/08-adhkar-counter.png) |
 
 ## Localisation
 

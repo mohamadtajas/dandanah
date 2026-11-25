@@ -89,5 +89,59 @@
   },
   "prayerInvalidCoordinates": "Enter valid coordinates.",
   "prayerTimesUnavailable": "Prayer times are not available for this location and date. Try another location or a lower latitude.",
-  "settingsSaveFailed": "Could not save settings. Try again."
+  "settingsSaveFailed": "Could not save settings. Try again.",
+  "adhkarToday": "Today's adhkar",
+  "adhkarMorning": "Morning",
+  "adhkarEvening": "Evening",
+  "adhkarFeatured": "Featured adhkar",
+  "adhkarAll": "All adhkar",
+  "adhkarSearch": "Search adhkar",
+  "adhkarNoResults": "No results",
+  "adhkarRemaining": "{count} remaining",
+  "adhkarDone": "Done",
+  "adhkarTapToCount": "Tap to count",
+  "adhkarCompletedTitle": "Adhkar completed",
+  "adhkarCompletedBody": "Added to today's streak.",
+  "adhkarResetItem": "Reset this dhikr",
+  "adhkarCategoryProgress": "Progress: {completed} of {total}",
+  "adhkarClose": "Close",
+  "@adhkarRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "@adhkarCategoryProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "adhkarResetCategory": "Reset section",
+  "adhkarCompletedBodyGeneric": "This adhkar section is complete.",
+  "adhkarStreakCount": "Adhkar streak: {count}",
+  "adhkarBestCount": "Best streak: {count}",
+  "adhkarPrevious": "Previous",
+  "adhkarNext": "Next",
+  "adhkarLoadError": "Could not load adhkar.",
+  "adhkarActionError": "Could not save progress.",
+  "@adhkarStreakCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@adhkarBestCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

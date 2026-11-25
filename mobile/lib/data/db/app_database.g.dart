@@ -3040,6 +3040,18 @@ class $AdhkarProgressTable extends AdhkarProgress
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _localDateMeta = const VerificationMeta(
+    'localDate',
+  );
+  @override
+  late final GeneratedColumn<String> localDate = GeneratedColumn<String>(
+    'local_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _completedCountMeta = const VerificationMeta(
     'completedCount',
   );
@@ -3063,7 +3075,12 @@ class $AdhkarProgressTable extends AdhkarProgress
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [itemId, completedCount, updatedAt];
+  List<GeneratedColumn> get $columns => [
+    itemId,
+    localDate,
+    completedCount,
+    updatedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3083,6 +3100,12 @@ class $AdhkarProgressTable extends AdhkarProgress
       );
     } else if (isInserting) {
       context.missing(_itemIdMeta);
+    }
+    if (data.containsKey('local_date')) {
+      context.handle(
+        _localDateMeta,
+        localDate.isAcceptableOrUnknown(data['local_date']!, _localDateMeta),
+      );
     }
     if (data.containsKey('completed_count')) {
       context.handle(
@@ -3116,6 +3139,10 @@ class $AdhkarProgressTable extends AdhkarProgress
         DriftSqlType.string,
         data['${effectivePrefix}item_id'],
       )!,
+      localDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_date'],
+      )!,
       completedCount: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}completed_count'],
@@ -3136,10 +3163,12 @@ class $AdhkarProgressTable extends AdhkarProgress
 class AdhkarProgressData extends DataClass
     implements Insertable<AdhkarProgressData> {
   final String itemId;
+  final String localDate;
   final int completedCount;
   final DateTime updatedAt;
   const AdhkarProgressData({
     required this.itemId,
+    required this.localDate,
     required this.completedCount,
     required this.updatedAt,
   });
@@ -3147,6 +3176,7 @@ class AdhkarProgressData extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['item_id'] = Variable<String>(itemId);
+    map['local_date'] = Variable<String>(localDate);
     map['completed_count'] = Variable<int>(completedCount);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -3155,6 +3185,7 @@ class AdhkarProgressData extends DataClass
   AdhkarProgressCompanion toCompanion(bool nullToAbsent) {
     return AdhkarProgressCompanion(
       itemId: Value(itemId),
+      localDate: Value(localDate),
       completedCount: Value(completedCount),
       updatedAt: Value(updatedAt),
     );
@@ -3167,6 +3198,7 @@ class AdhkarProgressData extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return AdhkarProgressData(
       itemId: serializer.fromJson<String>(json['itemId']),
+      localDate: serializer.fromJson<String>(json['localDate']),
       completedCount: serializer.fromJson<int>(json['completedCount']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -3176,6 +3208,7 @@ class AdhkarProgressData extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'itemId': serializer.toJson<String>(itemId),
+      'localDate': serializer.toJson<String>(localDate),
       'completedCount': serializer.toJson<int>(completedCount),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -3183,16 +3216,19 @@ class AdhkarProgressData extends DataClass
 
   AdhkarProgressData copyWith({
     String? itemId,
+    String? localDate,
     int? completedCount,
     DateTime? updatedAt,
   }) => AdhkarProgressData(
     itemId: itemId ?? this.itemId,
+    localDate: localDate ?? this.localDate,
     completedCount: completedCount ?? this.completedCount,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   AdhkarProgressData copyWithCompanion(AdhkarProgressCompanion data) {
     return AdhkarProgressData(
       itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      localDate: data.localDate.present ? data.localDate.value : this.localDate,
       completedCount: data.completedCount.present
           ? data.completedCount.value
           : this.completedCount,
@@ -3204,6 +3240,7 @@ class AdhkarProgressData extends DataClass
   String toString() {
     return (StringBuffer('AdhkarProgressData(')
           ..write('itemId: $itemId, ')
+          ..write('localDate: $localDate, ')
           ..write('completedCount: $completedCount, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -3211,29 +3248,33 @@ class AdhkarProgressData extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(itemId, completedCount, updatedAt);
+  int get hashCode => Object.hash(itemId, localDate, completedCount, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is AdhkarProgressData &&
           other.itemId == this.itemId &&
+          other.localDate == this.localDate &&
           other.completedCount == this.completedCount &&
           other.updatedAt == this.updatedAt);
 }
 
 class AdhkarProgressCompanion extends UpdateCompanion<AdhkarProgressData> {
   final Value<String> itemId;
+  final Value<String> localDate;
   final Value<int> completedCount;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
   const AdhkarProgressCompanion({
     this.itemId = const Value.absent(),
+    this.localDate = const Value.absent(),
     this.completedCount = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AdhkarProgressCompanion.insert({
     required String itemId,
+    this.localDate = const Value.absent(),
     required int completedCount,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -3242,12 +3283,14 @@ class AdhkarProgressCompanion extends UpdateCompanion<AdhkarProgressData> {
        updatedAt = Value(updatedAt);
   static Insertable<AdhkarProgressData> custom({
     Expression<String>? itemId,
+    Expression<String>? localDate,
     Expression<int>? completedCount,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (itemId != null) 'item_id': itemId,
+      if (localDate != null) 'local_date': localDate,
       if (completedCount != null) 'completed_count': completedCount,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -3256,12 +3299,14 @@ class AdhkarProgressCompanion extends UpdateCompanion<AdhkarProgressData> {
 
   AdhkarProgressCompanion copyWith({
     Value<String>? itemId,
+    Value<String>? localDate,
     Value<int>? completedCount,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
   }) {
     return AdhkarProgressCompanion(
       itemId: itemId ?? this.itemId,
+      localDate: localDate ?? this.localDate,
       completedCount: completedCount ?? this.completedCount,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -3273,6 +3318,9 @@ class AdhkarProgressCompanion extends UpdateCompanion<AdhkarProgressData> {
     final map = <String, Expression>{};
     if (itemId.present) {
       map['item_id'] = Variable<String>(itemId.value);
+    }
+    if (localDate.present) {
+      map['local_date'] = Variable<String>(localDate.value);
     }
     if (completedCount.present) {
       map['completed_count'] = Variable<int>(completedCount.value);
@@ -3290,6 +3338,7 @@ class AdhkarProgressCompanion extends UpdateCompanion<AdhkarProgressData> {
   String toString() {
     return (StringBuffer('AdhkarProgressCompanion(')
           ..write('itemId: $itemId, ')
+          ..write('localDate: $localDate, ')
           ..write('completedCount: $completedCount, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -6493,6 +6542,7 @@ typedef $$ReaderStateTableProcessedTableManager =
 typedef $$AdhkarProgressTableCreateCompanionBuilder =
     AdhkarProgressCompanion Function({
       required String itemId,
+      Value<String> localDate,
       required int completedCount,
       required DateTime updatedAt,
       Value<int> rowid,
@@ -6500,6 +6550,7 @@ typedef $$AdhkarProgressTableCreateCompanionBuilder =
 typedef $$AdhkarProgressTableUpdateCompanionBuilder =
     AdhkarProgressCompanion Function({
       Value<String> itemId,
+      Value<String> localDate,
       Value<int> completedCount,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -6516,6 +6567,11 @@ class $$AdhkarProgressTableFilterComposer
   });
   ColumnFilters<String> get itemId => $composableBuilder(
     column: $table.itemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localDate => $composableBuilder(
+    column: $table.localDate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6544,6 +6600,11 @@ class $$AdhkarProgressTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get localDate => $composableBuilder(
+    column: $table.localDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get completedCount => $composableBuilder(
     column: $table.completedCount,
     builder: (column) => ColumnOrderings(column),
@@ -6566,6 +6627,9 @@ class $$AdhkarProgressTableAnnotationComposer
   });
   GeneratedColumn<String> get itemId =>
       $composableBuilder(column: $table.itemId, builder: (column) => column);
+
+  GeneratedColumn<String> get localDate =>
+      $composableBuilder(column: $table.localDate, builder: (column) => column);
 
   GeneratedColumn<int> get completedCount => $composableBuilder(
     column: $table.completedCount,
@@ -6614,11 +6678,13 @@ class $$AdhkarProgressTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> itemId = const Value.absent(),
+                Value<String> localDate = const Value.absent(),
                 Value<int> completedCount = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AdhkarProgressCompanion(
                 itemId: itemId,
+                localDate: localDate,
                 completedCount: completedCount,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -6626,11 +6692,13 @@ class $$AdhkarProgressTableTableManager
           createCompanionCallback:
               ({
                 required String itemId,
+                Value<String> localDate = const Value.absent(),
                 required int completedCount,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
               }) => AdhkarProgressCompanion.insert(
                 itemId: itemId,
+                localDate: localDate,
                 completedCount: completedCount,
                 updatedAt: updatedAt,
                 rowid: rowid,

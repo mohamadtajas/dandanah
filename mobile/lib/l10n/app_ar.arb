@@ -89,5 +89,59 @@
   },
   "prayerInvalidCoordinates": "أدخل إحداثيات صحيحة.",
   "prayerTimesUnavailable": "تعذّر حساب مواقيت الصلاة لهذا الموقع والتاريخ. جرّب موقعًا آخر أو خط عرض أقل.",
-  "settingsSaveFailed": "تعذّر حفظ الإعدادات. حاول مرة أخرى."
+  "settingsSaveFailed": "تعذّر حفظ الإعدادات. حاول مرة أخرى.",
+  "adhkarToday": "أذكار اليوم",
+  "adhkarMorning": "الصباح",
+  "adhkarEvening": "المساء",
+  "adhkarFeatured": "أذكار مختارة",
+  "adhkarAll": "كل الأذكار",
+  "adhkarSearch": "ابحث في الأذكار",
+  "adhkarNoResults": "لا توجد نتائج",
+  "adhkarRemaining": "متبقي {count}",
+  "adhkarDone": "تم",
+  "adhkarTapToCount": "اضغط للعد",
+  "adhkarCompletedTitle": "أتممت الأذكار",
+  "adhkarCompletedBody": "أُضيفت إلى سلسلة اليوم.",
+  "adhkarResetItem": "إعادة هذا الذكر",
+  "adhkarCategoryProgress": "التقدم: {completed} من {total}",
+  "adhkarClose": "إغلاق",
+  "@adhkarRemaining": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "@adhkarCategoryProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "adhkarResetCategory": "إعادة القسم",
+  "adhkarCompletedBodyGeneric": "تم إكمال أذكار هذا القسم.",
+  "adhkarStreakCount": "سلسلة الأذكار: {count}",
+  "adhkarBestCount": "أفضل سلسلة: {count}",
+  "adhkarPrevious": "السابق",
+  "adhkarNext": "التالي",
+  "adhkarLoadError": "تعذر تحميل الأذكار.",
+  "adhkarActionError": "تعذر حفظ التقدم.",
+  "@adhkarStreakCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@adhkarBestCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

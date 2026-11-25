@@ -11,6 +11,10 @@ abstract interface class AdhkarRepository {
 
   Future<List<AdhkarItem>> itemsFor(String categoryId);
 
+  /// All item bodies grouped by category, used to build the offline search
+  /// index without loading 302 separate result sets.
+  Future<Map<String, String>> itemTextByCategory();
+
   Future<int> itemCount();
 
   Future<bool> isSeeded();
@@ -57,6 +61,20 @@ class DriftAdhkarRepository implements AdhkarRepository {
 
   @override
   Future<int> itemCount() => _db.adhkarItems.count().getSingle();
+
+  @override
+  Future<Map<String, String>> itemTextByCategory() async {
+    final rows = await _db.select(_db.adhkarItems).get();
+    final byCategory = <String, String>{};
+    for (final row in rows) {
+      byCategory.update(
+        row.categoryId,
+        (value) => '$value ${row.body}',
+        ifAbsent: () => row.body,
+      );
+    }
+    return byCategory;
+  }
 
   @override
   Future<bool> isSeeded() async =>

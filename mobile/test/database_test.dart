@@ -7,7 +7,7 @@ import 'generated_migrations/schema.dart';
 
 void main() {
   test(
-    'fresh database contains content and user tables at version 3',
+    'fresh database contains content and user tables at version 4',
     () async {
       final db = AppDatabase.memory();
       addTearDown(db.close);
@@ -39,7 +39,7 @@ void main() {
           .customSelect('PRAGMA user_version')
           .map((row) => row.read<int>('user_version'))
           .getSingle();
-      expect(version, 3);
+      expect(version, 4);
 
       final foreignKeys = await db
           .customSelect('PRAGMA foreign_keys')
@@ -54,6 +54,9 @@ void main() {
 
       final adhkarLogs = await _columns(db, 'adhkar_logs');
       expect(adhkarLogs['local_date'], 'TEXT');
+
+      final adhkarProgress = await _columns(db, 'adhkar_progress');
+      expect(adhkarProgress['local_date'], 'TEXT');
     },
   );
 
@@ -71,7 +74,7 @@ void main() {
     );
 
     final db = AppDatabase(old.newConnection());
-    await verifier.migrateAndValidate(db, 3);
+    await verifier.migrateAndValidate(db, 4);
 
     final surahs = await db.select(db.surahs).get();
     expect(surahs, hasLength(1));
@@ -99,7 +102,7 @@ void main() {
       );
 
       final db = AppDatabase(old.newConnection());
-      await verifier.migrateAndValidate(db, 3);
+      await verifier.migrateAndValidate(db, 4);
 
       final prayers = await db
           .customSelect('SELECT date, prayer, status FROM prayer_logs')
@@ -119,13 +122,40 @@ void main() {
     },
   );
 
+  test('v3 adhkar progress gains a local date for daily counters', () async {
+    final verifier = SchemaVerifier(GeneratedHelper());
+    final old = await verifier.schemaAt(3);
+    final noon = DateTime(2026, 11, 26, 12).millisecondsSinceEpoch ~/ 1000;
+    old.rawDatabase.execute(
+      'INSERT INTO adhkar_progress (item_id, completed_count, updated_at) '
+      'VALUES (?, ?, ?)',
+      ['morning-1', 3, noon],
+    );
+
+    final db = AppDatabase(old.newConnection());
+    await verifier.migrateAndValidate(db, 4);
+
+    final rows = await db
+        .customSelect(
+          'SELECT item_id, completed_count, local_date '
+          'FROM adhkar_progress',
+        )
+        .get();
+    expect(rows, hasLength(1));
+    expect(rows.single.read<String>('item_id'), 'morning-1');
+    expect(rows.single.read<int>('completed_count'), 3);
+    expect(rows.single.read<String>('local_date'), '2026-11-26');
+
+    await db.close();
+  });
+
   test('a failed upgrade rolls back every earlier migration step', () async {
     final verifier = SchemaVerifier(GeneratedHelper());
     final old = await verifier.schemaAt(1);
     old.rawDatabase.execute('CREATE TABLE prayer_logs (x TEXT)');
 
     final db = AppDatabase(old.newConnection());
-    await expectLater(verifier.migrateAndValidate(db, 3), throwsA(anything));
+    await expectLater(verifier.migrateAndValidate(db, 4), throwsA(anything));
 
     final tables = old.rawDatabase
         .select("SELECT name FROM sqlite_master WHERE type = 'table'")
