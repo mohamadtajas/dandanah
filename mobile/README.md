@@ -136,6 +136,10 @@ Captured on an Android 16 (API 36) emulator at 1080x2400 in Arabic RTL.
 |---|
 | ![Adhkar counter](../docs/screenshots/mobile/08-adhkar-counter.png) |
 
+| Location onboarding |
+|---|
+| ![Location onboarding](../docs/screenshots/mobile/09-location-onboarding.png) |
+
 ## Localisation
 
 `lib/l10n/app_ar.arb` is the template. Add a key there first, then mirror it in
