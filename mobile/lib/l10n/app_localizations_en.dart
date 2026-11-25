@@ -357,4 +357,91 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsLocationUse => 'Use my current location';
+
+  @override
+  String get quranTabSurahs => 'Surahs';
+
+  @override
+  String get quranTabJuz => 'Juz';
+
+  @override
+  String get quranTabBookmarks => 'Bookmarks';
+
+  @override
+  String get quranTabResume => 'Resume';
+
+  @override
+  String get quranSearch => 'Search surahs';
+
+  @override
+  String get quranSearchEmpty => 'No matching surahs';
+
+  @override
+  String get quranNoBookmarks => 'No bookmarks yet';
+
+  @override
+  String get quranNoResume => 'You have not started reading yet';
+
+  @override
+  String get quranDailyAyah => 'Ayah of the day';
+
+  @override
+  String quranJuz(int number) {
+    return 'Juz $number';
+  }
+
+  @override
+  String quranAyahCount(int count) {
+    return '$count ayahs';
+  }
+
+  @override
+  String get quranMakkah => 'Makkan';
+
+  @override
+  String get quranMadinah => 'Madinan';
+
+  @override
+  String get quranContinue => 'Continue reading';
+
+  @override
+  String quranResumeAt(String surah, int ayah) {
+    return '$surah · Ayah $ayah';
+  }
+
+  @override
+  String quranBookmarkAt(String surah, int ayah) {
+    return '$surah · Ayah $ayah';
+  }
+
+  @override
+  String get quranRemoveBookmark => 'Remove bookmark';
+
+  @override
+  String get quranAddBookmark => 'Add bookmark';
+
+  @override
+  String get quranSajda => 'Sajda';
+
+  @override
+  String get quranReaderError => 'Could not load the Quran.';
+
+  @override
+  String get quranFontDecrease => 'Decrease font size';
+
+  @override
+  String get quranFontIncrease => 'Increase font size';
+
+  @override
+  String get quranRead => 'Read';
+
+  @override
+  String quranJuzStart(String surah, int ayah) {
+    return 'Starts at $surah · $ayah';
+  }
+
+  @override
+  String quranAyahLabel(int number) {
+    return 'Ayah $number';
+  }
 }

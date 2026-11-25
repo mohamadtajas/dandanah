@@ -739,6 +739,156 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'استخدم موقعي الحالي'**
   String get settingsLocationUse;
+
+  /// No description provided for @quranTabSurahs.
+  ///
+  /// In ar, this message translates to:
+  /// **'السور'**
+  String get quranTabSurahs;
+
+  /// No description provided for @quranTabJuz.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأجزاء'**
+  String get quranTabJuz;
+
+  /// No description provided for @quranTabBookmarks.
+  ///
+  /// In ar, this message translates to:
+  /// **'العلامات'**
+  String get quranTabBookmarks;
+
+  /// No description provided for @quranTabResume.
+  ///
+  /// In ar, this message translates to:
+  /// **'المتابعة'**
+  String get quranTabResume;
+
+  /// No description provided for @quranSearch.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن سورة'**
+  String get quranSearch;
+
+  /// No description provided for @quranSearchEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد سور مطابقة'**
+  String get quranSearchEmpty;
+
+  /// No description provided for @quranNoBookmarks.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد علامات بعد'**
+  String get quranNoBookmarks;
+
+  /// No description provided for @quranNoResume.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تبدأ القراءة بعد'**
+  String get quranNoResume;
+
+  /// No description provided for @quranDailyAyah.
+  ///
+  /// In ar, this message translates to:
+  /// **'آية اليوم'**
+  String get quranDailyAyah;
+
+  /// No description provided for @quranJuz.
+  ///
+  /// In ar, this message translates to:
+  /// **'الجزء {number}'**
+  String quranJuz(int number);
+
+  /// No description provided for @quranAyahCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} آية'**
+  String quranAyahCount(int count);
+
+  /// No description provided for @quranMakkah.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكية'**
+  String get quranMakkah;
+
+  /// No description provided for @quranMadinah.
+  ///
+  /// In ar, this message translates to:
+  /// **'مدنية'**
+  String get quranMadinah;
+
+  /// No description provided for @quranContinue.
+  ///
+  /// In ar, this message translates to:
+  /// **'متابعة القراءة'**
+  String get quranContinue;
+
+  /// No description provided for @quranResumeAt.
+  ///
+  /// In ar, this message translates to:
+  /// **'{surah} · الآية {ayah}'**
+  String quranResumeAt(String surah, int ayah);
+
+  /// No description provided for @quranBookmarkAt.
+  ///
+  /// In ar, this message translates to:
+  /// **'{surah} · الآية {ayah}'**
+  String quranBookmarkAt(String surah, int ayah);
+
+  /// No description provided for @quranRemoveBookmark.
+  ///
+  /// In ar, this message translates to:
+  /// **'إزالة العلامة'**
+  String get quranRemoveBookmark;
+
+  /// No description provided for @quranAddBookmark.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة علامة'**
+  String get quranAddBookmark;
+
+  /// No description provided for @quranSajda.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجدة'**
+  String get quranSajda;
+
+  /// No description provided for @quranReaderError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تحميل المصحف.'**
+  String get quranReaderError;
+
+  /// No description provided for @quranFontDecrease.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصغير الخط'**
+  String get quranFontDecrease;
+
+  /// No description provided for @quranFontIncrease.
+  ///
+  /// In ar, this message translates to:
+  /// **'تكبير الخط'**
+  String get quranFontIncrease;
+
+  /// No description provided for @quranRead.
+  ///
+  /// In ar, this message translates to:
+  /// **'قراءة'**
+  String get quranRead;
+
+  /// No description provided for @quranJuzStart.
+  ///
+  /// In ar, this message translates to:
+  /// **'يبدأ من {surah} · {ayah}'**
+  String quranJuzStart(String surah, int ayah);
+
+  /// No description provided for @quranAyahLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الآية {number}'**
+  String quranAyahLabel(int number);
 }
 
 class _AppLocalizationsDelegate

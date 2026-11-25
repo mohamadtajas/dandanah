@@ -165,5 +165,81 @@
   "locationFetching": "جارٍ تحديد موقعك…",
   "locationSaved": "تم استخدام موقعك الحالي.",
   "locationSourceDevice": "موقع الجهاز",
-  "settingsLocationUse": "استخدم موقعي الحالي"
+  "settingsLocationUse": "استخدم موقعي الحالي",
+  "quranTabSurahs": "السور",
+  "quranTabJuz": "الأجزاء",
+  "quranTabBookmarks": "العلامات",
+  "quranTabResume": "المتابعة",
+  "quranSearch": "ابحث عن سورة",
+  "quranSearchEmpty": "لا توجد سور مطابقة",
+  "quranNoBookmarks": "لا توجد علامات بعد",
+  "quranNoResume": "لم تبدأ القراءة بعد",
+  "quranDailyAyah": "آية اليوم",
+  "quranJuz": "الجزء {number}",
+  "quranAyahCount": "{count} آية",
+  "quranMakkah": "مكية",
+  "quranMadinah": "مدنية",
+  "quranContinue": "متابعة القراءة",
+  "quranResumeAt": "{surah} · الآية {ayah}",
+  "quranBookmarkAt": "{surah} · الآية {ayah}",
+  "quranRemoveBookmark": "إزالة العلامة",
+  "quranAddBookmark": "إضافة علامة",
+  "quranSajda": "سجدة",
+  "quranReaderError": "تعذر تحميل المصحف.",
+  "quranFontDecrease": "تصغير الخط",
+  "quranFontIncrease": "تكبير الخط",
+  "quranRead": "قراءة",
+  "quranJuzStart": "يبدأ من {surah} · {ayah}",
+  "quranAyahLabel": "الآية {number}",
+  "@quranJuz": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "@quranAyahCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@quranResumeAt": {
+    "placeholders": {
+      "surah": {
+        "type": "String"
+      },
+      "ayah": {
+        "type": "int"
+      }
+    }
+  },
+  "@quranBookmarkAt": {
+    "placeholders": {
+      "surah": {
+        "type": "String"
+      },
+      "ayah": {
+        "type": "int"
+      }
+    }
+  },
+  "@quranJuzStart": {
+    "placeholders": {
+      "surah": {
+        "type": "String"
+      },
+      "ayah": {
+        "type": "int"
+      }
+    }
+  },
+  "@quranAyahLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  }
 }

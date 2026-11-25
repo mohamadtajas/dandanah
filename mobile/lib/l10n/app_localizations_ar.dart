@@ -357,4 +357,91 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get settingsLocationUse => 'استخدم موقعي الحالي';
+
+  @override
+  String get quranTabSurahs => 'السور';
+
+  @override
+  String get quranTabJuz => 'الأجزاء';
+
+  @override
+  String get quranTabBookmarks => 'العلامات';
+
+  @override
+  String get quranTabResume => 'المتابعة';
+
+  @override
+  String get quranSearch => 'ابحث عن سورة';
+
+  @override
+  String get quranSearchEmpty => 'لا توجد سور مطابقة';
+
+  @override
+  String get quranNoBookmarks => 'لا توجد علامات بعد';
+
+  @override
+  String get quranNoResume => 'لم تبدأ القراءة بعد';
+
+  @override
+  String get quranDailyAyah => 'آية اليوم';
+
+  @override
+  String quranJuz(int number) {
+    return 'الجزء $number';
+  }
+
+  @override
+  String quranAyahCount(int count) {
+    return '$count آية';
+  }
+
+  @override
+  String get quranMakkah => 'مكية';
+
+  @override
+  String get quranMadinah => 'مدنية';
+
+  @override
+  String get quranContinue => 'متابعة القراءة';
+
+  @override
+  String quranResumeAt(String surah, int ayah) {
+    return '$surah · الآية $ayah';
+  }
+
+  @override
+  String quranBookmarkAt(String surah, int ayah) {
+    return '$surah · الآية $ayah';
+  }
+
+  @override
+  String get quranRemoveBookmark => 'إزالة العلامة';
+
+  @override
+  String get quranAddBookmark => 'إضافة علامة';
+
+  @override
+  String get quranSajda => 'سجدة';
+
+  @override
+  String get quranReaderError => 'تعذر تحميل المصحف.';
+
+  @override
+  String get quranFontDecrease => 'تصغير الخط';
+
+  @override
+  String get quranFontIncrease => 'تكبير الخط';
+
+  @override
+  String get quranRead => 'قراءة';
+
+  @override
+  String quranJuzStart(String surah, int ayah) {
+    return 'يبدأ من $surah · $ayah';
+  }
+
+  @override
+  String quranAyahLabel(int number) {
+    return 'الآية $number';
+  }
 }

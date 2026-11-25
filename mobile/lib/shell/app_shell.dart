@@ -69,7 +69,7 @@ class _AppShellState extends State<AppShell> {
     final l10n = AppLocalizations.of(context)!;
     final pages = [
       DashboardPage(onSelectTab: _select),
-      const QuranPage(),
+      const MushafPage(),
       AdhkarPage(onSelectTab: _select),
       const AudioPage(),
     ];

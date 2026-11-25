@@ -165,5 +165,81 @@
   "locationFetching": "Getting your location…",
   "locationSaved": "Current location applied.",
   "locationSourceDevice": "Device location",
-  "settingsLocationUse": "Use my current location"
+  "settingsLocationUse": "Use my current location",
+  "quranTabSurahs": "Surahs",
+  "quranTabJuz": "Juz",
+  "quranTabBookmarks": "Bookmarks",
+  "quranTabResume": "Resume",
+  "quranSearch": "Search surahs",
+  "quranSearchEmpty": "No matching surahs",
+  "quranNoBookmarks": "No bookmarks yet",
+  "quranNoResume": "You have not started reading yet",
+  "quranDailyAyah": "Ayah of the day",
+  "quranJuz": "Juz {number}",
+  "quranAyahCount": "{count} ayahs",
+  "quranMakkah": "Makkan",
+  "quranMadinah": "Madinan",
+  "quranContinue": "Continue reading",
+  "quranResumeAt": "{surah} · Ayah {ayah}",
+  "quranBookmarkAt": "{surah} · Ayah {ayah}",
+  "quranRemoveBookmark": "Remove bookmark",
+  "quranAddBookmark": "Add bookmark",
+  "quranSajda": "Sajda",
+  "quranReaderError": "Could not load the Quran.",
+  "quranFontDecrease": "Decrease font size",
+  "quranFontIncrease": "Increase font size",
+  "quranRead": "Read",
+  "quranJuzStart": "Starts at {surah} · {ayah}",
+  "quranAyahLabel": "Ayah {number}",
+  "@quranJuz": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "@quranAyahCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@quranResumeAt": {
+    "placeholders": {
+      "surah": {
+        "type": "String"
+      },
+      "ayah": {
+        "type": "int"
+      }
+    }
+  },
+  "@quranBookmarkAt": {
+    "placeholders": {
+      "surah": {
+        "type": "String"
+      },
+      "ayah": {
+        "type": "int"
+      }
+    }
+  },
+  "@quranJuzStart": {
+    "placeholders": {
+      "surah": {
+        "type": "String"
+      },
+      "ayah": {
+        "type": "int"
+      }
+    }
+  },
+  "@quranAyahLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  }
 }

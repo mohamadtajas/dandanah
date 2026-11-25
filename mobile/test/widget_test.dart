@@ -48,7 +48,8 @@ void main() {
     await tester.tap(find.text('المصحف').last);
     await pumpUi(tester);
 
-    expect(find.text('بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'), findsOneWidget);
+    expect(find.text('السور'), findsOneWidget);
+    expect(find.text('الفاتحة'), findsWidgets);
   });
 
   testWidgets('settings opens and switches the theme', (tester) async {
