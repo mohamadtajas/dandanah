@@ -444,4 +444,60 @@ class AppLocalizationsEn extends AppLocalizations {
   String quranAyahLabel(int number) {
     return 'Ayah $number';
   }
+
+  @override
+  String get audioChooseReciter => 'Choose reciter';
+
+  @override
+  String get audioSearchSurah => 'Search surahs';
+
+  @override
+  String get audioPlaySurah => 'Play surah';
+
+  @override
+  String get audioNowPlaying => 'Now playing';
+
+  @override
+  String get audioPlay => 'Play';
+
+  @override
+  String get audioPause => 'Pause';
+
+  @override
+  String get audioNext => 'Next';
+
+  @override
+  String get audioPrevious => 'Previous';
+
+  @override
+  String get audioSpeed => 'Speed';
+
+  @override
+  String get audioRepeat => 'Repeat';
+
+  @override
+  String get audioRepeatOff => 'No repeat';
+
+  @override
+  String get audioRepeatOne => 'Repeat ayah';
+
+  @override
+  String get audioRepeatAll => 'Repeat surah';
+
+  @override
+  String get audioQueueEmpty => 'Nothing is playing yet';
+
+  @override
+  String get audioStop => 'Stop';
+
+  @override
+  String audioAyahLabel(int number) {
+    return 'Ayah $number';
+  }
+
+  @override
+  String get audioReciterLabel => 'Reciter';
+
+  @override
+  String get audioStopPlayback => 'Stop playback';
 }

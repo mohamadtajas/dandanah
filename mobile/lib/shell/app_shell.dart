@@ -4,6 +4,7 @@ import '../data/app_services.dart';
 import '../data/location/location_onboarding.dart';
 import '../features/adhkar/adhkar_page.dart';
 import '../features/audio/audio_page.dart';
+import '../features/audio/mini_player.dart';
 import '../features/dashboard/dashboard_page.dart';
 import '../features/location/location_onboarding_sheet.dart';
 import '../features/quran/quran_page.dart';
@@ -102,29 +103,35 @@ class _AppShellState extends State<AppShell> {
       body: SafeArea(
         child: IndexedStack(index: _index, children: pages),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: _select,
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home_rounded),
-            label: l10n.navDashboard,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.menu_book_outlined),
-            selectedIcon: const Icon(Icons.menu_book_rounded),
-            label: l10n.navQuran,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.nights_stay_outlined),
-            selectedIcon: const Icon(Icons.nights_stay_rounded),
-            label: l10n.navAdhkar,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.headphones_outlined),
-            selectedIcon: const Icon(Icons.headphones_rounded),
-            label: l10n.navAudio,
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MiniPlayer(playback: AppServices.current.playback),
+          NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: _select,
+            destinations: [
+              NavigationDestination(
+                icon: const Icon(Icons.home_outlined),
+                selectedIcon: const Icon(Icons.home_rounded),
+                label: l10n.navDashboard,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.menu_book_outlined),
+                selectedIcon: const Icon(Icons.menu_book_rounded),
+                label: l10n.navQuran,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.nights_stay_outlined),
+                selectedIcon: const Icon(Icons.nights_stay_rounded),
+                label: l10n.navAdhkar,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.headphones_outlined),
+                selectedIcon: const Icon(Icons.headphones_rounded),
+                label: l10n.navAudio,
+              ),
+            ],
           ),
         ],
       ),

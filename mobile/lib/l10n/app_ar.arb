@@ -241,5 +241,30 @@
         "type": "int"
       }
     }
+  },
+  "audioChooseReciter": "اختر القارئ",
+  "audioSearchSurah": "ابحث عن سورة",
+  "audioPlaySurah": "تشغيل السورة",
+  "audioNowPlaying": "قيد التشغيل",
+  "audioPlay": "تشغيل",
+  "audioPause": "إيقاف مؤقت",
+  "audioNext": "التالي",
+  "audioPrevious": "السابق",
+  "audioSpeed": "السرعة",
+  "audioRepeat": "التكرار",
+  "audioRepeatOff": "بدون تكرار",
+  "audioRepeatOne": "تكرار الآية",
+  "audioRepeatAll": "تكرار السورة",
+  "audioQueueEmpty": "لم يتم تشغيل أي تلاوة",
+  "audioStop": "إيقاف",
+  "audioAyahLabel": "الآية {number}",
+  "audioReciterLabel": "القارئ",
+  "audioStopPlayback": "إيقاف التلاوة",
+  "@audioAyahLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
   }
 }

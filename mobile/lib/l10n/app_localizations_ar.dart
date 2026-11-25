@@ -444,4 +444,60 @@ class AppLocalizationsAr extends AppLocalizations {
   String quranAyahLabel(int number) {
     return 'الآية $number';
   }
+
+  @override
+  String get audioChooseReciter => 'اختر القارئ';
+
+  @override
+  String get audioSearchSurah => 'ابحث عن سورة';
+
+  @override
+  String get audioPlaySurah => 'تشغيل السورة';
+
+  @override
+  String get audioNowPlaying => 'قيد التشغيل';
+
+  @override
+  String get audioPlay => 'تشغيل';
+
+  @override
+  String get audioPause => 'إيقاف مؤقت';
+
+  @override
+  String get audioNext => 'التالي';
+
+  @override
+  String get audioPrevious => 'السابق';
+
+  @override
+  String get audioSpeed => 'السرعة';
+
+  @override
+  String get audioRepeat => 'التكرار';
+
+  @override
+  String get audioRepeatOff => 'بدون تكرار';
+
+  @override
+  String get audioRepeatOne => 'تكرار الآية';
+
+  @override
+  String get audioRepeatAll => 'تكرار السورة';
+
+  @override
+  String get audioQueueEmpty => 'لم يتم تشغيل أي تلاوة';
+
+  @override
+  String get audioStop => 'إيقاف';
+
+  @override
+  String audioAyahLabel(int number) {
+    return 'الآية $number';
+  }
+
+  @override
+  String get audioReciterLabel => 'القارئ';
+
+  @override
+  String get audioStopPlayback => 'إيقاف التلاوة';
 }

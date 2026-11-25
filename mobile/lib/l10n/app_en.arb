@@ -241,5 +241,30 @@
         "type": "int"
       }
     }
+  },
+  "audioChooseReciter": "Choose reciter",
+  "audioSearchSurah": "Search surahs",
+  "audioPlaySurah": "Play surah",
+  "audioNowPlaying": "Now playing",
+  "audioPlay": "Play",
+  "audioPause": "Pause",
+  "audioNext": "Next",
+  "audioPrevious": "Previous",
+  "audioSpeed": "Speed",
+  "audioRepeat": "Repeat",
+  "audioRepeatOff": "No repeat",
+  "audioRepeatOne": "Repeat ayah",
+  "audioRepeatAll": "Repeat surah",
+  "audioQueueEmpty": "Nothing is playing yet",
+  "audioStop": "Stop",
+  "audioAyahLabel": "Ayah {number}",
+  "audioReciterLabel": "Reciter",
+  "audioStopPlayback": "Stop playback",
+  "@audioAyahLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
   }
 }

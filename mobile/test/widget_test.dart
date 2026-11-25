@@ -6,16 +6,20 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:sakeenah_mobile/app.dart';
 import 'package:sakeenah_mobile/data/app_services.dart';
+import 'package:sakeenah_mobile/data/audio/playback_controller.dart';
 import 'package:sakeenah_mobile/data/db/app_database.dart';
 import 'package:sakeenah_mobile/data/settings_store.dart';
 import 'package:sakeenah_mobile/data/worship/prayer_settings.dart';
 import 'package:sakeenah_mobile/features/settings/settings_page.dart';
+
+import 'support/fake_audio_engine.dart';
 
 void main() {
   setUpAll(() async {
     await AppServices.initialize(
       database: AppDatabase.memory(),
       bundle: _FileAssetBundle(),
+      playback: PlaybackController(FakeAudioEngine()),
     );
     await AppServices.current.updatePrayerSettings(
       PrayerSettings.defaults().copyWith(configured: true),

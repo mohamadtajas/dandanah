@@ -889,6 +889,114 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'الآية {number}'**
   String quranAyahLabel(int number);
+
+  /// No description provided for @audioChooseReciter.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر القارئ'**
+  String get audioChooseReciter;
+
+  /// No description provided for @audioSearchSurah.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن سورة'**
+  String get audioSearchSurah;
+
+  /// No description provided for @audioPlaySurah.
+  ///
+  /// In ar, this message translates to:
+  /// **'تشغيل السورة'**
+  String get audioPlaySurah;
+
+  /// No description provided for @audioNowPlaying.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد التشغيل'**
+  String get audioNowPlaying;
+
+  /// No description provided for @audioPlay.
+  ///
+  /// In ar, this message translates to:
+  /// **'تشغيل'**
+  String get audioPlay;
+
+  /// No description provided for @audioPause.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف مؤقت'**
+  String get audioPause;
+
+  /// No description provided for @audioNext.
+  ///
+  /// In ar, this message translates to:
+  /// **'التالي'**
+  String get audioNext;
+
+  /// No description provided for @audioPrevious.
+  ///
+  /// In ar, this message translates to:
+  /// **'السابق'**
+  String get audioPrevious;
+
+  /// No description provided for @audioSpeed.
+  ///
+  /// In ar, this message translates to:
+  /// **'السرعة'**
+  String get audioSpeed;
+
+  /// No description provided for @audioRepeat.
+  ///
+  /// In ar, this message translates to:
+  /// **'التكرار'**
+  String get audioRepeat;
+
+  /// No description provided for @audioRepeatOff.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدون تكرار'**
+  String get audioRepeatOff;
+
+  /// No description provided for @audioRepeatOne.
+  ///
+  /// In ar, this message translates to:
+  /// **'تكرار الآية'**
+  String get audioRepeatOne;
+
+  /// No description provided for @audioRepeatAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'تكرار السورة'**
+  String get audioRepeatAll;
+
+  /// No description provided for @audioQueueEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يتم تشغيل أي تلاوة'**
+  String get audioQueueEmpty;
+
+  /// No description provided for @audioStop.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف'**
+  String get audioStop;
+
+  /// No description provided for @audioAyahLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الآية {number}'**
+  String audioAyahLabel(int number);
+
+  /// No description provided for @audioReciterLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'القارئ'**
+  String get audioReciterLabel;
+
+  /// No description provided for @audioStopPlayback.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف التلاوة'**
+  String get audioStopPlayback;
 }
 
 class _AppLocalizationsDelegate
