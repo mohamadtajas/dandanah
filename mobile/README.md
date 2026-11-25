@@ -46,7 +46,8 @@ lib/data/
 
 Attribution and licence files live next to the assets:
 `QURAN_LICENSE.md` (Tanzil, CC BY 3.0) and `ADHKAR_LICENSE.md`
-(HisnElMuslim, MIT).
+(HisnElMuslim, MIT). Package and font notices are listed in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Reliability
 
