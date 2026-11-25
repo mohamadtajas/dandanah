@@ -27,7 +27,13 @@ class DailyPrayerTimes {
   Map<PrayerName, DateTime> get all => Map.unmodifiable(_times);
 }
 
+typedef _Reading = ({int hour, int minute, int second});
+
 /// Calculates prayer times fully offline using the bundled Adhan port.
+///
+/// Returned values are wall-clock `DateTime`s for the location's UTC offset
+/// (`isUtc == false`), always falling on the requested local calendar date.
+/// They are display values, not UTC instants.
 class PrayerTimesService {
   const PrayerTimesService();
 
@@ -36,7 +42,7 @@ class PrayerTimesService {
     required double latitude,
     required double longitude,
     required PrayerMethod method,
-    Duration utcOffset = Duration.zero,
+    required Duration utcOffset,
     PrayerMadhab madhab = PrayerMadhab.shafi,
   }) {
     final parameters = _calculationMethod(method).getParameters()
@@ -45,21 +51,42 @@ class PrayerTimesService {
           : adhan.Madhab.shafi
       ..highLatitudeRule = adhan.HighLatitudeRule.seventh_of_the_night;
 
-    final times = adhan.PrayerTimes.utcOffset(
+    final raw = adhan.PrayerTimes.utc(
       adhan.Coordinates(latitude, longitude),
       adhan.DateComponents(date.year, date.month, date.day),
       parameters,
-      utcOffset,
     );
 
-    return DailyPrayerTimes({
-      PrayerName.fajr: times.fajr,
-      PrayerName.sunrise: times.sunrise,
-      PrayerName.dhuhr: times.dhuhr,
-      PrayerName.asr: times.asr,
-      PrayerName.maghrib: times.maghrib,
-      PrayerName.isha: times.isha,
-    });
+    final readings = <PrayerName, _Reading>{
+      PrayerName.fajr: _reading(raw.fajr),
+      PrayerName.sunrise: _reading(raw.sunrise),
+      PrayerName.dhuhr: _reading(raw.dhuhr),
+      PrayerName.asr: _reading(raw.asr),
+      PrayerName.maghrib: _reading(raw.maghrib),
+      PrayerName.isha: _reading(raw.isha),
+    };
+
+    final dhuhr = readings[PrayerName.dhuhr]!;
+    final dhuhrDate = _resolveDhuhrUtcDate(date, utcOffset, dhuhr);
+
+    final times = <PrayerName, DateTime>{};
+    for (final entry in readings.entries) {
+      var utcDate = dhuhrDate;
+      final reading = entry.value;
+      if ((entry.key == PrayerName.fajr || entry.key == PrayerName.sunrise) &&
+          _after(reading, dhuhr)) {
+        utcDate = dhuhrDate.subtract(const Duration(days: 1));
+      }
+      if ((entry.key == PrayerName.asr ||
+              entry.key == PrayerName.maghrib ||
+              entry.key == PrayerName.isha) &&
+          _before(reading, dhuhr)) {
+        utcDate = dhuhrDate.add(const Duration(days: 1));
+      }
+      times[entry.key] = _wallClock(utcDate, reading, utcOffset);
+    }
+
+    return DailyPrayerTimes(times);
   }
 
   adhan.CalculationMethod _calculationMethod(PrayerMethod method) {
@@ -80,4 +107,72 @@ class PrayerTimesService {
       PrayerMethod.turkey => adhan.CalculationMethod.turkey,
     };
   }
+}
+
+_Reading _reading(DateTime time) =>
+    (hour: time.hour, minute: time.minute, second: time.second);
+
+int _seconds(_Reading reading) =>
+    reading.hour * 3600 + reading.minute * 60 + reading.second;
+
+bool _after(_Reading a, _Reading b) => _seconds(a) > _seconds(b);
+
+bool _before(_Reading a, _Reading b) => _seconds(a) < _seconds(b);
+
+/// `adhan` reduces each reading to a 0-24h clock. Pick the UTC date whose
+/// Dhuhr lands nearest local noon on the requested date; this recovers the day
+/// for UTC+13/14 and UTC-11/12 zones.
+DateTime _resolveDhuhrUtcDate(
+  DateTime date,
+  Duration utcOffset,
+  _Reading dhuhr,
+) {
+  var best = DateTime.utc(date.year, date.month, date.day);
+  var bestScore = 1 << 30;
+  for (var shift = -1; shift <= 1; shift++) {
+    final candidate = DateTime.utc(
+      date.year,
+      date.month,
+      date.day,
+    ).add(Duration(days: shift));
+    final local = _wallClockParts(candidate, dhuhr, utcOffset);
+    final candidateDay = DateTime.utc(local.year, local.month, local.day);
+    final requestedDay = DateTime.utc(date.year, date.month, date.day);
+    final dayGap = candidateDay.difference(requestedDay).inDays.abs();
+    final score = dayGap * 1000 + (local.hour - 12).abs();
+    if (score < bestScore) {
+      bestScore = score;
+      best = candidate;
+    }
+  }
+  return best;
+}
+
+DateTime _wallClockParts(
+  DateTime utcDate,
+  _Reading reading,
+  Duration utcOffset,
+) {
+  return DateTime.utc(
+    utcDate.year,
+    utcDate.month,
+    utcDate.day,
+    reading.hour,
+    reading.minute,
+    reading.second,
+  ).add(utcOffset);
+}
+
+/// Convert a shifted UTC value into a local wall-clock `DateTime` whose fields
+/// match the location's clock, without pretending it is a UTC instant.
+DateTime _wallClock(DateTime utcDate, _Reading reading, Duration utcOffset) {
+  final shifted = _wallClockParts(utcDate, reading, utcOffset);
+  return DateTime(
+    shifted.year,
+    shifted.month,
+    shifted.day,
+    shifted.hour,
+    shifted.minute,
+    shifted.second,
+  );
 }

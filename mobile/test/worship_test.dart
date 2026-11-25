@@ -77,6 +77,59 @@ void main() {
       expect(times[PrayerName.isha].isAfter(times[PrayerName.maghrib]), isTrue);
       expect(times[PrayerName.fajr].day, 21);
     });
+
+    test('returns local wall-clock times on the requested date', () {
+      final cases = [
+        (
+          name: 'Makkah',
+          latitude: 21.4225,
+          longitude: 39.8262,
+          offset: const Duration(hours: 3),
+        ),
+        (
+          name: 'Oslo',
+          latitude: 59.9139,
+          longitude: 10.7522,
+          offset: const Duration(hours: 2),
+        ),
+        (
+          name: 'Auckland',
+          latitude: -36.8485,
+          longitude: 174.7633,
+          offset: const Duration(hours: 13),
+        ),
+        (
+          name: 'Apia',
+          latitude: -13.8333,
+          longitude: -171.7667,
+          offset: const Duration(hours: 13),
+        ),
+        (
+          name: 'Kiritimati',
+          latitude: 1.8721,
+          longitude: -157.4278,
+          offset: const Duration(hours: 14),
+        ),
+      ];
+
+      for (final testCase in cases) {
+        final times = PrayerTimesService().calculate(
+          date: DateTime(2026, 11, 26),
+          latitude: testCase.latitude,
+          longitude: testCase.longitude,
+          method: PrayerMethod.muslimWorldLeague,
+          utcOffset: testCase.offset,
+        );
+        for (final entry in times.all.entries) {
+          expect(entry.value.isUtc, isFalse, reason: testCase.name);
+          expect(
+            (entry.value.year, entry.value.month, entry.value.day),
+            (2026, 11, 26),
+            reason: '${testCase.name} ${entry.key.name}',
+          );
+        }
+      }
+    });
   });
 
   group('hijri date', () {
