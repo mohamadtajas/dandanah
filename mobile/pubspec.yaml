@@ -22,6 +22,7 @@ dependencies:
   hijri: ^3.0.1
   timezone: ^0.11.2
   geolocator: ^14.1.2
+  scrollable_positioned_list: ^0.3.8
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,0 +1,46 @@
+# Owner actions
+
+Running list of things only the owner can decide or provide. I keep working on
+independent tasks while these are open.
+
+## Needed before M5 audio can be finished
+
+- **Quran audio source:** choose the reciters and the download/stream source.
+  The desktop app already has provider code; confirm which of those providers
+  may be reused on mobile and whether their terms allow mobile downloads.
+- **Anasheed source:** choose the catalogue source and confirm the licence for
+  bundled/streamed tracks.
+- **Adhan audio:** choose the adhan recording and confirm it is CC0 or
+  otherwise redistributable.
+- **Storage defaults:** confirm a mobile download budget (for example “warn
+  above 2 GB, never auto-download on cellular”).
+- **Provider keys:** any API key or account needed by a chosen provider.
+
+## Needed before release (M10)
+
+- Android keystore file, alias, and passwords.
+- GitHub Actions secrets for signing (`ANDROID_KEYSTORE_BASE64`,
+  `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`).
+- Play Console app entry and package ownership confirmation.
+- Apple Developer team, bundle id confirmation, and a Mac/Xcode signing path.
+- Decide the public app name and store description.
+
+## Physical tests only the owner can run
+
+- Large-system-font pass on the phone after M4/M5.
+- Airplane-mode reading and audio playback.
+- Background audio for 30+ minutes, lock screen and Bluetooth controls (M5).
+- Adhan exact-alarm/Doze behaviour on the real device (M6).
+- Widgets after reboot (M7).
+- Battery/background matrix (M9).
+
+## Decisions already taken on the owner's behalf
+
+- v1 stays Arabic-only, offline-first.
+- Quran text is never modified; Tanzil attribution stays visible.
+- Adhkar completion marks the section and the morning/evening streak.
+- Prayer streak counts only days with all five prayers; the dashboard shows
+  today’s 1/5 progress separately.
+- Device location uses `geolocator` plus a small native IANA timezone channel;
+  manual city selection remains the fallback.
+- M4 reader uses `scrollable_positioned_list` and saves the first visible ayah.

@@ -6,7 +6,7 @@ and prayer calculations but not the desktop runtime.
 
 ## Status
 
-Phase **M3** - adhkar catalog, counter, auto-advance and streak.
+Phase **M4** - Quran catalog, continuous reader, bookmarks, resume and daily ayah.
 
 - Arabic-first UI with `flutter_localizations` and generated ARB accessors.
 - Bottom navigation: Dashboard, Mushaf, Adhkar, Audio.
@@ -19,10 +19,13 @@ Phase **M3** - adhkar catalog, counter, auto-advance and streak.
 - Adhkar catalog with featured sections, search, per-section progress and a
   morning/evening streak, plus a full-screen counter with haptics,
   auto-advance and persisted per-item progress.
+- Quran catalog with surah/juz tabs, search, bookmarks and resume; a
+  continuous Uthmani reader with bookmark toggles, 20–44 pt font sizing and
+  a deterministic daily ayah.
 
 The full Uthmani Quran (114 surahs, 6236 ayahs) and Hisn al-Muslim (126
 categories, 302 items) are seeded from bundled assets on first launch. Adhkar
-screens consume them in M3; Quran screens arrive in M4.
+and Quran screens read them fully offline; audio arrives in M5.
 
 ## Data layer
 
@@ -31,8 +34,8 @@ lib/data/
   cities.dart              59 offline city presets
   db/app_database.dart      Drift schema v4 (content + user state)
   location/                 device fix, timezone channel, onboarding helper
-  models/                   Surah, Ayah, Adhkar, local date keys
-  repositories/             content, prayer log, adhkar practice
+  models/                   Surah, Ayah, Adhkar, Quran bookmark, local date
+  repositories/             content, prayer log, adhkar practice, Quran reader
   seed/                     QuranSeeder, AdhkarSeeder
   worship/                  settings, schedule, prayer/practice logs, Hijri, qibla
   app_services.dart         startup seeding and shared repositories
@@ -83,7 +86,9 @@ writes both the desktop and mobile Quran bundles from the same XML.
   tests, plus dashboard and settings widget tests. M3 adds adhkar repeat,
   auto-advance, resume, morning/evening streak, Arabic search, reset and
   2x-text layout tests. Location tests cover permission outcomes, an invalid
-  timezone, onboarding suppression and the Settings save path.
+  timezone, onboarding suppression and the Settings save path. M4 adds reader
+  position, bookmark, font-size, catalog, daily-ayah and continuous-reader
+  tests.
 
 ## Requirements
 
@@ -131,6 +136,10 @@ Captured on an Android 16 (API 36) emulator at 1080x2400 in Arabic RTL.
 | Audio | Settings (dark) | Settings (light) |
 |---|---|---|
 | ![Audio](../docs/screenshots/mobile/03-audio.png) | ![Settings dark](../docs/screenshots/mobile/04-settings-dark.png) | ![Settings light](../docs/screenshots/mobile/05-settings-light.png) |
+
+| Quran reader |
+|---|
+| ![Quran reader](../docs/screenshots/mobile/10-quran-reader.png) |
 
 | Adhkar counter |
 |---|
