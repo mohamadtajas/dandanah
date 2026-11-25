@@ -169,6 +169,11 @@ class PrayerScheduleService {
     );
   }
 
+  List<PrayerSlot> slotsForDate(PrayerSettings settings, DateTime date) {
+    final location = locationFor(settings.timezone);
+    return _day(settings, location, date.year, date.month, date.day);
+  }
+
   List<PrayerSlot> _day(
     PrayerSettings settings,
     tz.Location location,
