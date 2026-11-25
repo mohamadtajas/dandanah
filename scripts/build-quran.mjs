@@ -18,6 +18,7 @@ const mobileOutputPath = path.join(root, "mobile", "assets", "data", "quran.json
 const textXml = fs.readFileSync(textPath, "utf8");
 const metaXml = fs.readFileSync(metaPath, "utf8");
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
+const normalizeNewlines = (value) => value.replace(/\r\n/g, "\n");
 
 const decode = (value) =>
   value
@@ -195,8 +196,8 @@ const output = {
     licenseUrl: "https://tanzil.net/docs/tanzil_license",
     sourceUrl: "https://tanzil.net",
     downloaded: "2026-11-26",
-    textSha256: sha256(textXml),
-    metadataSha256: sha256(metaXml),
+    textSha256: sha256(normalizeNewlines(textXml)),
+    metadataSha256: sha256(normalizeNewlines(metaXml)),
     notice,
   },
   surahs,

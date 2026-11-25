@@ -17,11 +17,15 @@ void main() {
     final source = (data['source'] as Map).cast<String, dynamic>();
 
     final xml = await File('../data/quran-uthmani.xml').readAsString();
-    final digest = sha256.convert(utf8.encode(xml)).toString();
+    final digest = sha256
+        .convert(utf8.encode(xml.replaceAll('\r\n', '\n')))
+        .toString();
     expect(source['textSha256'], digest);
 
     final metadata = await File('../data/quran-metadata.xml').readAsString();
-    final metadataDigest = sha256.convert(utf8.encode(metadata)).toString();
+    final metadataDigest = sha256
+        .convert(utf8.encode(metadata.replaceAll('\r\n', '\n')))
+        .toString();
     expect(source['metadataSha256'], metadataDigest);
   });
 }
