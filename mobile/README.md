@@ -98,7 +98,8 @@ writes both the desktop and mobile Quran bundles from the same XML.
   position, bookmark, font-size, catalog, daily-ayah and continuous-reader
   tests. M5 adds audio URL/queue, playback controller, mini-player and full
   player tests. M6 adds adhan preference, planner, scheduler and settings
-  tests.
+  tests. A 2× text pass covers the Quran catalog/reader, audio pages,
+  mini-player and adhan settings.
 
 ## Requirements
 
