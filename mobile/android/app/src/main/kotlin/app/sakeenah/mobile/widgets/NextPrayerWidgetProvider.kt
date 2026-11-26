@@ -30,15 +30,30 @@ class NextPrayerWidgetProvider : HomeWidgetProvider() {
             WidgetIntents.open(context),
         )
       } else {
-        val (day, prayer) = next
+        val (_, prayer) = next
         views.setTextViewText(R.id.next_label, "الصلاة القادمة")
         views.setTextViewText(R.id.next_name, prayer.name)
         views.setTextViewText(R.id.next_time, prayer.time)
-        views.setTextViewText(R.id.next_button, if (prayer.done) "تمت" else "صليت")
-        views.setOnClickPendingIntent(
-            R.id.next_button,
-            WidgetIntents.prayed(context, day, prayer),
-        )
+        val due = snapshot.lastDue()
+        if (due == null) {
+          views.setTextViewText(R.id.next_button, "—")
+          views.setOnClickPendingIntent(
+              R.id.next_button,
+              WidgetIntents.open(context),
+          )
+        } else if (due.second.done) {
+          views.setTextViewText(R.id.next_button, "تمت")
+          views.setOnClickPendingIntent(
+              R.id.next_button,
+              WidgetIntents.open(context),
+          )
+        } else {
+          views.setTextViewText(R.id.next_button, "صليت")
+          views.setOnClickPendingIntent(
+              R.id.next_button,
+              WidgetIntents.prayed(context, due.first, due.second),
+          )
+        }
       }
       appWidgetManager.updateAppWidget(widgetId, views)
     }

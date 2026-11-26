@@ -133,11 +133,22 @@ class PrayerWidgetPublisher {
 
     final s = settings.value;
     if (!s.configured) return false;
-    final today = dateKeyInTimezone(s.timezone, now: clock?.call());
-    final clicked = DateTime.parse('${date}T00:00:00');
+    final now = (clock?.call() ?? DateTime.now()).toUtc();
+    final today = dateKeyInTimezone(s.timezone, now: now);
+    final clickedDate = DateTime.parse('${date}T00:00:00');
     final base = DateTime.parse('${today}T00:00:00');
-    final distance = clicked.difference(base).inDays;
+    final distance = clickedDate.difference(base).inDays;
     if (distance < -1 || distance > 1) return false;
+
+    // A stale widget tap must not log a prayer before its time.
+    DateTime? instant;
+    for (final slot in schedule.slotsForDate(s, clickedDate)) {
+      if (slot.name == prayer) {
+        instant = slot.instant;
+        break;
+      }
+    }
+    if (instant == null || instant.isAfter(now)) return false;
 
     await log.setStatus(date, prayer, PrayerStatus.onTime);
     await refresh();

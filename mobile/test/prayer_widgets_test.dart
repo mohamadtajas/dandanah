@@ -82,16 +82,25 @@ void main() {
 
   test('a widget tap logs the prayer and republishes', () async {
     final handled = await publisher.handlePrayed(
-      Uri.parse('sakeenah://prayed?date=2026-11-26&prayer=dhuhr'),
+      Uri.parse('sakeenah://prayed?date=2026-11-26&prayer=fajr'),
     );
 
     expect(handled, isTrue);
     expect(
-      (await log.day('2026-11-26')).statuses[PrayerName.dhuhr],
+      (await log.day('2026-11-26')).statuses[PrayerName.fajr],
       PrayerStatus.onTime,
     );
     expect(bridge.saved, isNotEmpty);
     expect(bridge.updates, hasLength(3));
+  });
+
+  test('a tap for a prayer that has not started is ignored', () async {
+    final handled = await publisher.handlePrayed(
+      Uri.parse('sakeenah://prayed?date=2026-11-26&prayer=dhuhr'),
+    );
+
+    expect(handled, isFalse);
+    expect((await log.day('2026-11-26')).statuses, isEmpty);
   });
 
   test('malformed or stale widget taps are ignored', () async {

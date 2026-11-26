@@ -44,6 +44,18 @@ internal data class WidgetSnapshot(
     return best
   }
 
+  /** The most recent prayer whose time has arrived, used by the prayed button. */
+  fun lastDue(now: Long = System.currentTimeMillis()): Pair<WidgetDay, WidgetPrayer>? {
+    var best: Pair<WidgetDay, WidgetPrayer>? = null
+    for (day in days) {
+      for (prayer in day.prayers) {
+        if (prayer.at > now) continue
+        if (best == null || prayer.at > best.second.at) best = day to prayer
+      }
+    }
+    return best
+  }
+
   fun todayDay(): WidgetDay? =
       days.firstOrNull { it.date == LocalDate.now().toString() }
           ?: days.firstOrNull { it.date == today }
