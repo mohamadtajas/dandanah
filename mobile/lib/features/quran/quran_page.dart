@@ -30,6 +30,7 @@ class _MushafPageState extends State<MushafPage>
   Ayah? _daily;
   bool _loading = true;
   bool _failed = false;
+  int _loadToken = 0;
 
   @override
   void initState() {
@@ -45,6 +46,7 @@ class _MushafPageState extends State<MushafPage>
   }
 
   Future<void> _load() async {
+    final token = ++_loadToken;
     try {
       final surahs = await _services.quran.surahs();
       final juzs = await _services.quran.juzs();
@@ -53,7 +55,7 @@ class _MushafPageState extends State<MushafPage>
       final daily = await _services.quran.ayahByOrdinal(
         dailyAyahOrdinal(localDateKey(DateTime.now())),
       );
-      if (!mounted) return;
+      if (!mounted || token != _loadToken) return;
       setState(() {
         _surahs = surahs;
         _juzs = juzs;
@@ -65,10 +67,10 @@ class _MushafPageState extends State<MushafPage>
         _failed = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || token != _loadToken) return;
       setState(() {
         _loading = false;
-        _failed = true;
+        _failed = _surahs.isEmpty;
       });
     }
   }

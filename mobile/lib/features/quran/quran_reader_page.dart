@@ -45,6 +45,7 @@ class _QuranReaderPageState extends State<QuranReaderPage> {
   bool _loading = true;
   bool _failed = false;
   bool _canPop = false;
+  int _loadToken = 0;
 
   @override
   void initState() {
@@ -73,6 +74,7 @@ class _QuranReaderPageState extends State<QuranReaderPage> {
   }
 
   Future<void> _load() async {
+    final token = ++_loadToken;
     try {
       final quran = _services.quran;
       final size = await _services.quranReader.fontSize();
@@ -124,12 +126,20 @@ class _QuranReaderPageState extends State<QuranReaderPage> {
       });
       _positions.itemPositions.addListener(_onPositions);
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || token != _loadToken) return;
       setState(() {
         _loading = false;
         _failed = true;
       });
     }
+  }
+
+  void _retry() {
+    setState(() {
+      _loading = true;
+      _failed = false;
+    });
+    _load();
   }
 
   void _onPositions() {
@@ -236,9 +246,17 @@ class _QuranReaderPageState extends State<QuranReaderPage> {
             ? const Center(child: CircularProgressIndicator())
             : _failed
             ? Center(
-                child: Text(
-                  l10n.quranReaderError,
-                  style: TextStyle(color: scheme.onSurfaceVariant),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.quranReaderError,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: scheme.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton(onPressed: _retry, child: Text(l10n.retry)),
+                  ],
                 ),
               )
             : ScrollablePositionedList.builder(
@@ -360,63 +378,72 @@ class _AyahTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      key: ValueKey('quran-ayah-${ayah.surah}-${ayah.number}'),
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(6, 10, 6, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 13,
-                  backgroundColor: scheme.primary.withValues(alpha: 0.12),
-                  child: Text(
-                    '${ayah.number}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.primary,
+    return Semantics(
+      button: true,
+      label: l10n.quranAyahLabel(ayah.number),
+      child: InkWell(
+        key: ValueKey('quran-ayah-${ayah.surah}-${ayah.number}'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(6, 10, 6, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: CircleAvatar(
+                      radius: 13,
+                      backgroundColor: scheme.primary.withValues(alpha: 0.12),
+                      child: Text(
+                        '${ayah.number}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.primary,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                if (ayah.sajda) ...[
-                  const SizedBox(width: 6),
-                  Text(
-                    l10n.quranSajda,
-                    style: TextStyle(fontSize: 9, color: scheme.secondary),
+                  if (ayah.sajda) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      l10n.quranSajda,
+                      style: TextStyle(fontSize: 9, color: scheme.secondary),
+                    ),
+                  ],
+                  const Spacer(),
+                  IconButton(
+                    key: ValueKey(
+                      'quran-bookmark-${ayah.surah}-${ayah.number}',
+                    ),
+                    tooltip: bookmarked
+                        ? l10n.quranRemoveBookmark
+                        : l10n.quranAddBookmark,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: onBookmark,
+                    icon: Icon(
+                      bookmarked
+                          ? Icons.bookmark_rounded
+                          : Icons.bookmark_border_rounded,
+                      size: 18,
+                      color: bookmarked ? scheme.primary : scheme.outline,
+                    ),
                   ),
                 ],
-                const Spacer(),
-                IconButton(
-                  key: ValueKey('quran-bookmark-${ayah.surah}-${ayah.number}'),
-                  tooltip: bookmarked
-                      ? l10n.quranRemoveBookmark
-                      : l10n.quranAddBookmark,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: onBookmark,
-                  icon: Icon(
-                    bookmarked
-                        ? Icons.bookmark_rounded
-                        : Icons.bookmark_border_rounded,
-                    size: 18,
-                    color: bookmarked ? scheme.primary : scheme.outline,
-                  ),
-                ),
-              ],
-            ),
-            Text(
-              ayah.text,
-              textDirection: TextDirection.rtl,
-              style: SakeenahTheme.quran(
-                Theme.of(context).textTheme.bodyLarge!,
-                size: fontSize,
-              ).copyWith(color: scheme.onSurface),
-            ),
-          ],
+              ),
+              Text(
+                ayah.text,
+                textDirection: TextDirection.rtl,
+                style: SakeenahTheme.quran(
+                  Theme.of(context).textTheme.bodyLarge!,
+                  size: fontSize,
+                ).copyWith(color: scheme.onSurface),
+              ),
+            ],
+          ),
         ),
       ),
     );
