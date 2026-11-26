@@ -186,8 +186,8 @@ class _AdhkarPageState extends State<AdhkarPage> {
         const SizedBox(height: 18),
         Row(
           children: [
-            _SectionTitle(text: l10n.adhkarAll),
-            const Spacer(),
+            Expanded(child: _SectionTitle(text: l10n.adhkarAll)),
+            const SizedBox(width: 8),
             Text(
               '${filtered.length}',
               style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),

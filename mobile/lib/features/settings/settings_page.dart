@@ -510,6 +510,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 DropdownButtonFormField<int>(
                   initialValue: _adhan.preAlertMinutes,
+                  isExpanded: true,
                   decoration: InputDecoration(labelText: l10n.adhanPreAlert),
                   items: [
                     DropdownMenuItem(

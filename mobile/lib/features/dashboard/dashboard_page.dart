@@ -405,24 +405,37 @@ class _PrayerHero extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(
-                Icons.local_fire_department_rounded,
-                size: 17,
-                color: scheme.primary,
-              ),
-              const SizedBox(width: 5),
-              Text(
-                '${streak?.current ?? 0}',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.primary,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.local_fire_department_rounded,
+                        size: 17,
+                        color: scheme.primary,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '${streak?.current ?? 0}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        l10n.prayerStreak,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                l10n.prayerStreak,
-                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -721,12 +734,14 @@ class _Chip extends StatelessWidget {
         children: [
           Icon(icon, size: 13, color: scheme.primary),
           const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 10,
-              color: scheme.primary,
-              fontWeight: FontWeight.w500,
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 10,
+                color: scheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
