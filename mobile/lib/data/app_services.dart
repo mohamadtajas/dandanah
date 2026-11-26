@@ -7,12 +7,15 @@ import 'db/app_database.dart';
 import 'location/location_service.dart';
 import 'repositories/adhkar_practice_repository.dart';
 import 'repositories/adhkar_repository.dart';
+import 'repositories/adhan_settings_repository.dart';
 import 'repositories/prayer_log_repository.dart';
 import 'repositories/quran_reader_repository.dart';
 import 'repositories/quran_repository.dart';
 import 'seed/adhkar_seeder.dart';
 import 'seed/quran_seeder.dart';
 import 'settings_store.dart';
+import 'worship/adhan_scheduler.dart';
+import 'worship/prayer_notification_service.dart';
 import 'worship/prayer_settings.dart';
 
 /// Loads the bundled Quran and adhkar assets into the local database.
@@ -87,6 +90,8 @@ class AppServices {
     this.prayerSettings,
     this.themeMode,
     this.location,
+    this.adhanSettings,
+    this.notifications,
   );
 
   static const themeKey = 'ui.theme';
@@ -101,7 +106,15 @@ class AppServices {
   final ValueNotifier<PrayerSettings> prayerSettings;
   final ValueNotifier<ThemeMode> themeMode;
   final LocationService location;
+  final AdhanSettingsRepository adhanSettings;
+  final PrayerNotificationService notifications;
   PlaybackController? _playback;
+
+  AdhanScheduler get adhanScheduler => AdhanScheduler(
+    preferences: adhanSettings,
+    settings: prayerSettings,
+    service: notifications,
+  );
 
   PlaybackController get playback =>
       _playback ??= PlaybackController(JustAudioEngine());
@@ -124,6 +137,7 @@ class AppServices {
     AppDatabase? database,
     LocationService? location,
     PlaybackController? playback,
+    PrayerNotificationService? notifications,
   }) async {
     final db = database ?? await AppDatabase.open();
     try {
@@ -142,6 +156,8 @@ class AppServices {
         ValueNotifier(settings),
         ValueNotifier(theme),
         location ?? LocationService(),
+        AdhanSettingsRepository(db),
+        notifications ?? LocalPrayerNotificationService(),
       );
       _current = services;
       services._playback = playback;

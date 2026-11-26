@@ -18,6 +18,11 @@ Future<void> _start() async {
   try {
     final AudioEngine engine = await _audioEngine();
     await AppServices.initialize(playback: PlaybackController(engine));
+    try {
+      await AppServices.current.adhanScheduler.refresh();
+    } catch (error) {
+      debugPrint('Adhan scheduling unavailable: $error');
+    }
     debugPrint(
       'Sakeenah offline data ready in ${started.elapsedMilliseconds} ms',
     );
