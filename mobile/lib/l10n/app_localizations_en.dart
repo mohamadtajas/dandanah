@@ -636,4 +636,48 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get adhanScheduleFailed =>
       'Settings were saved, but notifications could not be scheduled.';
+
+  @override
+  String get audioDownloadAll => 'Download all surahs';
+
+  @override
+  String get audioCancelDownload => 'Stop downloading';
+
+  @override
+  String audioDownloadProgress(int done, int total) {
+    return 'Downloading: $done / $total';
+  }
+
+  @override
+  String get audioDownloadComplete => 'Download complete.';
+
+  @override
+  String get audioDownloadFailed =>
+      'Some files could not be downloaded. Check your connection.';
+
+  @override
+  String get audioDownloaded => 'Downloaded';
+
+  @override
+  String get audioDeleteDownload => 'Delete download';
+
+  @override
+  String get audioDeleted => 'Surah download deleted.';
+
+  @override
+  String audioStorageUsed(String size) {
+    return 'Stored: $size';
+  }
+
+  @override
+  String get audioAllDownloaded => 'All surahs downloaded';
+
+  @override
+  String get audioCancelDownloadShort => 'Stop';
+
+  @override
+  String get audioDownloadStopped => 'Download stopped.';
+
+  @override
+  String get audioDownloadSurah => 'Download surah';
 }

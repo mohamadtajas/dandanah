@@ -314,5 +314,35 @@
   "creditsFontsNotice": "خطوط عربية مفتوحة بترخيص SIL Open Font License 1.1.",
   "creditsFullLicense": "نص الترخيص الكامل",
   "creditsOpenSource": "فتح المصدر",
-  "adhanScheduleFailed": "تم حفظ الإعدادات، لكن تعذر جدولة التنبيهات."
+  "adhanScheduleFailed": "تم حفظ الإعدادات، لكن تعذر جدولة التنبيهات.",
+  "audioDownloadAll": "تنزيل كل السور",
+  "audioCancelDownload": "إيقاف التنزيل",
+  "audioDownloadProgress": "جارٍ التنزيل: {done} / {total}",
+  "audioDownloadComplete": "اكتمل التنزيل.",
+  "audioDownloadFailed": "تعذر تنزيل بعض الملفات. تحقق من الاتصال.",
+  "audioDownloaded": "منزّلة",
+  "audioDeleteDownload": "حذف التنزيل",
+  "audioDeleted": "تم حذف تنزيل السورة.",
+  "audioStorageUsed": "المحفوظ: {size}",
+  "audioAllDownloaded": "كل السور منزّلة",
+  "@audioDownloadProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "@audioStorageUsed": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "audioCancelDownloadShort": "إيقاف",
+  "audioDownloadStopped": "تم إيقاف التنزيل.",
+  "audioDownloadSurah": "تنزيل السورة"
 }

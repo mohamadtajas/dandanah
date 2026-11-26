@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
+import 'audio/audio_downloads.dart';
 import 'audio/just_audio_engine.dart';
 import 'audio/playback_controller.dart';
 import 'db/app_database.dart';
@@ -95,6 +98,7 @@ class AppServices {
     this.adhanSettings,
     this.notifications,
     this.widgets,
+    this.downloads,
   );
 
   static const themeKey = 'ui.theme';
@@ -112,6 +116,7 @@ class AppServices {
   final AdhanSettingsRepository adhanSettings;
   final PrayerNotificationService notifications;
   final PrayerWidgetPublisher widgets;
+  final AudioDownloadManager downloads;
   PlaybackController? _playback;
 
   AdhanScheduler get adhanScheduler => AdhanScheduler(
@@ -143,6 +148,7 @@ class AppServices {
     PlaybackController? playback,
     PrayerNotificationService? notifications,
     WidgetBridge? widgetBridge,
+    AudioDownloadManager? downloads,
   }) async {
     final db = database ?? await AppDatabase.open();
     try {
@@ -170,6 +176,7 @@ class AppServices {
           log: prayerLog,
           bridge: widgetBridge ?? const HomeWidgetBridge(),
         ),
+        downloads ?? await _defaultDownloads(),
       );
       _current = services;
       services._playback = playback;
@@ -177,6 +184,20 @@ class AppServices {
     } catch (_) {
       await db.close();
       rethrow;
+    }
+  }
+
+  static Future<AudioDownloadManager> _defaultDownloads() async {
+    try {
+      return AudioDownloadManager(await AudioDownloadStore.forApp());
+    } catch (_) {
+      // Tests and desktop runs have no path_provider; a temp folder keeps
+      // the download manager usable without affecting the app data.
+      return AudioDownloadManager(
+        AudioDownloadStore(
+          root: Directory('${Directory.systemTemp.path}/sakeenah_audio'),
+        ),
+      );
     }
   }
 

@@ -636,4 +636,47 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get adhanScheduleFailed =>
       'تم حفظ الإعدادات، لكن تعذر جدولة التنبيهات.';
+
+  @override
+  String get audioDownloadAll => 'تنزيل كل السور';
+
+  @override
+  String get audioCancelDownload => 'إيقاف التنزيل';
+
+  @override
+  String audioDownloadProgress(int done, int total) {
+    return 'جارٍ التنزيل: $done / $total';
+  }
+
+  @override
+  String get audioDownloadComplete => 'اكتمل التنزيل.';
+
+  @override
+  String get audioDownloadFailed => 'تعذر تنزيل بعض الملفات. تحقق من الاتصال.';
+
+  @override
+  String get audioDownloaded => 'منزّلة';
+
+  @override
+  String get audioDeleteDownload => 'حذف التنزيل';
+
+  @override
+  String get audioDeleted => 'تم حذف تنزيل السورة.';
+
+  @override
+  String audioStorageUsed(String size) {
+    return 'المحفوظ: $size';
+  }
+
+  @override
+  String get audioAllDownloaded => 'كل السور منزّلة';
+
+  @override
+  String get audioCancelDownloadShort => 'إيقاف';
+
+  @override
+  String get audioDownloadStopped => 'تم إيقاف التنزيل.';
+
+  @override
+  String get audioDownloadSurah => 'تنزيل السورة';
 }

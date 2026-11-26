@@ -1243,6 +1243,84 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تم حفظ الإعدادات، لكن تعذر جدولة التنبيهات.'**
   String get adhanScheduleFailed;
+
+  /// No description provided for @audioDownloadAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنزيل كل السور'**
+  String get audioDownloadAll;
+
+  /// No description provided for @audioCancelDownload.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف التنزيل'**
+  String get audioCancelDownload;
+
+  /// No description provided for @audioDownloadProgress.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ التنزيل: {done} / {total}'**
+  String audioDownloadProgress(int done, int total);
+
+  /// No description provided for @audioDownloadComplete.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتمل التنزيل.'**
+  String get audioDownloadComplete;
+
+  /// No description provided for @audioDownloadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تنزيل بعض الملفات. تحقق من الاتصال.'**
+  String get audioDownloadFailed;
+
+  /// No description provided for @audioDownloaded.
+  ///
+  /// In ar, this message translates to:
+  /// **'منزّلة'**
+  String get audioDownloaded;
+
+  /// No description provided for @audioDeleteDownload.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف التنزيل'**
+  String get audioDeleteDownload;
+
+  /// No description provided for @audioDeleted.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حذف تنزيل السورة.'**
+  String get audioDeleted;
+
+  /// No description provided for @audioStorageUsed.
+  ///
+  /// In ar, this message translates to:
+  /// **'المحفوظ: {size}'**
+  String audioStorageUsed(String size);
+
+  /// No description provided for @audioAllDownloaded.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل السور منزّلة'**
+  String get audioAllDownloaded;
+
+  /// No description provided for @audioCancelDownloadShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف'**
+  String get audioCancelDownloadShort;
+
+  /// No description provided for @audioDownloadStopped.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إيقاف التنزيل.'**
+  String get audioDownloadStopped;
+
+  /// No description provided for @audioDownloadSurah.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنزيل السورة'**
+  String get audioDownloadSurah;
 }
 
 class _AppLocalizationsDelegate

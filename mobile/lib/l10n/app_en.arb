@@ -314,5 +314,35 @@
   "creditsFontsNotice": "Arabic fonts under the SIL Open Font License 1.1.",
   "creditsFullLicense": "Full licence text",
   "creditsOpenSource": "Open source",
-  "adhanScheduleFailed": "Settings were saved, but notifications could not be scheduled."
+  "adhanScheduleFailed": "Settings were saved, but notifications could not be scheduled.",
+  "audioDownloadAll": "Download all surahs",
+  "audioCancelDownload": "Stop downloading",
+  "audioDownloadProgress": "Downloading: {done} / {total}",
+  "audioDownloadComplete": "Download complete.",
+  "audioDownloadFailed": "Some files could not be downloaded. Check your connection.",
+  "audioDownloaded": "Downloaded",
+  "audioDeleteDownload": "Delete download",
+  "audioDeleted": "Surah download deleted.",
+  "audioStorageUsed": "Stored: {size}",
+  "audioAllDownloaded": "All surahs downloaded",
+  "@audioDownloadProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "@audioStorageUsed": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "audioCancelDownloadShort": "Stop",
+  "audioDownloadStopped": "Download stopped.",
+  "audioDownloadSurah": "Download surah"
 }

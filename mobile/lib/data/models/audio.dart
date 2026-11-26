@@ -35,6 +35,17 @@ class AudioTrack {
 
   String get title => surahName;
   String get subtitle => 'آية $ayah';
+
+  /// Returns a copy pointing at a local file when the surah is downloaded.
+  AudioTrack withUrl(String url) => AudioTrack(
+    id: id,
+    reciterId: reciterId,
+    reciterName: reciterName,
+    surah: surah,
+    ayah: ayah,
+    surahName: surahName,
+    url: url,
+  );
 }
 
 enum AudioRepeatMode { off, one, all }
