@@ -19,7 +19,19 @@ class AdhanScheduler {
   final PrayerNotificationService service;
   final PrayerNotificationPlanner planner;
 
-  Future<void> refresh({DateTime? now}) async {
+  /// Serialises refreshes so `cancelAll` and `schedule` cannot interleave.
+  Future<void> _tail = Future<void>.value();
+
+  Future<void> refresh({DateTime? now}) {
+    final result = _tail.then((_) => _refresh(now: now));
+    _tail = result.then((_) {}, onError: (Object _, StackTrace _) {});
+    return result;
+  }
+
+  Future<void> _refresh({DateTime? now}) async {
+    // Before onboarding the settings are only Mecca defaults; scheduling
+    // those would alert the user at the wrong times.
+    if (!settings.value.configured) return;
     await service.initialize();
     final prefs = await preferences.load();
     final plan = planner.plan(
@@ -35,7 +47,8 @@ class AdhanScheduler {
 
   Future<void> sendTest() async {
     await service.initialize();
-    await service.showTest();
+    final prefs = await preferences.load();
+    await service.showTest(withSound: prefs.soundEnabled);
   }
 
   Future<void> save(AdhanPreferences next) async {

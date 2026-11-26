@@ -4,10 +4,21 @@ import '../../data/audio/playback_controller.dart';
 import '../../data/models/audio.dart';
 import '../../l10n/app_localizations.dart';
 
-class PlayerPage extends StatelessWidget {
+class PlayerPage extends StatefulWidget {
   const PlayerPage({super.key, required this.playback});
 
   final PlaybackController playback;
+
+  @override
+  State<PlayerPage> createState() => _PlayerPageState();
+}
+
+class _PlayerPageState extends State<PlayerPage> {
+  /// While the user drags the slider we show the thumb immediately and only
+  /// seek once, on release, to avoid repeated HTTP range requests.
+  double? _dragSeconds;
+
+  PlaybackController get _playback => widget.playback;
 
   String _time(Duration value) {
     final minutes = value.inMinutes;
@@ -22,23 +33,25 @@ class PlayerPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.audioNowPlaying)),
       body: ListenableBuilder(
-        listenable: playback,
+        listenable: _playback,
         builder: (context, _) {
-          final track = playback.current;
+          final track = _playback.current;
           if (track == null) {
             return Center(child: Text(l10n.audioQueueEmpty));
           }
-          final duration = playback.duration;
+          final duration = _playback.duration;
           final hasDuration = duration > Duration.zero;
           final maxSeconds = hasDuration
               ? duration.inMilliseconds / 1000.0
               : 1.0;
+          final position = _playback.position;
           final seconds = hasDuration
-              ? (playback.position.inMilliseconds / 1000.0).clamp(
-                  0.0,
-                  maxSeconds,
-                )
+              ? (position.inMilliseconds / 1000.0).clamp(0.0, maxSeconds)
               : 0.0;
+          final sliderValue = (_dragSeconds ?? seconds).clamp(0.0, maxSeconds);
+          final shownPosition = _dragSeconds == null
+              ? position
+              : Duration(milliseconds: (_dragSeconds! * 1000).round());
           return ListView(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
             children: [
@@ -74,7 +87,7 @@ class PlayerPage extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
               ),
-              if (playback.error != null) ...[
+              if (_playback.error != null) ...[
                 const SizedBox(height: 14),
                 Container(
                   padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
@@ -110,7 +123,7 @@ class PlayerPage extends StatelessWidget {
                         alignment: AlignmentDirectional.centerEnd,
                         child: TextButton(
                           key: const ValueKey('audio-retry'),
-                          onPressed: playback.play,
+                          onPressed: _playback.retry,
                           child: Text(l10n.retry),
                         ),
                       ),
@@ -121,19 +134,25 @@ class PlayerPage extends StatelessWidget {
               const SizedBox(height: 18),
               Slider(
                 key: const ValueKey('audio-seek'),
-                value: seconds,
+                value: sliderValue,
                 max: maxSeconds,
                 onChanged: hasDuration
-                    ? (value) => playback.seek(
-                        Duration(milliseconds: (value * 1000).round()),
-                      )
+                    ? (value) => setState(() => _dragSeconds = value)
+                    : null,
+                onChangeEnd: hasDuration
+                    ? (value) {
+                        setState(() => _dragSeconds = null);
+                        _playback.seek(
+                          Duration(milliseconds: (value * 1000).round()),
+                        );
+                      }
                     : null,
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    _time(playback.position),
+                    _time(shownPosition),
                     style: TextStyle(
                       fontSize: 10,
                       color: scheme.onSurfaceVariant,
@@ -154,21 +173,21 @@ class PlayerPage extends StatelessWidget {
                 children: [
                   IconButton(
                     tooltip: l10n.audioPrevious,
-                    onPressed: playback.current?.ayah == 1
-                        ? null
-                        : playback.previous,
+                    onPressed: _playback.state.hasPrevious
+                        ? _playback.previous
+                        : null,
                     icon: const Icon(Icons.skip_previous_rounded, size: 34),
                   ),
                   const SizedBox(width: 14),
                   IconButton.filled(
                     key: const ValueKey('audio-toggle'),
-                    tooltip: playback.playing
+                    tooltip: _playback.playing
                         ? l10n.audioPause
                         : l10n.audioPlay,
-                    onPressed: playback.toggle,
+                    onPressed: _playback.toggle,
                     iconSize: 34,
                     icon: Icon(
-                      playback.playing
+                      _playback.playing
                           ? Icons.pause_rounded
                           : Icons.play_arrow_rounded,
                     ),
@@ -176,7 +195,7 @@ class PlayerPage extends StatelessWidget {
                   const SizedBox(width: 14),
                   IconButton(
                     tooltip: l10n.audioNext,
-                    onPressed: playback.next,
+                    onPressed: _playback.next,
                     icon: const Icon(Icons.skip_next_rounded, size: 34),
                   ),
                 ],
@@ -190,21 +209,21 @@ class PlayerPage extends StatelessWidget {
                   ActionChip(
                     key: const ValueKey('audio-speed'),
                     avatar: const Icon(Icons.speed_rounded, size: 16),
-                    label: Text('${playback.speed}x'),
-                    onPressed: playback.cycleSpeed,
+                    label: Text('${_playback.speed}x'),
+                    onPressed: _playback.cycleSpeed,
                   ),
                   ActionChip(
                     key: const ValueKey('audio-repeat'),
-                    avatar: Icon(switch (playback.repeat) {
+                    avatar: Icon(switch (_playback.repeat) {
                       AudioRepeatMode.one => Icons.repeat_one_rounded,
                       _ => Icons.repeat_rounded,
                     }, size: 16),
-                    label: Text(switch (playback.repeat) {
+                    label: Text(switch (_playback.repeat) {
                       AudioRepeatMode.off => l10n.audioRepeatOff,
                       AudioRepeatMode.one => l10n.audioRepeatOne,
                       AudioRepeatMode.all => l10n.audioRepeatAll,
                     }),
-                    onPressed: playback.cycleRepeat,
+                    onPressed: _playback.cycleRepeat,
                   ),
                 ],
               ),

@@ -551,4 +551,89 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get adhanBatteryHint =>
       'Allow the app to run in the background and turn off battery optimisation for it in system settings.';
+
+  @override
+  String get creditsSection => 'About';
+
+  @override
+  String get creditsTitle => 'Sources and licences';
+
+  @override
+  String get creditsIntro =>
+      'The app relies on the following sources. The Quran text is bundled verbatim and is never edited.';
+
+  @override
+  String get creditsTanzilName => 'Tanzil Project';
+
+  @override
+  String get creditsTanzilWhat => 'Uthmani Quran text and surah/juz metadata';
+
+  @override
+  String get creditsTanzilLicense => 'CC BY 3.0 — © Tanzil Project';
+
+  @override
+  String get creditsTanzilNotice =>
+      'The Uthmani Quran text is used unmodified, with its source (Tanzil Project) indicated and a link to tanzil.net.';
+
+  @override
+  String get creditsAdhkarName => 'Hisn al-Muslim (HisnElMuslim)';
+
+  @override
+  String get creditsAdhkarWhat => 'Adhkar texts, repeat counts and references';
+
+  @override
+  String get creditsAdhkarLicense => 'MIT — © Abdellah SELLAM';
+
+  @override
+  String get creditsAdhkarNotice =>
+      'Adhkar texts come from the open-source Hisn al-Muslim collection under the MIT licence.';
+
+  @override
+  String get creditsAdhanName => 'Adhan recording';
+
+  @override
+  String get creditsAdhanWhat => 'Bundled adhan, unmodified';
+
+  @override
+  String get creditsAdhanLicense => 'CC0 1.0 — Adam-synagda';
+
+  @override
+  String get creditsAdhanNotice =>
+      'Beautiful adhan by Adam-synagda via Wikimedia Commons, CC0 1.0 public domain, no changes made.';
+
+  @override
+  String get creditsAudioName => 'EveryAyah';
+
+  @override
+  String get creditsAudioWhat => 'Ayah-by-ayah Quran recitation';
+
+  @override
+  String get creditsAudioLicense => 'Freely available';
+
+  @override
+  String get creditsAudioNotice =>
+      'Recitations stream from everyayah.com and are not bundled in the app.';
+
+  @override
+  String get creditsFontsName => 'Fonts';
+
+  @override
+  String get creditsFontsWhat => 'Tajawal and Amiri Quran';
+
+  @override
+  String get creditsFontsLicense => 'SIL OFL 1.1';
+
+  @override
+  String get creditsFontsNotice =>
+      'Arabic fonts under the SIL Open Font License 1.1.';
+
+  @override
+  String get creditsFullLicense => 'Full licence text';
+
+  @override
+  String get creditsOpenSource => 'Open source';
+
+  @override
+  String get adhanScheduleFailed =>
+      'Settings were saved, but notifications could not be scheduled.';
 }

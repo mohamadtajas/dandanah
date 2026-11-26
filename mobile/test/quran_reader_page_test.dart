@@ -145,10 +145,10 @@ void main() {
   });
 
   testWidgets('at-Tawba renders without a basmala', (tester) async {
-    final baqarah = await AppServices.current.quran.surahByNumber(2);
     await pumpReader(tester, const QuranReaderPage.surah(surah: 9));
 
-    expect(find.text(baqarah!.bismillah!), findsNothing);
+    expect(find.textContaining('بِسْمِ ٱللَّهِ'), findsNothing);
+    expect(find.textContaining('بسم الله'), findsNothing);
   });
 
   testWidgets('flushes the pending position before the route pops', (
@@ -197,6 +197,52 @@ void main() {
     expect(position, isNotNull);
     expect(position!.surah, 2);
     expect(position.ayah, greaterThan(1));
+  });
+
+  testWidgets('two rapid backs pop the reader only once', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ar'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const QuranReaderPage.surah(surah: 2),
+                ),
+              ),
+              child: const Text('فتح'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('فتح'));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byType(ScrollablePositionedList),
+      const Offset(0, -1400),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final first = tester.binding.handlePopRoute();
+    final second = tester.binding.handlePopRoute();
+    await Future.wait([first, second]);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(QuranReaderPage), findsNothing);
+    expect(find.text('فتح'), findsOneWidget);
   });
 }
 

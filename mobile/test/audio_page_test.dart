@@ -181,6 +181,32 @@ void main() {
 
     expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
   });
+
+  testWidgets('stopping from the mini player dismisses it', (tester) async {
+    await playback.playQueue(tracks());
+    await pump(tester, MiniPlayer(playback: playback));
+    expect(find.byKey(const ValueKey('mini-toggle')), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('mini-toggle')), findsNothing);
+    expect(playback.current, isNull);
+    expect(playback.queue, isEmpty);
+  });
+
+  testWidgets('retry re-applies the queue after a failed load', (tester) async {
+    await playback.playQueue(tracks());
+    engine.emit(engine.current.copyWith(error: 'load failed'));
+    final before = engine.playCalls;
+
+    await playback.retry();
+    await tester.pumpAndSettle();
+
+    expect(engine.playCalls, before + 1);
+    expect(playback.current?.surah, 1);
+    expect(playback.queue, hasLength(7));
+  });
 }
 
 class _FileAssetBundle extends AssetBundle {

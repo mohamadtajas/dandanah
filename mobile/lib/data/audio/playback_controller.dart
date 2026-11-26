@@ -73,6 +73,18 @@ class PlaybackController extends ChangeNotifier {
 
   Future<void> stop() => _engine.stop();
 
+  Future<void> stopAndClear() => _engine.stopAndClear();
+
+  /// Re-applies the current queue when the initial load failed.
+  Future<void> retry() async {
+    final index = _state.index;
+    if (queue.isEmpty) {
+      return play();
+    }
+    await _engine.setQueue(queue, initialIndex: index);
+    await _engine.play();
+  }
+
   @override
   void dispose() {
     _subscription.cancel();

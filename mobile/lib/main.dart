@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -18,18 +20,24 @@ Future<void> _start() async {
   try {
     final AudioEngine engine = await _audioEngine();
     await AppServices.initialize(playback: PlaybackController(engine));
-    try {
-      await AppServices.current.adhanScheduler.refresh();
-    } catch (error) {
-      debugPrint('Adhan scheduling unavailable: $error');
-    }
     debugPrint(
       'Sakeenah offline data ready in ${started.elapsedMilliseconds} ms',
     );
     runApp(const SakeenahApp());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_refreshAdhan());
+    });
   } catch (error, stack) {
     debugPrint('Sakeenah startup failed: $error\n$stack');
     runApp(StartupErrorApp(error: error, onRetry: _start));
+  }
+}
+
+Future<void> _refreshAdhan() async {
+  try {
+    await AppServices.current.adhanScheduler.refresh();
+  } catch (error) {
+    debugPrint('Adhan scheduling unavailable: $error');
   }
 }
 

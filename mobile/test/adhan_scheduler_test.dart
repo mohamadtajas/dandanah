@@ -17,7 +17,9 @@ void main() {
   setUp(() {
     db = AppDatabase.memory();
     preferences = AdhanSettingsRepository(db);
-    settings = ValueNotifier(PrayerSettings.defaults());
+    settings = ValueNotifier(
+      PrayerSettings.defaults().copyWith(configured: true),
+    );
     service = _FakeNotifications();
     scheduler = AdhanScheduler(
       preferences: preferences,
@@ -55,6 +57,25 @@ void main() {
     expect(service.permissionsAsked, 1);
     await scheduler.sendTest();
     expect(service.testShown, 1);
+    expect(service.lastTestWithSound, isTrue);
+  });
+
+  test('an unconfigured location schedules nothing', () async {
+    settings.value = PrayerSettings.defaults();
+    await scheduler.refresh(now: DateTime.utc(2026, 11, 26));
+
+    expect(service.initialized, 0);
+    expect(service.cancelled, 0);
+    expect(service.events, isEmpty);
+  });
+
+  test('concurrent refreshes are serialised', () async {
+    await Future.wait([
+      scheduler.refresh(now: DateTime.utc(2026, 11, 26)),
+      scheduler.refresh(now: DateTime.utc(2026, 11, 26)),
+    ]);
+
+    expect(service.cancelled, 2);
   });
 }
 
@@ -63,6 +84,7 @@ class _FakeNotifications implements PrayerNotificationService {
   int cancelled = 0;
   int permissionsAsked = 0;
   int testShown = 0;
+  bool? lastTestWithSound;
   List<PrayerNotification> events = [];
 
   @override
@@ -87,5 +109,8 @@ class _FakeNotifications implements PrayerNotificationService {
   }
 
   @override
-  Future<void> showTest() async => testShown++;
+  Future<void> showTest({bool withSound = true}) async {
+    testShown++;
+    lastTestWithSound = withSound;
+  }
 }

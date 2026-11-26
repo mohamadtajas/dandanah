@@ -76,5 +76,8 @@ abstract interface class AudioEngine {
 
   Future<void> stop();
 
+  /// Stops playback and clears the queue so the mini-player disappears.
+  Future<void> stopAndClear();
+
   Future<void> dispose();
 }

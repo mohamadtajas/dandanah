@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -18,18 +21,25 @@ abstract interface class PrayerNotificationService {
     required PrayerSettings settings,
   });
 
-  Future<void> showTest();
+  Future<void> showTest({bool withSound = true});
 }
 
 class LocalPrayerNotificationService implements PrayerNotificationService {
-  LocalPrayerNotificationService({FlutterLocalNotificationsPlugin? plugin})
-    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+  LocalPrayerNotificationService({
+    FlutterLocalNotificationsPlugin? plugin,
+    int? maxPending,
+  }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
+       _maxPending = maxPending ?? (Platform.isIOS ? 60 : null);
 
   static const _adhanChannel = 'adhan';
-  static const _reminderChannel = 'prayer_reminders';
+  static const _silentChannel = 'prayer_silent';
   static const _testId = 999999;
 
+  /// iOS keeps at most 64 pending requests; older ones are silently dropped.
+  static const iosPendingLimit = 64;
+
   final FlutterLocalNotificationsPlugin _plugin;
+  final int? _maxPending;
   bool _initialized = false;
 
   @override
@@ -59,12 +69,16 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
         sound: RawResourceAndroidNotificationSound('adhan'),
       ),
     );
+    // Android channels own their sound, so a separate silent channel is
+    // required for pre-alerts and when the adhan sound is disabled.
     await androidPlugin?.createNotificationChannel(
       const AndroidNotificationChannel(
-        _reminderChannel,
-        'تنبيهات الصلاة',
-        description: 'تذكير قبل الصلاة',
+        _silentChannel,
+        'تنبيهات صامتة',
+        description: 'تنبيهات الصلاة بدون صوت',
         importance: Importance.high,
+        playSound: false,
+        enableVibration: false,
       ),
     );
     _initialized = true;
@@ -72,6 +86,7 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
 
   @override
   Future<bool> requestPermissions() async {
+    await initialize();
     final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -79,6 +94,9 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
     final notifications =
         await android?.requestNotificationsPermission() ?? true;
     final exact = await android?.requestExactAlarmsPermission() ?? true;
+    // Exact alarms are an optimisation: scheduling falls back to inexact
+    // alarms, so only notification permission is decisive here.
+    debugPrint('Exact alarm permission: $exact');
     final ios = _plugin
         .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin
@@ -86,7 +104,7 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
     final iosGranted =
         await ios?.requestPermissions(alert: true, badge: true, sound: true) ??
         true;
-    return notifications && exact && iosGranted;
+    return notifications && iosGranted;
   }
 
   @override
@@ -100,15 +118,30 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
   }) async {
     await initialize();
     final location = locationFor(settings.timezone);
-    for (final event in events) {
-      final isAdhan = !event.preAlert;
-      final useAdhanSound = preferences.soundEnabled && isAdhan;
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    final exactAlarms = await android?.canScheduleExactNotifications() ?? false;
+    final scheduleMode = exactAlarms
+        ? AndroidScheduleMode.exactAllowWhileIdle
+        : AndroidScheduleMode.inexactAllowWhileIdle;
+    debugPrint('Scheduling prayer notifications with $scheduleMode');
+    final horizon = DateTime.now().add(const Duration(seconds: 2));
+    final pending = events
+        .where((event) => event.instant.isAfter(horizon))
+        .take(_maxPending ?? events.length);
+
+    for (final event in pending) {
+      final useAdhanSound = preferences.soundEnabled && !event.preAlert;
       final details = NotificationDetails(
         android: AndroidNotificationDetails(
-          useAdhanSound ? _adhanChannel : _reminderChannel,
-          useAdhanSound ? 'الأذان' : 'تنبيهات الصلاة',
-          channelDescription: 'تنبيهات وقت الصلاة',
-          importance: Importance.max,
+          useAdhanSound ? _adhanChannel : _silentChannel,
+          useAdhanSound ? 'الأذان' : 'تنبيهات صامتة',
+          channelDescription: useAdhanSound
+              ? 'تنبيهات وقت الصلاة'
+              : 'تنبيهات الصلاة بدون صوت',
+          importance: useAdhanSound ? Importance.max : Importance.high,
           priority: Priority.high,
           playSound: useAdhanSound,
           sound: useAdhanSound
@@ -118,41 +151,48 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
         ),
         iOS: DarwinNotificationDetails(presentSound: useAdhanSound),
       );
-      await _plugin.zonedSchedule(
-        id: _notificationId(event.id),
-        title: event.preAlert
-            ? 'اقتربت صلاة ${event.prayer.arabicName}'
-            : 'حان وقت صلاة ${event.prayer.arabicName}',
-        body: event.preAlert
-            ? 'بعد ${preferences.preAlertMinutes} دقيقة'
-            : 'حان وقت الصلاة',
-        scheduledDate: tz.TZDateTime.from(event.instant, location),
-        notificationDetails: details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        payload: event.prayer.name,
-      );
+      try {
+        await _plugin.zonedSchedule(
+          id: _notificationId(event.id),
+          title: event.preAlert
+              ? 'اقتربت صلاة ${event.prayer.arabicName}'
+              : 'حان وقت صلاة ${event.prayer.arabicName}',
+          body: event.preAlert
+              ? 'بعد ${preferences.preAlertMinutes} دقيقة'
+              : 'حان وقت الصلاة',
+          scheduledDate: tz.TZDateTime.from(event.instant, location),
+          notificationDetails: details,
+          androidScheduleMode: scheduleMode,
+          payload: event.prayer.name,
+        );
+      } catch (error) {
+        // One refused request must not abort the rest of the plan.
+        debugPrint('Could not schedule ${event.id}: $error');
+      }
     }
   }
 
   @override
-  Future<void> showTest() async {
+  Future<void> showTest({bool withSound = true}) async {
     await initialize();
     await _plugin.show(
       id: _testId,
       title: 'اختبار الأذان',
       body: 'ستظهر تنبيهات الصلاة هكذا.',
-      notificationDetails: const NotificationDetails(
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
-          _adhanChannel,
-          'الأذان',
+          withSound ? _adhanChannel : _silentChannel,
+          withSound ? 'الأذان' : 'تنبيهات صامتة',
           channelDescription: 'تنبيهات وقت الصلاة',
-          importance: Importance.max,
+          importance: withSound ? Importance.max : Importance.high,
           priority: Priority.high,
-          playSound: true,
-          sound: RawResourceAndroidNotificationSound('adhan'),
+          playSound: withSound,
+          sound: withSound
+              ? const RawResourceAndroidNotificationSound('adhan')
+              : null,
           category: AndroidNotificationCategory.alarm,
         ),
-        iOS: DarwinNotificationDetails(presentSound: true),
+        iOS: DarwinNotificationDetails(presentSound: withSound),
       ),
     );
   }

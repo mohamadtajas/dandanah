@@ -7,6 +7,7 @@ import '../../data/location/location_service.dart';
 import '../../data/models/adhan.dart';
 import '../../data/worship/adhan_scheduler.dart';
 import '../../data/worship/prayer_method.dart';
+import 'credits_page.dart';
 import '../../data/worship/coordinate_input.dart';
 import '../../data/worship/prayer_settings.dart';
 import '../../data/worship/timezone_bootstrap.dart';
@@ -63,8 +64,12 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadAdhan() async {
-    final prefs = await _adhanScheduler.preferences.load();
-    if (mounted) setState(() => _adhan = prefs);
+    try {
+      final prefs = await _adhanScheduler.preferences.load();
+      if (mounted) setState(() => _adhan = prefs);
+    } catch (_) {
+      // Keep the defaults already shown; saving still works.
+    }
   }
 
   @override
@@ -188,6 +193,17 @@ class _SettingsPageState extends State<SettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.settingsSaved)),
       );
+      // Prayer times moved: refresh the two-week notification plan.
+      try {
+        await _adhanScheduler.refresh();
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.adhanScheduleFailed),
+          ),
+        );
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -206,7 +222,17 @@ class _SettingsPageState extends State<SettingsPage> {
       _adhanBusy = true;
     });
     try {
-      await _adhanScheduler.save(next);
+      // Save and reschedule separately so a scheduling failure does not
+      // pretend the preference itself was lost.
+      await _adhanScheduler.preferences.save(next);
+      try {
+        await _adhanScheduler.refresh();
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(l10n.adhanScheduleFailed)));
+        }
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -219,22 +245,43 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _enableAdhan() async {
     final l10n = AppLocalizations.of(context)!;
-    final granted = await _adhanScheduler.requestPermissions();
-    if (!mounted) return;
-    if (!granted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10n.adhanPermissionDenied)));
-      return;
+    if (_adhanBusy) return;
+    setState(() => _adhanBusy = true);
+    try {
+      final granted = await _adhanScheduler.requestPermissions();
+      if (!mounted) return;
+      if (!granted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.adhanPermissionDenied)));
+        return;
+      }
+      await _adhanScheduler.refresh();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.adhanScheduleFailed)));
+      }
+    } finally {
+      if (mounted) setState(() => _adhanBusy = false);
     }
-    await _adhanScheduler.refresh();
   }
 
   Future<void> _testAdhan() async {
     final l10n = AppLocalizations.of(context)!;
-    await _adhanScheduler.sendTest();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(l10n.adhanTestSent)));
+    if (_adhanBusy) return;
+    setState(() => _adhanBusy = true);
+    try {
+      await _adhanScheduler.sendTest();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.adhanTestSent)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.adhanScheduleFailed)));
+    } finally {
+      if (mounted) setState(() => _adhanBusy = false);
+    }
   }
 
   @override
@@ -618,6 +665,26 @@ class _SettingsPageState extends State<SettingsPage> {
                 setState(() => _mode = mode);
                 widget.onThemeChanged(mode);
               },
+            ),
+          ),
+          const SizedBox(height: 14),
+          _SectionCard(
+            title: l10n.creditsSection,
+            child: ListTile(
+              key: const ValueKey('settings-credits'),
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.info_outline_rounded, color: scheme.primary),
+              title: Text(
+                l10n.creditsTitle,
+                style: TextStyle(fontSize: 12, color: scheme.onSurface),
+              ),
+              trailing: Icon(
+                Icons.chevron_left_rounded,
+                color: scheme.onSurfaceVariant,
+              ),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const CreditsPage()),
+              ),
             ),
           ),
           const SizedBox(height: 14),

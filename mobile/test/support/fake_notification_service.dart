@@ -9,6 +9,7 @@ class FakeNotificationService implements PrayerNotificationService {
   int testShown = 0;
   List<PrayerNotification> events = [];
   bool grantPermissions = true;
+  bool? lastTestWithSound;
 
   @override
   Future<void> initialize() async => initialized++;
@@ -32,5 +33,8 @@ class FakeNotificationService implements PrayerNotificationService {
   }
 
   @override
-  Future<void> showTest() async => testShown++;
+  Future<void> showTest({bool withSound = true}) async {
+    testShown++;
+    lastTestWithSound = withSound;
+  }
 }

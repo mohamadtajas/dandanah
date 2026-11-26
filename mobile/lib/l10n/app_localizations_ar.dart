@@ -550,4 +550,90 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get adhanBatteryHint =>
       'اسمح للتطبيق بالعمل في الخلفية وأوقف تحسين البطارية له من إعدادات النظام.';
+
+  @override
+  String get creditsSection => 'عن التطبيق';
+
+  @override
+  String get creditsTitle => 'المصادر والتراخيص';
+
+  @override
+  String get creditsIntro =>
+      'يعتمد التطبيق على المصادر التالية. النص القرآني مضمَّن كما هو دون أي تعديل.';
+
+  @override
+  String get creditsTanzilName => 'مشروع تنزيل (Tanzil)';
+
+  @override
+  String get creditsTanzilWhat =>
+      'النص القرآني العثماني وبيانات السور والأجزاء';
+
+  @override
+  String get creditsTanzilLicense => 'CC BY 3.0 — © Tanzil Project';
+
+  @override
+  String get creditsTanzilNotice =>
+      'يُستخدم النص القرآني العثماني كما هو، مع الإشارة إلى مصدره Tanzil Project ورابط tanzil.net.';
+
+  @override
+  String get creditsAdhkarName => 'حصن المسلم (HisnElMuslim)';
+
+  @override
+  String get creditsAdhkarWhat => 'نصوص الأذكار وتكرارها ومصادرها';
+
+  @override
+  String get creditsAdhkarLicense => 'MIT — © Abdellah SELLAM';
+
+  @override
+  String get creditsAdhkarNotice =>
+      'نصوص الأذكار مأخوذة من مجموعة حصن المسلم مفتوحة المصدر بترخيص MIT.';
+
+  @override
+  String get creditsAdhanName => 'تسجيل الأذان';
+
+  @override
+  String get creditsAdhanWhat => 'أذان مضمَّن دون تعديل';
+
+  @override
+  String get creditsAdhanLicense => 'CC0 1.0 — Adam-synagda';
+
+  @override
+  String get creditsAdhanNotice =>
+      'Beautiful adhan by Adam-synagda عبر Wikimedia Commons، ملكية عامة CC0 1.0، دون تعديل.';
+
+  @override
+  String get creditsAudioName => 'EveryAyah';
+
+  @override
+  String get creditsAudioWhat => 'تلاوة القرآن آية بآية';
+
+  @override
+  String get creditsAudioLicense => 'متاح مجانًا';
+
+  @override
+  String get creditsAudioNotice =>
+      'تُبَث التلاوات من everyayah.com ولا تُضمَّن ملفاتها في التطبيق.';
+
+  @override
+  String get creditsFontsName => 'الخطوط';
+
+  @override
+  String get creditsFontsWhat => 'Tajawal و Amiri Quran';
+
+  @override
+  String get creditsFontsLicense => 'SIL OFL 1.1';
+
+  @override
+  String get creditsFontsNotice =>
+      'خطوط عربية مفتوحة بترخيص SIL Open Font License 1.1.';
+
+  @override
+  String get creditsFullLicense => 'نص الترخيص الكامل';
+
+  @override
+  String get creditsOpenSource => 'فتح المصدر';
+
+  @override
+  String get adhanScheduleFailed =>
+      'تم حفظ الإعدادات، لكن تعذر جدولة التنبيهات.';
 }

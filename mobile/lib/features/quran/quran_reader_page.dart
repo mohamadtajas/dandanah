@@ -45,6 +45,7 @@ class _QuranReaderPageState extends State<QuranReaderPage> {
   bool _loading = true;
   bool _failed = false;
   bool _canPop = false;
+  bool _popping = false;
   int _loadToken = 0;
 
   @override
@@ -68,9 +69,15 @@ class _QuranReaderPageState extends State<QuranReaderPage> {
   Future<void> _flushPending() async {
     _saveTimer?.cancel();
     final pending = _pending;
-    _pending = null;
     if (pending == null) return;
-    await _services.quranReader.savePosition(pending.surah, pending.ayah);
+    _pending = null;
+    try {
+      await _services.quranReader.savePosition(pending.surah, pending.ayah);
+    } catch (_) {
+      // Keep the position so the next pause/back can retry instead of
+      // silently losing it.
+      _pending ??= pending;
+    }
   }
 
   Future<void> _load() async {
@@ -111,7 +118,7 @@ class _QuranReaderPageState extends State<QuranReaderPage> {
         );
         if (index >= 0) initialIndex = index;
       }
-      if (!mounted) return;
+      if (!mounted || token != _loadToken) return;
       setState(() {
         _entries = entries;
         _bookmarked = {
@@ -291,13 +298,19 @@ class _QuranReaderPageState extends State<QuranReaderPage> {
   }
 
   Future<void> _handlePop() async {
-    if (_canPop) return;
-    await _flushPending();
-    if (!mounted) return;
-    setState(() => _canPop = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) Navigator.of(context).pop();
-    });
+    if (_canPop || _popping) return;
+    _popping = true;
+    try {
+      await _flushPending();
+    } finally {
+      _popping = false;
+      if (mounted) {
+        setState(() => _canPop = true);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) Navigator.of(context).pop();
+        });
+      }
+    }
   }
 }
 

@@ -147,5 +147,8 @@ class _FakeEngine implements AudioEngine {
   Future<void> stop() async => _emit(_state.copyWith(playing: false));
 
   @override
+  Future<void> stopAndClear() async => _emit(const AudioEngineState());
+
+  @override
   Future<void> dispose() async => _controller.close();
 }

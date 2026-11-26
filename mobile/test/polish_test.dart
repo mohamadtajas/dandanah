@@ -23,6 +23,7 @@ import 'package:sakeenah_mobile/features/audio/mini_player.dart';
 import 'package:sakeenah_mobile/features/audio/player_page.dart';
 import 'package:sakeenah_mobile/features/quran/quran_page.dart';
 import 'package:sakeenah_mobile/features/quran/quran_reader_page.dart';
+import 'package:sakeenah_mobile/features/settings/credits_page.dart';
 import 'package:sakeenah_mobile/features/settings/settings_page.dart';
 import 'package:sakeenah_mobile/l10n/app_localizations.dart';
 import 'package:sakeenah_mobile/theme/sakeenah_theme.dart';
@@ -195,6 +196,20 @@ void main() {
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
       await tester.pump(const Duration(milliseconds: 100));
     }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('credits fit a small phone at 2x text', (tester) async {
+    await pump(tester, const CreditsPage());
+    await tester.tap(find.text('مشروع تنزيل (Tanzil)'));
+    await tester.pumpAndSettle();
+    final license = find.text('نص الترخيص الكامل');
+    expect(license, findsOneWidget);
+    await tester.ensureVisible(license);
+    await tester.pump();
+    await tester.tap(license);
+    await tester.pumpAndSettle();
+    expect(find.byType(SelectableText), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

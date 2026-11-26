@@ -25,7 +25,7 @@ defaults:
 
 jobs:
   android:
-    name: Android analyze, test, debug APK
+    name: Android analyze, test, debug + release APK
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,10 +53,26 @@ jobs:
 
       - run: flutter build apk --debug
 
+      - name: Build release APK (debug-signed for smoke testing)
+        run: flutter build apk --release
+
+      - name: Release APK keeps adhan audio and INTERNET
+        run: |
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test "$(unzip -l "$APK" | grep -c '\.ogg')" -ge 1
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | tail -1)
+          "$BT/aapt2" dump permissions "$APK" | grep -q 'android.permission.INTERNET'
+
       - uses: actions/upload-artifact@v4
         with:
           name: sakeenah-debug-apk
           path: mobile/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sakeenah-release-apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
 
   ios-compile:

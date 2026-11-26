@@ -41,6 +41,27 @@ void main() {
     expect(restored.soundEnabled, isFalse);
   });
 
+  test('legacy or corrupt preferences are normalised', () {
+    final restored = AdhanPreferences.fromJson({
+      'enabled': {'fajr': 'yes', 'dhuhr': false},
+      'preAlertMinutes': 7,
+      'soundEnabled': 'loud',
+    });
+
+    expect(restored.isEnabled(PrayerName.fajr), isTrue);
+    expect(restored.isEnabled(PrayerName.dhuhr), isFalse);
+    expect(restored.preAlertMinutes, 5);
+    expect(restored.soundEnabled, isTrue);
+    expect(
+      AdhanPreferences.defaults().copyWith(preAlertMinutes: 99).preAlertMinutes,
+      20,
+    );
+    expect(
+      AdhanPreferences.defaults().copyWith(preAlertMinutes: -4).preAlertMinutes,
+      0,
+    );
+  });
+
   test('repository persists preferences', () async {
     final db = AppDatabase.memory();
     addTearDown(db.close);

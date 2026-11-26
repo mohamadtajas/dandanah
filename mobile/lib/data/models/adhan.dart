@@ -9,6 +9,9 @@ const obligatoryPrayerNames = [
 ];
 
 class AdhanPreferences {
+  /// Selectable pre-alert offsets in minutes; `0` disables the pre-alert.
+  static const preAlertOptions = [0, 5, 10, 15, 20];
+
   const AdhanPreferences({
     this.enabled = const {
       PrayerName.fajr: true,
@@ -27,6 +30,15 @@ class AdhanPreferences {
 
   factory AdhanPreferences.defaults() => const AdhanPreferences();
 
+  /// Snaps a stored/legacy value to an option the settings dropdown can show.
+  static int normalizePreAlert(int minutes) {
+    var best = preAlertOptions.first;
+    for (final option in preAlertOptions) {
+      if ((option - minutes).abs() < (best - minutes).abs()) best = option;
+    }
+    return best;
+  }
+
   bool isEnabled(PrayerName prayer) =>
       obligatoryPrayerNames.contains(prayer) && (enabled[prayer] ?? true);
 
@@ -36,7 +48,9 @@ class AdhanPreferences {
     bool? soundEnabled,
   }) => AdhanPreferences(
     enabled: enabled ?? this.enabled,
-    preAlertMinutes: preAlertMinutes ?? this.preAlertMinutes,
+    preAlertMinutes: preAlertMinutes == null
+        ? this.preAlertMinutes
+        : normalizePreAlert(preAlertMinutes),
     soundEnabled: soundEnabled ?? this.soundEnabled,
   );
 
@@ -54,17 +68,21 @@ class AdhanPreferences {
     final map = <PrayerName, bool>{};
     if (raw is Map) {
       for (final prayer in obligatoryPrayerNames) {
-        map[prayer] = raw[prayer.name] as bool? ?? true;
+        final value = raw[prayer.name];
+        map[prayer] = value is bool ? value : true;
       }
     } else {
       for (final prayer in obligatoryPrayerNames) {
         map[prayer] = true;
       }
     }
+    final sound = json['soundEnabled'];
     return AdhanPreferences(
       enabled: map,
-      preAlertMinutes: (json['preAlertMinutes'] as num?)?.toInt() ?? 10,
-      soundEnabled: json['soundEnabled'] as bool? ?? true,
+      preAlertMinutes: normalizePreAlert(
+        (json['preAlertMinutes'] as num?)?.toInt() ?? 10,
+      ),
+      soundEnabled: sound is bool ? sound : true,
     );
   }
 }

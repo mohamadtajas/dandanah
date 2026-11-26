@@ -65,7 +65,16 @@ class _AudioPageState extends State<AudioPage> {
       surahName: surah.name,
       ayahCount: surah.ayahCount,
     );
-    await _playback.playQueue(queue);
+    try {
+      await _playback.playQueue(queue);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.audioPlaybackError),
+        ),
+      );
+    }
   }
 
   @override

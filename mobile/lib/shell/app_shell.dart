@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../data/app_services.dart';
@@ -28,13 +30,27 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _index = 0;
   bool _locationPrompted = false;
+  AppLifecycleListener? _lifecycle;
 
   @override
   void initState() {
     super.initState();
+    // Rolling refresh: a process that stays alive past the 14-day horizon
+    // (or a settings change outside Settings) still keeps notifications.
+    _lifecycle = AppLifecycleListener(
+      onResume: () => unawaited(
+        AppServices.current.adhanScheduler.refresh().catchError((_) {}),
+      ),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _maybeShowLocationOnboarding();
     });
+  }
+
+  @override
+  void dispose() {
+    _lifecycle?.dispose();
+    super.dispose();
   }
 
   Future<void> _maybeShowLocationOnboarding() async {
@@ -57,6 +73,11 @@ class _AppShellState extends State<AppShell> {
         onSave: (settings) async {
           await services.updatePrayerSettings(settings);
           await markLocationOnboardingSeen(services.database);
+          try {
+            await services.adhanScheduler.refresh();
+          } catch (_) {
+            // Notifications can be enabled later from Settings.
+          }
         },
         onDismiss: () => markLocationOnboardingSeen(services.database),
       ),

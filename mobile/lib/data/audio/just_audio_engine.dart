@@ -15,7 +15,10 @@ class JustAudioEngine extends BaseAudioHandler
       _player.positionStream.listen((_) => _emit()),
       _player.durationStream.listen((_) => _emit()),
       _player.speedStream.listen((_) => _emit()),
-      _player.currentIndexStream.listen((_) => _emit()),
+      _player.currentIndexStream.listen((_) {
+        _error = null;
+        _emit();
+      }),
       _player.errorStream.listen((error) {
         _error = error.message;
         _emit();
@@ -30,6 +33,8 @@ class JustAudioEngine extends BaseAudioHandler
   List<AudioTrack> _queue = const [];
   AudioRepeatMode _repeat = AudioRepeatMode.off;
   String? _error;
+  String? _mediaTrackId;
+  Duration? _mediaDuration;
   AudioEngineState _state = const AudioEngineState();
 
   @override
@@ -58,15 +63,24 @@ class JustAudioEngine extends BaseAudioHandler
     _states.add(_state);
     final track = _state.current;
     if (track != null) {
-      mediaItem.add(
-        MediaItem(
-          id: track.id,
-          title: track.surahName,
-          artist: track.reciterName,
-          album: track.subtitle,
-          duration: _player.duration,
-        ),
-      );
+      final duration = _player.duration;
+      if (_mediaTrackId != track.id || _mediaDuration != duration) {
+        _mediaTrackId = track.id;
+        _mediaDuration = duration;
+        mediaItem.add(
+          MediaItem(
+            id: track.id,
+            title: track.surahName,
+            artist: track.reciterName,
+            album: track.subtitle,
+            duration: duration,
+          ),
+        );
+      }
+    } else if (_mediaTrackId != null) {
+      _mediaTrackId = null;
+      _mediaDuration = null;
+      mediaItem.add(null);
     }
     playbackState.add(
       playbackState.value.copyWith(
@@ -98,6 +112,8 @@ class JustAudioEngine extends BaseAudioHandler
     _error = null;
     if (tracks.isEmpty) {
       await _player.stop();
+      _mediaTrackId = null;
+      _mediaDuration = null;
       _emit();
       return;
     }
@@ -114,10 +130,15 @@ class JustAudioEngine extends BaseAudioHandler
           album: track.subtitle,
         ),
     ]);
-    await _player.setAudioSources(
-      sources,
-      initialIndex: initialIndex.clamp(0, sources.length - 1),
-    );
+    try {
+      await _player.setAudioSources(
+        sources,
+        initialIndex: initialIndex.clamp(0, sources.length - 1),
+      );
+    } catch (error) {
+      // A failed load must surface in the UI, not as an unhandled error.
+      _error = error.toString();
+    }
     _emit();
   }
 
@@ -127,7 +148,12 @@ class JustAudioEngine extends BaseAudioHandler
       _error = null;
       _emit();
     }
-    unawaited(_player.play());
+    unawaited(
+      _player.play().catchError((Object error) {
+        _error = error.toString();
+        _emit();
+      }),
+    );
   }
 
   @override
@@ -182,6 +208,27 @@ class JustAudioEngine extends BaseAudioHandler
 
   @override
   Future<void> stop() => _player.stop();
+
+  @override
+  Future<void> stopAndClear() async {
+    await _player.stop();
+    _queue = const [];
+    _error = null;
+    _mediaTrackId = null;
+    _mediaDuration = null;
+    queue.add(const []);
+    mediaItem.add(null);
+    _state = const AudioEngineState(repeat: AudioRepeatMode.off);
+    _state = _state.copyWith(repeat: _repeat);
+    if (!_states.isClosed) _states.add(_state);
+    playbackState.add(
+      playbackState.value.copyWith(
+        controls: const [],
+        playing: false,
+        processingState: AudioProcessingState.idle,
+      ),
+    );
+  }
 
   @override
   Future<void> dispose() async {

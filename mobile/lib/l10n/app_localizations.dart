@@ -1087,6 +1087,162 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'اسمح للتطبيق بالعمل في الخلفية وأوقف تحسين البطارية له من إعدادات النظام.'**
   String get adhanBatteryHint;
+
+  /// No description provided for @creditsSection.
+  ///
+  /// In ar, this message translates to:
+  /// **'عن التطبيق'**
+  String get creditsSection;
+
+  /// No description provided for @creditsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'المصادر والتراخيص'**
+  String get creditsTitle;
+
+  /// No description provided for @creditsIntro.
+  ///
+  /// In ar, this message translates to:
+  /// **'يعتمد التطبيق على المصادر التالية. النص القرآني مضمَّن كما هو دون أي تعديل.'**
+  String get creditsIntro;
+
+  /// No description provided for @creditsTanzilName.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشروع تنزيل (Tanzil)'**
+  String get creditsTanzilName;
+
+  /// No description provided for @creditsTanzilWhat.
+  ///
+  /// In ar, this message translates to:
+  /// **'النص القرآني العثماني وبيانات السور والأجزاء'**
+  String get creditsTanzilWhat;
+
+  /// No description provided for @creditsTanzilLicense.
+  ///
+  /// In ar, this message translates to:
+  /// **'CC BY 3.0 — © Tanzil Project'**
+  String get creditsTanzilLicense;
+
+  /// No description provided for @creditsTanzilNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'يُستخدم النص القرآني العثماني كما هو، مع الإشارة إلى مصدره Tanzil Project ورابط tanzil.net.'**
+  String get creditsTanzilNotice;
+
+  /// No description provided for @creditsAdhkarName.
+  ///
+  /// In ar, this message translates to:
+  /// **'حصن المسلم (HisnElMuslim)'**
+  String get creditsAdhkarName;
+
+  /// No description provided for @creditsAdhkarWhat.
+  ///
+  /// In ar, this message translates to:
+  /// **'نصوص الأذكار وتكرارها ومصادرها'**
+  String get creditsAdhkarWhat;
+
+  /// No description provided for @creditsAdhkarLicense.
+  ///
+  /// In ar, this message translates to:
+  /// **'MIT — © Abdellah SELLAM'**
+  String get creditsAdhkarLicense;
+
+  /// No description provided for @creditsAdhkarNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'نصوص الأذكار مأخوذة من مجموعة حصن المسلم مفتوحة المصدر بترخيص MIT.'**
+  String get creditsAdhkarNotice;
+
+  /// No description provided for @creditsAdhanName.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل الأذان'**
+  String get creditsAdhanName;
+
+  /// No description provided for @creditsAdhanWhat.
+  ///
+  /// In ar, this message translates to:
+  /// **'أذان مضمَّن دون تعديل'**
+  String get creditsAdhanWhat;
+
+  /// No description provided for @creditsAdhanLicense.
+  ///
+  /// In ar, this message translates to:
+  /// **'CC0 1.0 — Adam-synagda'**
+  String get creditsAdhanLicense;
+
+  /// No description provided for @creditsAdhanNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'Beautiful adhan by Adam-synagda عبر Wikimedia Commons، ملكية عامة CC0 1.0، دون تعديل.'**
+  String get creditsAdhanNotice;
+
+  /// No description provided for @creditsAudioName.
+  ///
+  /// In ar, this message translates to:
+  /// **'EveryAyah'**
+  String get creditsAudioName;
+
+  /// No description provided for @creditsAudioWhat.
+  ///
+  /// In ar, this message translates to:
+  /// **'تلاوة القرآن آية بآية'**
+  String get creditsAudioWhat;
+
+  /// No description provided for @creditsAudioLicense.
+  ///
+  /// In ar, this message translates to:
+  /// **'متاح مجانًا'**
+  String get creditsAudioLicense;
+
+  /// No description provided for @creditsAudioNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'تُبَث التلاوات من everyayah.com ولا تُضمَّن ملفاتها في التطبيق.'**
+  String get creditsAudioNotice;
+
+  /// No description provided for @creditsFontsName.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخطوط'**
+  String get creditsFontsName;
+
+  /// No description provided for @creditsFontsWhat.
+  ///
+  /// In ar, this message translates to:
+  /// **'Tajawal و Amiri Quran'**
+  String get creditsFontsWhat;
+
+  /// No description provided for @creditsFontsLicense.
+  ///
+  /// In ar, this message translates to:
+  /// **'SIL OFL 1.1'**
+  String get creditsFontsLicense;
+
+  /// No description provided for @creditsFontsNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'خطوط عربية مفتوحة بترخيص SIL Open Font License 1.1.'**
+  String get creditsFontsNotice;
+
+  /// No description provided for @creditsFullLicense.
+  ///
+  /// In ar, this message translates to:
+  /// **'نص الترخيص الكامل'**
+  String get creditsFullLicense;
+
+  /// No description provided for @creditsOpenSource.
+  ///
+  /// In ar, this message translates to:
+  /// **'فتح المصدر'**
+  String get creditsOpenSource;
+
+  /// No description provided for @adhanScheduleFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حفظ الإعدادات، لكن تعذر جدولة التنبيهات.'**
+  String get adhanScheduleFailed;
 }
 
 class _AppLocalizationsDelegate

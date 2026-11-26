@@ -7,7 +7,6 @@ class FakeAudioEngine implements AudioEngine {
   final _controller = StreamController<AudioEngineState>.broadcast(sync: true);
   AudioEngineState _state = const AudioEngineState();
   int playCalls = 0;
-
   @override
   Stream<AudioEngineState> get states => _controller.stream;
 
@@ -66,6 +65,10 @@ class FakeAudioEngine implements AudioEngine {
 
   @override
   Future<void> stop() async => emit(_state.copyWith(playing: false));
+
+  @override
+  Future<void> stopAndClear() async =>
+      emit(AudioEngineState(speed: _state.speed, repeat: _state.repeat));
 
   @override
   Future<void> dispose() async => _controller.close();

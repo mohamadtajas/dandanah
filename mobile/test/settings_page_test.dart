@@ -71,6 +71,12 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
+    final notifications = FakeNotificationService();
+    final scheduler = AdhanScheduler(
+      preferences: AdhanSettingsRepository(AppServices.current.database),
+      settings: AppServices.current.prayerSettings,
+      service: notifications,
+    );
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('ar'),
@@ -85,6 +91,7 @@ void main() {
           themeMode: ThemeMode.dark,
           onThemeChanged: (_) {},
           location: AppServices.current.location,
+          adhanScheduler: scheduler,
         ),
       ),
     );
@@ -103,6 +110,8 @@ void main() {
     expect(saved.configured, isTrue);
     expect(saved.locationSource, 'manual');
     expect(find.text('تم حفظ الإعدادات'), findsOneWidget);
+    // Changing the city/timezone must move the scheduled adhan plan too.
+    expect(notifications.events, isNotEmpty);
   });
 
   testWidgets('uses and saves the current device location', (tester) async {
@@ -157,6 +166,44 @@ void main() {
     expect(saved.timezone, 'Asia/Amman');
     expect(saved.cityId, isNull);
   });
+  testWidgets('opens the sources and licences page', (tester) async {
+    tester.view.physicalSize = const Size(1000, 4600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ar'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: SettingsPage(
+          themeMode: ThemeMode.dark,
+          onThemeChanged: (_) {},
+          location: AppServices.current.location,
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final credits = find.byKey(const ValueKey('settings-credits'));
+    await tester.ensureVisible(credits);
+    await tester.pump();
+    await tester.tap(credits);
+    await tester.pumpAndSettle();
+
+    expect(find.text('المصادر والتراخيص'), findsWidgets);
+    expect(find.text('مشروع تنزيل (Tanzil)'), findsOneWidget);
+    expect(find.text('CC BY 3.0 — © Tanzil Project'), findsOneWidget);
+    expect(find.text('تسجيل الأذان'), findsOneWidget);
+    expect(find.text('CC0 1.0 — Adam-synagda'), findsOneWidget);
+  });
+
   testWidgets('adhan toggles save and test notification fires', (tester) async {
     tester.view.physicalSize = const Size(1000, 4600);
     tester.view.devicePixelRatio = 1;
@@ -204,6 +251,45 @@ void main() {
     await tester.tap(find.text('إرسال إشعار تجريبي'));
     await tester.pump(const Duration(milliseconds: 200));
     expect(notifications.testShown, 1);
+  });
+
+  testWidgets('denied notification permission is reported', (tester) async {
+    tester.view.physicalSize = const Size(1000, 4600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final notifications = FakeNotificationService()..grantPermissions = false;
+    final scheduler = AdhanScheduler(
+      preferences: AdhanSettingsRepository(AppServices.current.database),
+      settings: AppServices.current.prayerSettings,
+      service: notifications,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ar'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: SettingsPage(
+          themeMode: ThemeMode.dark,
+          onThemeChanged: (_) {},
+          location: AppServices.current.location,
+          adhanScheduler: scheduler,
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.tap(find.text('تفعيل إشعارات الصلاة'));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('لم يتم منح إذن الإشعارات.'), findsOneWidget);
+    expect(notifications.events, isEmpty);
   });
 }
 

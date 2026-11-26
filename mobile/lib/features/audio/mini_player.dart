@@ -85,7 +85,7 @@ class MiniPlayer extends StatelessWidget {
                   ),
                   IconButton(
                     tooltip: l10n.audioStopPlayback,
-                    onPressed: playback.stop,
+                    onPressed: playback.stopAndClear,
                     icon: const Icon(Icons.close_rounded, size: 18),
                   ),
                 ],
