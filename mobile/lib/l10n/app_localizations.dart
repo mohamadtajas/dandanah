@@ -1075,6 +1075,18 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تعذر تشغيل التلاوة. تحقق من اتصالك بالإنترنت.'**
   String get audioPlaybackError;
+
+  /// No description provided for @adhanBatteryTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لضمان وصول الأذان في وقته'**
+  String get adhanBatteryTitle;
+
+  /// No description provided for @adhanBatteryHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسمح للتطبيق بالعمل في الخلفية وأوقف تحسين البطارية له من إعدادات النظام.'**
+  String get adhanBatteryHint;
 }
 
 class _AppLocalizationsDelegate

@@ -543,4 +543,11 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get audioPlaybackError =>
       'تعذر تشغيل التلاوة. تحقق من اتصالك بالإنترنت.';
+
+  @override
+  String get adhanBatteryTitle => 'لضمان وصول الأذان في وقته';
+
+  @override
+  String get adhanBatteryHint =>
+      'اسمح للتطبيق بالعمل في الخلفية وأوقف تحسين البطارية له من إعدادات النظام.';
 }

@@ -286,5 +286,7 @@
     }
   },
   "audioLoadError": "Could not load the surah list.",
-  "audioPlaybackError": "Could not play the recitation. Check your internet connection."
+  "audioPlaybackError": "Could not play the recitation. Check your internet connection.",
+  "adhanBatteryTitle": "Keep adhan on time",
+  "adhanBatteryHint": "Allow the app to run in the background and turn off battery optimisation for it in system settings."
 }

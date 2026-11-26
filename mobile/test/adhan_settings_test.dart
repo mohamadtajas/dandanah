@@ -1,11 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sakeenah_mobile/data/db/app_database.dart';
 import 'package:sakeenah_mobile/data/models/adhan.dart';
+import 'package:sakeenah_mobile/data/models/local_date.dart';
 import 'package:sakeenah_mobile/data/repositories/adhan_settings_repository.dart';
 import 'package:sakeenah_mobile/data/worship/prayer_method.dart';
 import 'package:sakeenah_mobile/data/worship/prayer_notifications.dart';
 import 'package:sakeenah_mobile/data/worship/prayer_settings.dart';
 import 'package:sakeenah_mobile/data/worship/prayer_times_service.dart';
+import 'package:sakeenah_mobile/data/worship/timezone_bootstrap.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 void main() {
   test('defaults enable all five prayers with a ten-minute pre-alert', () {
@@ -107,5 +110,39 @@ void main() {
       daysAhead: 1,
     );
     expect(plan, hasLength(5));
+  });
+
+  test('planner keeps local prayer days across a DST change', () {
+    const timezone = 'America/New_York';
+    final settings = PrayerSettings.defaults(timezone: timezone)
+        .copyWith(latitude: 40.7128, longitude: -74.0060);
+    final plan = PrayerNotificationPlanner().plan(
+      settings: settings,
+      preferences: AdhanPreferences.defaults(),
+      // DST starts in New York on 2026-03-08.
+      nowUtc: DateTime.utc(2026, 3, 7, 12),
+      daysAhead: 3,
+    );
+
+    final location = locationFor(timezone);
+    final days = <String>{};
+    for (final event in plan) {
+      final local = tz.TZDateTime.from(event.instant, location);
+      final day = localDateKey(local);
+      days.add(day);
+      expect(
+        event.id.startsWith(day),
+        isTrue,
+        reason: '${event.id} should occur on $day',
+      );
+    }
+    expect(days, containsAll(['2026-03-07', '2026-03-08', '2026-03-09']));
+
+    for (final adhan in plan.where((event) => !event.preAlert)) {
+      final preId = adhan.id.replaceAll('-adhan', '-pre');
+      final pre = plan.where((event) => event.id == preId).firstOrNull;
+      if (pre == null) continue;
+      expect(pre.instant, adhan.instant.subtract(const Duration(minutes: 10)));
+    }
   });
 }

@@ -193,6 +193,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('الأذان والتنبيهات'), findsOneWidget);
+    expect(find.text('لضمان وصول الأذان في وقته'), findsOneWidget);
     await tester.tap(find.widgetWithText(SwitchListTile, 'الفجر'));
     await tester.pump(const Duration(milliseconds: 300));
 

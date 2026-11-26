@@ -544,4 +544,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get audioPlaybackError =>
       'Could not play the recitation. Check your internet connection.';
+
+  @override
+  String get adhanBatteryTitle => 'Keep adhan on time';
+
+  @override
+  String get adhanBatteryHint =>
+      'Allow the app to run in the background and turn off battery optimisation for it in system settings.';
 }

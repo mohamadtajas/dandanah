@@ -548,6 +548,51 @@ class _SettingsPageState extends State<SettingsPage> {
                   icon: const Icon(Icons.notifications_outlined, size: 17),
                   label: Text(l10n.adhanTest),
                 ),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+                  decoration: BoxDecoration(
+                    color: scheme.secondary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: scheme.secondary.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.battery_saver_outlined,
+                        size: 16,
+                        color: scheme.secondary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.adhanBatteryTitle,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: scheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              l10n.adhanBatteryHint,
+                              style: TextStyle(
+                                fontSize: 10,
+                                height: 1.6,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
