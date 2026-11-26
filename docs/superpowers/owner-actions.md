@@ -46,3 +46,7 @@ independent tasks while these are open.
 - Device location uses `geolocator` plus a small native IANA timezone channel;
   manual city selection remains the fallback.
 - M4 reader uses `scrollable_positioned_list` and saves the first visible ayah.
+- One pre-alert offset (0/5/10/15/20 minutes) applies to all five prayers; the
+  per-prayer switches enable or disable both the adhan and its pre-alert.
+- iOS keeps the earliest 60 pending notifications (within the platform's 64
+  limit) until the next launch/resume refresh.

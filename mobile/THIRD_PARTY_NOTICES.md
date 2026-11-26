@@ -36,6 +36,7 @@ Versions are pinned by `pubspec.lock`.
 | `scrollable_positioned_list` | BSD 3-Clause (Google) |
 | `timezone` | BSD 3-Clause (Dart team) |
 | `shared_preferences` / `sqflite` (transitive) | BSD 3-Clause (Flutter Authors) |
+| `url_launcher` | BSD 3-Clause (Flutter Authors) |
 
 The complete dependency graph and transitive licences can be regenerated with
 `flutter pub deps` and reviewed against the packages' `LICENSE` files.

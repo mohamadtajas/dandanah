@@ -27,11 +27,21 @@ Phase **M6** - adhan and prayer notification scheduling.
   session for background and lock-screen controls.
 - Per-prayer adhan and pre-alert notifications scheduled on-device for two
   weeks, with a bundled CC0 adhan sound on Android and exact-alarm support.
+- A Sources and licences page with the Tanzil attribution, the adhan CC0
+  credit, Hisn al-Muslim and font licences, and live source links.
 
 The full Uthmani Quran (114 surahs, 6236 ayahs) and Hisn al-Muslim (126
 categories, 302 items) are seeded from bundled assets on first launch. Adhkar
 and Quran reading work fully offline; Quran audio streams from EveryAyah.
 Downloads and anasheed remain owner-gated.
+
+## Release builds
+
+`flutter build apk --release` is smoke-tested in CI. AGP 9 shrinks resources in
+release builds, so `res/raw/keep.xml` explicitly keeps the adhan sound that
+`flutter_local_notifications` looks up by name; the main manifest declares
+`INTERNET` for EveryAyah streaming. The CI job fails if either the sound or
+the permission is missing from the release APK.
 
 ## Data layer
 
