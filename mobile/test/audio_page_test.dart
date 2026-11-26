@@ -151,6 +151,36 @@ void main() {
     expect(find.text('الفاتحة'), findsOneWidget);
     expect(find.byKey(const ValueKey('mini-toggle')), findsOneWidget);
   });
+
+  testWidgets('player surfaces a playback error and retries', (tester) async {
+    await playback.playQueue(tracks());
+    await pump(tester, PlayerPage(playback: playback));
+
+    engine.emit(
+      engine.current.copyWith(playing: false, error: 'connection closed'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('تعذر تشغيل التلاوة. تحقق من اتصالك بالإنترنت.'),
+      findsOneWidget,
+    );
+    final before = engine.playCalls;
+    await tester.tap(find.byKey(const ValueKey('audio-retry')));
+    await tester.pumpAndSettle();
+    expect(engine.playCalls, before + 1);
+  });
+
+  testWidgets('mini player flags a playback error', (tester) async {
+    await playback.playQueue(tracks());
+    await pump(tester, MiniPlayer(playback: playback));
+    expect(find.byIcon(Icons.error_outline_rounded), findsNothing);
+
+    engine.emit(engine.current.copyWith(error: 'connection closed'));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
+  });
 }
 
 class _FileAssetBundle extends AssetBundle {

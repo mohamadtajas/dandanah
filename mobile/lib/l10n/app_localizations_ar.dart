@@ -536,4 +536,11 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get adhanHint =>
       'تُجدول التنبيهات محليًا لمدة أسبوعين وتُجدد عند فتح التطبيق.';
+
+  @override
+  String get audioLoadError => 'تعذر تحميل قائمة السور.';
+
+  @override
+  String get audioPlaybackError =>
+      'تعذر تشغيل التلاوة. تحقق من اتصالك بالإنترنت.';
 }

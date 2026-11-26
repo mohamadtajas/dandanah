@@ -30,7 +30,14 @@ class MiniPlayer extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
               child: Row(
                 children: [
-                  Icon(Icons.graphic_eq_rounded, color: scheme.primary),
+                  Icon(
+                    playback.error != null
+                        ? Icons.error_outline_rounded
+                        : Icons.graphic_eq_rounded,
+                    color: playback.error != null
+                        ? scheme.error
+                        : scheme.primary,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(

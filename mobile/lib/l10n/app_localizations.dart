@@ -1063,6 +1063,18 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تُجدول التنبيهات محليًا لمدة أسبوعين وتُجدد عند فتح التطبيق.'**
   String get adhanHint;
+
+  /// No description provided for @audioLoadError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تحميل قائمة السور.'**
+  String get audioLoadError;
+
+  /// No description provided for @audioPlaybackError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تشغيل التلاوة. تحقق من اتصالك بالإنترنت.'**
+  String get audioPlaybackError;
 }
 
 class _AppLocalizationsDelegate

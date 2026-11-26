@@ -53,6 +53,7 @@ class JustAudioEngine extends BaseAudioHandler
       speed: _player.speed,
       repeat: _repeat,
       error: _error,
+      clearError: _error == null,
     );
     _states.add(_state);
     final track = _state.current;
@@ -122,6 +123,10 @@ class JustAudioEngine extends BaseAudioHandler
 
   @override
   Future<void> play() async {
+    if (_error != null) {
+      _error = null;
+      _emit();
+    }
     unawaited(_player.play());
   }
 
@@ -132,10 +137,18 @@ class JustAudioEngine extends BaseAudioHandler
   Future<void> seek(Duration position) => _player.seek(position);
 
   @override
-  Future<void> next() => _player.seekToNext();
+  Future<void> next() async {
+    _error = null;
+    await _player.seekToNext();
+    _emit();
+  }
 
   @override
-  Future<void> previous() => _player.seekToPrevious();
+  Future<void> previous() async {
+    _error = null;
+    await _player.seekToPrevious();
+    _emit();
+  }
 
   @override
   Future<void> skipToNext() => next();

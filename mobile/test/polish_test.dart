@@ -32,10 +32,12 @@ import 'support/fake_audio_engine.dart';
 import 'support/fake_notification_service.dart';
 
 void main() {
+  late FakeAudioEngine engine;
   late PlaybackController playback;
 
   setUpAll(() async {
-    playback = PlaybackController(FakeAudioEngine());
+    engine = FakeAudioEngine();
+    playback = PlaybackController(engine);
     await AppServices.initialize(
       database: AppDatabase.memory(),
       bundle: _FileAssetBundle(),
@@ -163,6 +165,10 @@ void main() {
       ),
     ]);
     await pump(tester, PlayerPage(playback: playback));
+    expect(tester.takeException(), isNull);
+
+    engine.emit(engine.current.copyWith(error: 'connection closed'));
+    await tester.pump(const Duration(milliseconds: 100));
     expect(tester.takeException(), isNull);
 
     await pump(tester, MiniPlayer(playback: playback));

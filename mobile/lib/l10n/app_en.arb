@@ -284,5 +284,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "audioLoadError": "Could not load the surah list.",
+  "audioPlaybackError": "Could not play the recitation. Check your internet connection."
 }

@@ -78,7 +78,7 @@ class _AudioPageState extends State<AudioPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(l10n.audioQueueEmpty),
+            Text(l10n.audioLoadError),
             const SizedBox(height: 8),
             FilledButton(
               onPressed: () {

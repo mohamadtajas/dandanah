@@ -39,6 +39,7 @@ class AudioEngineState {
     double? speed,
     AudioRepeatMode? repeat,
     String? error,
+    bool clearError = false,
   }) => AudioEngineState(
     queue: queue ?? this.queue,
     index: index ?? this.index,
@@ -48,7 +49,7 @@ class AudioEngineState {
     duration: duration ?? this.duration,
     speed: speed ?? this.speed,
     repeat: repeat ?? this.repeat,
-    error: error ?? this.error,
+    error: clearError ? null : error ?? this.error,
   );
 }
 

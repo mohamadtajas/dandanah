@@ -537,4 +537,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get adhanHint =>
       'Notifications are scheduled on-device for two weeks and refreshed when the app opens.';
+
+  @override
+  String get audioLoadError => 'Could not load the surah list.';
+
+  @override
+  String get audioPlaybackError =>
+      'Could not play the recitation. Check your internet connection.';
 }
