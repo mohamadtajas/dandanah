@@ -12,6 +12,14 @@ class AdhanPreferences {
   /// Selectable pre-alert offsets in minutes; `0` disables the pre-alert.
   static const preAlertOptions = [0, 5, 10, 15, 20];
 
+  static const _defaultPreAlerts = {
+    PrayerName.fajr: 10,
+    PrayerName.dhuhr: 10,
+    PrayerName.asr: 10,
+    PrayerName.maghrib: 10,
+    PrayerName.isha: 10,
+  };
+
   const AdhanPreferences({
     this.enabled = const {
       PrayerName.fajr: true,
@@ -20,12 +28,14 @@ class AdhanPreferences {
       PrayerName.maghrib: true,
       PrayerName.isha: true,
     },
-    this.preAlertMinutes = 10,
+    this.preAlerts = _defaultPreAlerts,
     this.soundEnabled = true,
   });
 
   final Map<PrayerName, bool> enabled;
-  final int preAlertMinutes;
+
+  /// Minutes before each prayer for its pre-alert; `0` disables it.
+  final Map<PrayerName, int> preAlerts;
   final bool soundEnabled;
 
   factory AdhanPreferences.defaults() => const AdhanPreferences();
@@ -42,15 +52,21 @@ class AdhanPreferences {
   bool isEnabled(PrayerName prayer) =>
       obligatoryPrayerNames.contains(prayer) && (enabled[prayer] ?? true);
 
+  int preAlertFor(PrayerName prayer) =>
+      normalizePreAlert(preAlerts[prayer] ?? 10);
+
   AdhanPreferences copyWith({
     Map<PrayerName, bool>? enabled,
-    int? preAlertMinutes,
+    Map<PrayerName, int>? preAlerts,
     bool? soundEnabled,
   }) => AdhanPreferences(
     enabled: enabled ?? this.enabled,
-    preAlertMinutes: preAlertMinutes == null
-        ? this.preAlertMinutes
-        : normalizePreAlert(preAlertMinutes),
+    preAlerts: preAlerts == null
+        ? this.preAlerts
+        : {
+            for (final prayer in obligatoryPrayerNames)
+              prayer: normalizePreAlert(preAlerts[prayer] ?? 10),
+          },
     soundEnabled: soundEnabled ?? this.soundEnabled,
   );
 
@@ -59,7 +75,10 @@ class AdhanPreferences {
       for (final prayer in obligatoryPrayerNames)
         prayer.name: isEnabled(prayer),
     },
-    'preAlertMinutes': preAlertMinutes,
+    'preAlerts': {
+      for (final prayer in obligatoryPrayerNames)
+        prayer.name: preAlertFor(prayer),
+    },
     'soundEnabled': soundEnabled,
   };
 
@@ -76,12 +95,25 @@ class AdhanPreferences {
         map[prayer] = true;
       }
     }
+
+    // Version 1 stored one global `preAlertMinutes`; migrate it to all five.
+    final legacy = json['preAlertMinutes'];
+    final legacyMinutes = normalizePreAlert(
+      legacy is num ? legacy.toInt() : 10,
+    );
+    final rawAlerts = json['preAlerts'];
+    final alerts = <PrayerName, int>{};
+    for (final prayer in obligatoryPrayerNames) {
+      final value = rawAlerts is Map ? rawAlerts[prayer.name] : null;
+      alerts[prayer] = normalizePreAlert(
+        value is num ? value.toInt() : legacyMinutes,
+      );
+    }
+
     final sound = json['soundEnabled'];
     return AdhanPreferences(
       enabled: map,
-      preAlertMinutes: normalizePreAlert(
-        (json['preAlertMinutes'] as num?)?.toInt() ?? 10,
-      ),
+      preAlerts: alerts,
       soundEnabled: sound is bool ? sound : true,
     );
   }
@@ -93,10 +125,14 @@ class PrayerNotification {
     required this.prayer,
     required this.instant,
     required this.preAlert,
+    this.preAlertMinutes = 0,
   });
 
   final String id;
   final PrayerName prayer;
   final DateTime instant;
   final bool preAlert;
+
+  /// Offset carried into the notification body; zero for the adhan itself.
+  final int preAlertMinutes;
 }

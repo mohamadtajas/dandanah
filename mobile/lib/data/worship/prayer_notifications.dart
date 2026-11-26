@@ -47,10 +47,9 @@ class PrayerNotificationPlanner {
             ),
           );
         }
-        if (preferences.preAlertMinutes > 0) {
-          final pre = slot.instant.subtract(
-            Duration(minutes: preferences.preAlertMinutes),
-          );
+        final minutes = preferences.preAlertFor(slot.name);
+        if (minutes > 0) {
+          final pre = slot.instant.subtract(Duration(minutes: minutes));
           if (pre.isAfter(now)) {
             events.add(
               PrayerNotification(
@@ -58,6 +57,7 @@ class PrayerNotificationPlanner {
                 prayer: slot.name,
                 instant: pre,
                 preAlert: true,
+                preAlertMinutes: minutes,
               ),
             );
           }

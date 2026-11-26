@@ -149,7 +149,10 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
               : null,
           category: AndroidNotificationCategory.alarm,
         ),
-        iOS: DarwinNotificationDetails(presentSound: useAdhanSound),
+        iOS: DarwinNotificationDetails(
+          presentSound: useAdhanSound,
+          sound: useAdhanSound ? 'adhan.caf' : null,
+        ),
       );
       try {
         await _plugin.zonedSchedule(
@@ -158,7 +161,7 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
               ? 'اقتربت صلاة ${event.prayer.arabicName}'
               : 'حان وقت صلاة ${event.prayer.arabicName}',
           body: event.preAlert
-              ? 'بعد ${preferences.preAlertMinutes} دقيقة'
+              ? 'بعد ${event.preAlertMinutes} دقيقة'
               : 'حان وقت الصلاة',
           scheduledDate: tz.TZDateTime.from(event.instant, location),
           notificationDetails: details,
@@ -192,7 +195,10 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
               : null,
           category: AndroidNotificationCategory.alarm,
         ),
-        iOS: DarwinNotificationDetails(presentSound: withSound),
+        iOS: DarwinNotificationDetails(
+          presentSound: withSound,
+          sound: withSound ? 'adhan.caf' : null,
+        ),
       ),
     );
   }

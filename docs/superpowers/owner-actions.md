@@ -31,8 +31,8 @@ independent tasks while these are open.
 - Background audio for 30+ minutes, lock screen and Bluetooth controls (M5).
 - Adhan exact-alarm/Doze behaviour on the real device (M6), including a
   reboot-reschedule check and OEM battery settings.
-- iOS custom adhan sound: supply a `.caf`/`.aiff`/`.wav` adhan file; the
-  current iOS fallback uses the default notification sound.
+- iOS adhan sound: a 29-second CC0 excerpt (`adhan.caf`, Apple's 30-second
+  notification limit) is now bundled; verify it on a real iPhone.
 - Widgets after reboot (M7).
 - Battery/background matrix (M9).
 
@@ -46,7 +46,7 @@ independent tasks while these are open.
 - Device location uses `geolocator` plus a small native IANA timezone channel;
   manual city selection remains the fallback.
 - M4 reader uses `scrollable_positioned_list` and saves the first visible ayah.
-- One pre-alert offset (0/5/10/15/20 minutes) applies to all five prayers; the
-  per-prayer switches enable or disable both the adhan and its pre-alert.
+- Each prayer has its own pre-alert offset (0/5/10/15/20 minutes); the
+  per-prayer switch enables or disables both the adhan and its pre-alert.
 - iOS keeps the earliest 60 pending notifications (within the platform's 64
   limit) until the next launch/resume refresh.

@@ -13,35 +13,39 @@ import 'package:timezone/timezone.dart' as tz;
 void main() {
   test('defaults enable all five prayers with a ten-minute pre-alert', () {
     final defaults = AdhanPreferences.defaults();
-    for (final prayer in const [
-      PrayerName.fajr,
-      PrayerName.dhuhr,
-      PrayerName.asr,
-      PrayerName.maghrib,
-      PrayerName.isha,
-    ]) {
+    for (final prayer in obligatoryPrayerNames) {
       expect(defaults.isEnabled(prayer), isTrue);
+      expect(defaults.preAlertFor(prayer), 10);
     }
     expect(defaults.isEnabled(PrayerName.sunrise), isFalse);
-    expect(defaults.preAlertMinutes, 10);
     expect(defaults.soundEnabled, isTrue);
   });
 
-  test('preferences round-trip through JSON', () {
+  test('each prayer keeps its own pre-alert offset', () {
     final original = AdhanPreferences.defaults().copyWith(
       enabled: {...AdhanPreferences.defaults().enabled, PrayerName.fajr: false},
-      preAlertMinutes: 20,
+      preAlerts: {
+        PrayerName.fajr: 20,
+        PrayerName.dhuhr: 0,
+        PrayerName.asr: 5,
+        PrayerName.maghrib: 15,
+        PrayerName.isha: 10,
+      },
       soundEnabled: false,
     );
     final restored = AdhanPreferences.fromJson(original.toJson());
 
     expect(restored.isEnabled(PrayerName.fajr), isFalse);
     expect(restored.isEnabled(PrayerName.dhuhr), isTrue);
-    expect(restored.preAlertMinutes, 20);
+    expect(restored.preAlertFor(PrayerName.fajr), 20);
+    expect(restored.preAlertFor(PrayerName.dhuhr), 0);
+    expect(restored.preAlertFor(PrayerName.asr), 5);
+    expect(restored.preAlertFor(PrayerName.maghrib), 15);
+    expect(restored.preAlertFor(PrayerName.isha), 10);
     expect(restored.soundEnabled, isFalse);
   });
 
-  test('legacy or corrupt preferences are normalised', () {
+  test('legacy global pre-alert migrates to every prayer', () {
     final restored = AdhanPreferences.fromJson({
       'enabled': {'fajr': 'yes', 'dhuhr': false},
       'preAlertMinutes': 7,
@@ -50,15 +54,25 @@ void main() {
 
     expect(restored.isEnabled(PrayerName.fajr), isTrue);
     expect(restored.isEnabled(PrayerName.dhuhr), isFalse);
-    expect(restored.preAlertMinutes, 5);
+    for (final prayer in obligatoryPrayerNames) {
+      expect(restored.preAlertFor(prayer), 5);
+    }
     expect(restored.soundEnabled, isTrue);
+  });
+
+  test('corrupt per-prayer values are normalised', () {
+    final restored = AdhanPreferences.fromJson({
+      'preAlerts': {'fajr': 99, 'dhuhr': -4, 'asr': 'soon'},
+    });
+
+    expect(restored.preAlertFor(PrayerName.fajr), 20);
+    expect(restored.preAlertFor(PrayerName.dhuhr), 0);
+    expect(restored.preAlertFor(PrayerName.asr), 10);
     expect(
-      AdhanPreferences.defaults().copyWith(preAlertMinutes: 99).preAlertMinutes,
-      20,
-    );
-    expect(
-      AdhanPreferences.defaults().copyWith(preAlertMinutes: -4).preAlertMinutes,
-      0,
+      AdhanPreferences.defaults()
+          .copyWith(preAlerts: {PrayerName.isha: 7})
+          .preAlertFor(PrayerName.isha),
+      5,
     );
   });
 
@@ -67,9 +81,16 @@ void main() {
     addTearDown(db.close);
     final repo = AdhanSettingsRepository(db);
 
-    expect((await repo.load()).preAlertMinutes, 10);
-    await repo.save(AdhanPreferences.defaults().copyWith(preAlertMinutes: 5));
-    expect((await repo.load()).preAlertMinutes, 5);
+    expect((await repo.load()).preAlertFor(PrayerName.fajr), 10);
+    await repo.save(
+      AdhanPreferences.defaults().copyWith(
+        preAlerts: {PrayerName.fajr: 5, PrayerName.isha: 20},
+      ),
+    );
+    final loaded = await repo.load();
+    expect(loaded.preAlertFor(PrayerName.fajr), 5);
+    expect(loaded.preAlertFor(PrayerName.isha), 20);
+    expect(loaded.preAlertFor(PrayerName.dhuhr), 10);
   });
 
   test('planner emits adhan and pre-alert events in order', () {
@@ -90,9 +111,37 @@ void main() {
       pre.first.instant,
       adhan.first.instant.subtract(const Duration(minutes: 10)),
     );
+    expect(pre.first.preAlertMinutes, 10);
     for (var index = 1; index < plan.length; index++) {
       expect(plan[index].instant.isBefore(plan[index - 1].instant), isFalse);
     }
+  });
+
+  test('planner honours a different offset per prayer', () {
+    final preferences = AdhanPreferences.defaults().copyWith(
+      preAlerts: {
+        PrayerName.fajr: 20,
+        PrayerName.dhuhr: 0,
+        PrayerName.asr: 5,
+        PrayerName.maghrib: 15,
+        PrayerName.isha: 10,
+      },
+    );
+    final plan = PrayerNotificationPlanner().plan(
+      settings: PrayerSettings.defaults(),
+      preferences: preferences,
+      nowUtc: DateTime.utc(2026, 11, 26),
+      daysAhead: 1,
+    );
+
+    final byId = {for (final event in plan) event.id: event};
+    final fajr = byId['2026-11-26-fajr-pre'];
+    final dhuhr = byId['2026-11-26-dhuhr-pre'];
+    final asr = byId['2026-11-26-asr-pre'];
+    expect(fajr, isNotNull);
+    expect(fajr!.preAlertMinutes, 20);
+    expect(dhuhr, isNull);
+    expect(asr!.preAlertMinutes, 5);
   });
 
   test('disabled prayers and past events are omitted', () {
@@ -104,7 +153,7 @@ void main() {
           ...AdhanPreferences.defaults().enabled,
           PrayerName.dhuhr: false,
         },
-        preAlertMinutes: 0,
+        preAlerts: {for (final prayer in obligatoryPrayerNames) prayer: 0},
       ),
       nowUtc: DateTime.utc(2026, 11, 26, 20),
       daysAhead: 2,
@@ -126,7 +175,9 @@ void main() {
     );
     final plan = PrayerNotificationPlanner().plan(
       settings: settings,
-      preferences: AdhanPreferences.defaults().copyWith(preAlertMinutes: 0),
+      preferences: AdhanPreferences.defaults().copyWith(
+        preAlerts: {for (final prayer in obligatoryPrayerNames) prayer: 0},
+      ),
       nowUtc: DateTime.utc(2026, 11, 26),
       daysAhead: 1,
     );
@@ -163,7 +214,10 @@ void main() {
       final preId = adhan.id.replaceAll('-adhan', '-pre');
       final pre = plan.where((event) => event.id == preId).firstOrNull;
       if (pre == null) continue;
-      expect(pre.instant, adhan.instant.subtract(const Duration(minutes: 10)));
+      expect(
+        pre.instant,
+        adhan.instant.subtract(Duration(minutes: pre.preAlertMinutes)),
+      );
     }
   });
 }

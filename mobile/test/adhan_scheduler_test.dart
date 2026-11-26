@@ -47,7 +47,9 @@ void main() {
     service.events.clear();
 
     await scheduler.save(
-      AdhanPreferences.defaults().copyWith(preAlertMinutes: 0),
+      AdhanPreferences.defaults().copyWith(
+        preAlerts: {for (final prayer in obligatoryPrayerNames) prayer: 0},
+      ),
     );
     expect(service.events.where((event) => event.preAlert), isEmpty);
   });

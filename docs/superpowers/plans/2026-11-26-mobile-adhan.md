@@ -14,12 +14,12 @@ Create `lib/data/models/adhan.dart`, `lib/data/worship/prayer_notifications.dart
 
 ### Task 2: Notification service and scheduler
 
-Wrap `flutter_local_notifications` behind an interface; add Android channels, exact-alarm permission, boot receiver, raw adhan sound; `AdhanScheduler.refresh()` cancels and reschedules 14 days. Tests use a fake service.
+Wrap `flutter_local_notifications` behind an interface; add Android channels (adhan and silent), exact-alarm permission with an inexact fallback, boot receiver, raw adhan sound; `AdhanScheduler.refresh()` cancels and reschedules 14 days, serialises concurrent refreshes and skips before onboarding. iOS caps the plan at 60 pending notifications and bundles a 29-second `adhan.caf` excerpt. Tests use a fake service.
 
 ### Task 3: Settings UI
 
-Add an adhan section: per-prayer switches, pre-alert minutes, sound, test notification, permission status. Tests with a fake scheduler/service.
+Add an adhan section: per-prayer switches, a pre-alert offset per prayer, sound, test notification, permission status, OEM battery guidance. Saving prayer settings reschedules; tests use a fake scheduler/service.
 
 ### Task 4: Device verification
 
-Build/install, grant notification and exact-alarm permission, send a test notification, schedule a near-future prayer, verify Doze/screen-off on the owner’s phone later. iOS uses the default notification sound until an owner-supplied iOS adhan file exists.
+Build/install, grant notification and exact-alarm permission, send a test notification, schedule a near-future prayer, verify Doze/screen-off on the owner’s phone later. Release builds are checked for `INTERNET` and the adhan resource (AGP 9 shrinks it otherwise). Verify the iOS `adhan.caf` sound on a real iPhone.

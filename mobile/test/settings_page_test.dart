@@ -248,6 +248,17 @@ void main() {
     expect(saved.isEnabled(PrayerName.fajr), isFalse);
     expect(notifications.cancelled, greaterThan(0));
 
+    // Pre-alert offsets are per prayer.
+    await tester.tap(find.byKey(const ValueKey('adhan-pre-dhuhr-10')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('قبلها بـ 20 دقيقة').last);
+    await tester.pumpAndSettle();
+
+    final alerts = await repo.load();
+    expect(alerts.preAlertFor(PrayerName.dhuhr), 20);
+    expect(alerts.preAlertFor(PrayerName.fajr), 10);
+    expect(alerts.preAlertFor(PrayerName.asr), 10);
+
     await tester.tap(find.text('إرسال إشعار تجريبي'));
     await tester.pump(const Duration(milliseconds: 200));
     expect(notifications.testShown, 1);

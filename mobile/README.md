@@ -26,7 +26,9 @@ Phase **M6** - adhan and prayer notification scheduling.
   full player, seek, speed and repeat; `audio_service` publishes the media
   session for background and lock-screen controls.
 - Per-prayer adhan and pre-alert notifications scheduled on-device for two
-  weeks, with a bundled CC0 adhan sound on Android and exact-alarm support.
+  weeks (every prayer has its own pre-alert offset), with bundled CC0 adhan
+  sounds on Android and iOS, exact-alarm support, and a silent channel for
+  pre-alerts.
 - A Sources and licences page with the Tanzil attribution, the adhan CC0
   credit, Hisn al-Muslim and font licences, and live source links.
 

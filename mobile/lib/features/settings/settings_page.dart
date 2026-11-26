@@ -538,8 +538,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   label: Text(l10n.adhanEnable),
                 ),
                 const SizedBox(height: 4),
-                for (final prayer in obligatoryPrayerNames)
+                for (final prayer in obligatoryPrayerNames) ...[
                   SwitchListTile(
+                    key: ValueKey('adhan-enable-${prayer.name}'),
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     title: Text(
@@ -555,28 +556,48 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                           ),
                   ),
-                DropdownButtonFormField<int>(
-                  initialValue: _adhan.preAlertMinutes,
-                  isExpanded: true,
-                  decoration: InputDecoration(labelText: l10n.adhanPreAlert),
-                  items: [
-                    DropdownMenuItem(
-                      value: 0,
-                      child: Text(l10n.adhanNoPreAlert),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: 4,
+                      bottom: 4,
                     ),
-                    for (final minutes in const [5, 10, 15, 20])
-                      DropdownMenuItem(
-                        value: minutes,
-                        child: Text(l10n.adhanMinutes(minutes)),
+                    child: DropdownButtonFormField<int>(
+                      key: ValueKey(
+                        'adhan-pre-${prayer.name}-${_adhan.preAlertFor(prayer)}',
                       ),
-                  ],
-                  onChanged: _adhanBusy
-                      ? null
-                      : (value) {
-                          if (value == null) return;
-                          _saveAdhan(_adhan.copyWith(preAlertMinutes: value));
-                        },
-                ),
+                      initialValue: _adhan.preAlertFor(prayer),
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: l10n.adhanPreAlert,
+                        isDense: true,
+                      ),
+                      items: [
+                        DropdownMenuItem(
+                          value: 0,
+                          child: Text(l10n.adhanNoPreAlert),
+                        ),
+                        for (final minutes in const [5, 10, 15, 20])
+                          DropdownMenuItem(
+                            value: minutes,
+                            child: Text(l10n.adhanMinutes(minutes)),
+                          ),
+                      ],
+                      onChanged: _adhanBusy
+                          ? null
+                          : (value) {
+                              if (value == null) return;
+                              _saveAdhan(
+                                _adhan.copyWith(
+                                  preAlerts: {
+                                    ..._adhan.preAlerts,
+                                    prayer: value,
+                                  },
+                                ),
+                              );
+                            },
+                    ),
+                  ),
+                ],
                 SwitchListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
@@ -679,7 +700,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 style: TextStyle(fontSize: 12, color: scheme.onSurface),
               ),
               trailing: Icon(
-                Icons.chevron_left_rounded,
+                Icons.chevron_right_rounded,
                 color: scheme.onSurfaceVariant,
               ),
               onTap: () => Navigator.of(context).push(

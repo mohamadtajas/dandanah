@@ -12,7 +12,7 @@ assets in `assets/data/`; font licences are in `assets/fonts/`.
 | Hisn al-Muslim adhkar | `asellam/HisnElMuslim` | MIT — `assets/data/ADHKAR_LICENSE.md` |
 | Tajawal font | Google Fonts | SIL OFL 1.1 — `assets/fonts/OFL-Tajawal.txt` |
 | Amiri Quran font | Google Fonts | SIL OFL 1.1 - `assets/fonts/OFL-AmiriQuran.txt` |
-| Adhan sound (`adhan.ogg`) | Wikimedia Commons, Adam-synagda | CC0 1.0 |
+| Adhan sound (`adhan.ogg` Android, `adhan.caf` iOS 29s excerpt) | Wikimedia Commons, Adam-synagda | CC0 1.0 |
 
 The Quran text is bundled verbatim and is never edited by the application.
 
