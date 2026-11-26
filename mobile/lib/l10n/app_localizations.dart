@@ -997,6 +997,72 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'إيقاف التلاوة'**
   String get audioStopPlayback;
+
+  /// No description provided for @adhanSection.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأذان والتنبيهات'**
+  String get adhanSection;
+
+  /// No description provided for @adhanEnable.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفعيل إشعارات الصلاة'**
+  String get adhanEnable;
+
+  /// No description provided for @adhanPreAlert.
+  ///
+  /// In ar, this message translates to:
+  /// **'التنبيه المسبق'**
+  String get adhanPreAlert;
+
+  /// No description provided for @adhanNoPreAlert.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدون تنبيه مسبق'**
+  String get adhanNoPreAlert;
+
+  /// No description provided for @adhanMinutes.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبلها بـ {minutes} دقيقة'**
+  String adhanMinutes(int minutes);
+
+  /// No description provided for @adhanSound.
+  ///
+  /// In ar, this message translates to:
+  /// **'صوت الأذان'**
+  String get adhanSound;
+
+  /// No description provided for @adhanTest.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال إشعار تجريبي'**
+  String get adhanTest;
+
+  /// No description provided for @adhanTestSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إرسال إشعار تجريبي.'**
+  String get adhanTestSent;
+
+  /// No description provided for @adhanPermissionDenied.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يتم منح إذن الإشعارات.'**
+  String get adhanPermissionDenied;
+
+  /// No description provided for @adhanSaveFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر حفظ إعدادات الأذان.'**
+  String get adhanSaveFailed;
+
+  /// No description provided for @adhanHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'تُجدول التنبيهات محليًا لمدة أسبوعين وتُجدد عند فتح التطبيق.'**
+  String get adhanHint;
 }
 
 class _AppLocalizationsDelegate

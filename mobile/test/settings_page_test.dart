@@ -7,8 +7,15 @@ import 'package:sakeenah_mobile/data/app_services.dart';
 import 'package:sakeenah_mobile/data/db/app_database.dart';
 import 'package:sakeenah_mobile/data/location/device_location.dart';
 import 'package:sakeenah_mobile/data/location/location_service.dart';
+import 'package:sakeenah_mobile/data/models/adhan.dart';
+import 'package:sakeenah_mobile/data/repositories/adhan_settings_repository.dart';
+import 'package:sakeenah_mobile/data/worship/adhan_scheduler.dart';
+import 'package:sakeenah_mobile/data/worship/prayer_times_service.dart';
 import 'package:sakeenah_mobile/features/settings/settings_page.dart';
 import 'package:sakeenah_mobile/l10n/app_localizations.dart';
+
+import 'support/fake_notification_service.dart';
+
 import 'package:cupertino_ui/cupertino_ui.dart'
     show GlobalCupertinoLocalizations;
 import 'package:flutter_localizations/flutter_localizations.dart'
@@ -149,6 +156,53 @@ void main() {
     expect(saved.locationSource, 'device');
     expect(saved.timezone, 'Asia/Amman');
     expect(saved.cityId, isNull);
+  });
+  testWidgets('adhan toggles save and test notification fires', (tester) async {
+    tester.view.physicalSize = const Size(1000, 4600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final notifications = FakeNotificationService();
+    final repo = AdhanSettingsRepository(AppServices.current.database);
+    await repo.save(AdhanPreferences.defaults());
+    final scheduler = AdhanScheduler(
+      preferences: repo,
+      settings: AppServices.current.prayerSettings,
+      service: notifications,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ar'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: SettingsPage(
+          themeMode: ThemeMode.dark,
+          onThemeChanged: (_) {},
+          location: AppServices.current.location,
+          adhanScheduler: scheduler,
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('الأذان والتنبيهات'), findsOneWidget);
+    await tester.tap(find.widgetWithText(SwitchListTile, 'الفجر'));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final saved = await repo.load();
+    expect(saved.isEnabled(PrayerName.fajr), isFalse);
+    expect(notifications.cancelled, greaterThan(0));
+
+    await tester.tap(find.text('إرسال إشعار تجريبي'));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(notifications.testShown, 1);
   });
 }
 

@@ -266,5 +266,23 @@
         "type": "int"
       }
     }
+  },
+  "adhanSection": "Adhan and notifications",
+  "adhanEnable": "Enable prayer notifications",
+  "adhanPreAlert": "Pre-alert",
+  "adhanNoPreAlert": "No pre-alert",
+  "adhanMinutes": "{minutes} minutes before",
+  "adhanSound": "Adhan sound",
+  "adhanTest": "Send a test notification",
+  "adhanTestSent": "Test notification sent.",
+  "adhanPermissionDenied": "Notification permission was not granted.",
+  "adhanSaveFailed": "Could not save adhan settings.",
+  "adhanHint": "Notifications are scheduled on-device for two weeks and refreshed when the app opens.",
+  "@adhanMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
   }
 }

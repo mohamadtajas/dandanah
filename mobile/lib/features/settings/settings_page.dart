@@ -4,6 +4,8 @@ import '../../data/app_services.dart';
 import '../../data/cities.dart';
 import '../../data/location/device_location.dart';
 import '../../data/location/location_service.dart';
+import '../../data/models/adhan.dart';
+import '../../data/worship/adhan_scheduler.dart';
 import '../../data/worship/prayer_method.dart';
 import '../../data/worship/coordinate_input.dart';
 import '../../data/worship/prayer_settings.dart';
@@ -16,11 +18,13 @@ class SettingsPage extends StatefulWidget {
     required this.themeMode,
     required this.onThemeChanged,
     required this.location,
+    this.adhanScheduler,
   });
 
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final LocationService location;
+  final AdhanScheduler? adhanScheduler;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -45,8 +49,23 @@ class _SettingsPageState extends State<SettingsPage> {
   late String? _locationSource = _settings.locationSource;
   bool _saving = false;
   bool _locating = false;
+  late final AdhanScheduler _adhanScheduler =
+      widget.adhanScheduler ?? _services.adhanScheduler;
+  AdhanPreferences _adhan = AdhanPreferences.defaults();
+  bool _adhanBusy = false;
 
   late final List<String> _timezones = _buildTimezones();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAdhan();
+  }
+
+  Future<void> _loadAdhan() async {
+    final prefs = await _adhanScheduler.preferences.load();
+    if (mounted) setState(() => _adhan = prefs);
+  }
 
   @override
   void dispose() {
@@ -178,6 +197,44 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       );
     }
+  }
+
+  Future<void> _saveAdhan(AdhanPreferences next) async {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      _adhan = next;
+      _adhanBusy = true;
+    });
+    try {
+      await _adhanScheduler.save(next);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.adhanSaveFailed)));
+      }
+    } finally {
+      if (mounted) setState(() => _adhanBusy = false);
+    }
+  }
+
+  Future<void> _enableAdhan() async {
+    final l10n = AppLocalizations.of(context)!;
+    final granted = await _adhanScheduler.requestPermissions();
+    if (!mounted) return;
+    if (!granted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.adhanPermissionDenied)));
+      return;
+    }
+    await _adhanScheduler.refresh();
+  }
+
+  Future<void> _testAdhan() async {
+    final l10n = AppLocalizations.of(context)!;
+    await _adhanScheduler.sendTest();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(l10n.adhanTestSent)));
   }
 
   @override
@@ -406,6 +463,89 @@ class _SettingsPageState extends State<SettingsPage> {
                     icon: const Icon(Icons.save_outlined),
                     label: Text(l10n.save),
                   ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _SectionCard(
+            title: l10n.adhanSection,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.adhanHint,
+                  style: TextStyle(
+                    fontSize: 10,
+                    height: 1.6,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _enableAdhan,
+                  icon: const Icon(
+                    Icons.notifications_active_outlined,
+                    size: 17,
+                  ),
+                  label: Text(l10n.adhanEnable),
+                ),
+                const SizedBox(height: 4),
+                for (final prayer in obligatoryPrayerNames)
+                  SwitchListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      prayer.arabicName,
+                      style: TextStyle(fontSize: 12, color: scheme.onSurface),
+                    ),
+                    value: _adhan.isEnabled(prayer),
+                    onChanged: _adhanBusy
+                        ? null
+                        : (value) => _saveAdhan(
+                            _adhan.copyWith(
+                              enabled: {..._adhan.enabled, prayer: value},
+                            ),
+                          ),
+                  ),
+                DropdownButtonFormField<int>(
+                  initialValue: _adhan.preAlertMinutes,
+                  decoration: InputDecoration(labelText: l10n.adhanPreAlert),
+                  items: [
+                    DropdownMenuItem(
+                      value: 0,
+                      child: Text(l10n.adhanNoPreAlert),
+                    ),
+                    for (final minutes in const [5, 10, 15, 20])
+                      DropdownMenuItem(
+                        value: minutes,
+                        child: Text(l10n.adhanMinutes(minutes)),
+                      ),
+                  ],
+                  onChanged: _adhanBusy
+                      ? null
+                      : (value) {
+                          if (value == null) return;
+                          _saveAdhan(_adhan.copyWith(preAlertMinutes: value));
+                        },
+                ),
+                SwitchListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    l10n.adhanSound,
+                    style: TextStyle(fontSize: 12, color: scheme.onSurface),
+                  ),
+                  value: _adhan.soundEnabled,
+                  onChanged: _adhanBusy
+                      ? null
+                      : (value) =>
+                            _saveAdhan(_adhan.copyWith(soundEnabled: value)),
+                ),
+                TextButton.icon(
+                  onPressed: _testAdhan,
+                  icon: const Icon(Icons.notifications_outlined, size: 17),
+                  label: Text(l10n.adhanTest),
                 ),
               ],
             ),

@@ -266,5 +266,23 @@
         "type": "int"
       }
     }
+  },
+  "adhanSection": "الأذان والتنبيهات",
+  "adhanEnable": "تفعيل إشعارات الصلاة",
+  "adhanPreAlert": "التنبيه المسبق",
+  "adhanNoPreAlert": "بدون تنبيه مسبق",
+  "adhanMinutes": "قبلها بـ {minutes} دقيقة",
+  "adhanSound": "صوت الأذان",
+  "adhanTest": "إرسال إشعار تجريبي",
+  "adhanTestSent": "تم إرسال إشعار تجريبي.",
+  "adhanPermissionDenied": "لم يتم منح إذن الإشعارات.",
+  "adhanSaveFailed": "تعذر حفظ إعدادات الأذان.",
+  "adhanHint": "تُجدول التنبيهات محليًا لمدة أسبوعين وتُجدد عند فتح التطبيق.",
+  "@adhanMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
   }
 }

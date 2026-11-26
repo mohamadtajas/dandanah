@@ -500,4 +500,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get audioStopPlayback => 'Stop playback';
+
+  @override
+  String get adhanSection => 'Adhan and notifications';
+
+  @override
+  String get adhanEnable => 'Enable prayer notifications';
+
+  @override
+  String get adhanPreAlert => 'Pre-alert';
+
+  @override
+  String get adhanNoPreAlert => 'No pre-alert';
+
+  @override
+  String adhanMinutes(int minutes) {
+    return '$minutes minutes before';
+  }
+
+  @override
+  String get adhanSound => 'Adhan sound';
+
+  @override
+  String get adhanTest => 'Send a test notification';
+
+  @override
+  String get adhanTestSent => 'Test notification sent.';
+
+  @override
+  String get adhanPermissionDenied =>
+      'Notification permission was not granted.';
+
+  @override
+  String get adhanSaveFailed => 'Could not save adhan settings.';
+
+  @override
+  String get adhanHint =>
+      'Notifications are scheduled on-device for two weeks and refreshed when the app opens.';
 }

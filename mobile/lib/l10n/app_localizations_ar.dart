@@ -500,4 +500,40 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get audioStopPlayback => 'إيقاف التلاوة';
+
+  @override
+  String get adhanSection => 'الأذان والتنبيهات';
+
+  @override
+  String get adhanEnable => 'تفعيل إشعارات الصلاة';
+
+  @override
+  String get adhanPreAlert => 'التنبيه المسبق';
+
+  @override
+  String get adhanNoPreAlert => 'بدون تنبيه مسبق';
+
+  @override
+  String adhanMinutes(int minutes) {
+    return 'قبلها بـ $minutes دقيقة';
+  }
+
+  @override
+  String get adhanSound => 'صوت الأذان';
+
+  @override
+  String get adhanTest => 'إرسال إشعار تجريبي';
+
+  @override
+  String get adhanTestSent => 'تم إرسال إشعار تجريبي.';
+
+  @override
+  String get adhanPermissionDenied => 'لم يتم منح إذن الإشعارات.';
+
+  @override
+  String get adhanSaveFailed => 'تعذر حفظ إعدادات الأذان.';
+
+  @override
+  String get adhanHint =>
+      'تُجدول التنبيهات محليًا لمدة أسبوعين وتُجدد عند فتح التطبيق.';
 }
