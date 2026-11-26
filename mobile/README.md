@@ -157,6 +157,10 @@ Captured on an Android 16 (API 36) emulator at 1080x2400 in Arabic RTL.
 |---|
 | ![Adhan settings](../docs/screenshots/mobile/12-adhan-settings.png) |
 
+| Offline audio error |
+|---|
+| ![Offline audio error](../docs/screenshots/mobile/13-audio-offline.png) |
+
 | Adhkar counter |
 |---|
 | ![Adhkar counter](../docs/screenshots/mobile/08-adhkar-counter.png) |
