@@ -29,7 +29,10 @@ independent tasks while these are open.
 - Large-system-font pass on the phone after M4/M5.
 - Airplane-mode reading and audio playback.
 - Background audio for 30+ minutes, lock screen and Bluetooth controls (M5).
-- Adhan exact-alarm/Doze behaviour on the real device (M6).
+- Adhan exact-alarm/Doze behaviour on the real device (M6), including a
+  reboot-reschedule check and OEM battery settings.
+- iOS custom adhan sound: supply a `.caf`/`.aiff`/`.wav` adhan file; the
+  current iOS fallback uses the default notification sound.
 - Widgets after reboot (M7).
 - Battery/background matrix (M9).
 

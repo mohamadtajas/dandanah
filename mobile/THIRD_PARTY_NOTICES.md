@@ -11,7 +11,8 @@ assets in `assets/data/`; font licences are in `assets/fonts/`.
 | Quran text (Uthmani) | Tanzil Project | CC BY 3.0 — `assets/data/QURAN_LICENSE.md` |
 | Hisn al-Muslim adhkar | `asellam/HisnElMuslim` | MIT — `assets/data/ADHKAR_LICENSE.md` |
 | Tajawal font | Google Fonts | SIL OFL 1.1 — `assets/fonts/OFL-Tajawal.txt` |
-| Amiri Quran font | Google Fonts | SIL OFL 1.1 — `assets/fonts/OFL-AmiriQuran.txt` |
+| Amiri Quran font | Google Fonts | SIL OFL 1.1 - `assets/fonts/OFL-AmiriQuran.txt` |
+| Adhan sound (`adhan.ogg`) | Wikimedia Commons, Adam-synagda | CC0 1.0 |
 
 The Quran text is bundled verbatim and is never edited by the application.
 
@@ -28,6 +29,13 @@ Versions are pinned by `pubspec.lock`.
 | `hijri` | BSD 3-Clause (Ahmed Aljoaid) |
 | `path_provider`, `path` | BSD 3-Clause (Flutter Authors / Dart team) |
 | `intl` | BSD 3-Clause (Dart team) |
+| `geolocator` | MIT (Baseflow) |
+| `just_audio` | MIT (Ryan Heise) |
+| `audio_service` | MIT (Ryan Heise) |
+| `flutter_local_notifications` | BSD 3-Clause (Michael Bui) |
+| `scrollable_positioned_list` | BSD 3-Clause (Google) |
+| `timezone` | BSD 3-Clause (Dart team) |
+| `shared_preferences` / `sqflite` (transitive) | BSD 3-Clause (Flutter Authors) |
 
 The complete dependency graph and transitive licences can be regenerated with
 `flutter pub deps` and reviewed against the packages' `LICENSE` files.

@@ -6,7 +6,7 @@ and prayer calculations but not the desktop runtime.
 
 ## Status
 
-Phase **M5** - Quran audio catalog, foreground player and background service.
+Phase **M6** - adhan and prayer notification scheduling.
 
 - Arabic-first UI with `flutter_localizations` and generated ARB accessors.
 - Bottom navigation: Dashboard, Mushaf, Adhkar, Audio.
@@ -25,11 +25,13 @@ Phase **M5** - Quran audio catalog, foreground player and background service.
 - Quran audio with eight EveryAyah reciters, a surah queue, mini-player,
   full player, seek, speed and repeat; `audio_service` publishes the media
   session for background and lock-screen controls.
+- Per-prayer adhan and pre-alert notifications scheduled on-device for two
+  weeks, with a bundled CC0 adhan sound on Android and exact-alarm support.
 
 The full Uthmani Quran (114 surahs, 6236 ayahs) and Hisn al-Muslim (126
 categories, 302 items) are seeded from bundled assets on first launch. Adhkar
 and Quran reading work fully offline; Quran audio streams from EveryAyah.
-Downloads and a storage budget are the remaining M5 work.
+Downloads and anasheed remain owner-gated.
 
 ## Data layer
 
@@ -42,7 +44,8 @@ lib/data/
   models/                   Surah, Ayah, Adhkar, Quran bookmark, local date
   repositories/             content, prayer log, adhkar practice, Quran reader
   seed/                     QuranSeeder, AdhkarSeeder
-  worship/                  settings, schedule, prayer/practice logs, Hijri, qibla
+  worship/                  settings, schedule, prayer/practice logs, Hijri, qibla,
+                            notification planning and adhan scheduling
   app_services.dart         startup seeding and shared repositories
 ```
 
@@ -94,7 +97,8 @@ writes both the desktop and mobile Quran bundles from the same XML.
   timezone, onboarding suppression and the Settings save path. M4 adds reader
   position, bookmark, font-size, catalog, daily-ayah and continuous-reader
   tests. M5 adds audio URL/queue, playback controller, mini-player and full
-  player tests.
+  player tests. M6 adds adhan preference, planner, scheduler and settings
+  tests.
 
 ## Requirements
 
@@ -146,6 +150,10 @@ Captured on an Android 16 (API 36) emulator at 1080x2400 in Arabic RTL.
 | Quran reader | Audio player |
 |---|---|
 | ![Quran reader](../docs/screenshots/mobile/10-quran-reader.png) | ![Audio player](../docs/screenshots/mobile/11-audio-player.png) |
+
+| Adhan settings |
+|---|
+| ![Adhan settings](../docs/screenshots/mobile/12-adhan-settings.png) |
 
 | Adhkar counter |
 |---|
