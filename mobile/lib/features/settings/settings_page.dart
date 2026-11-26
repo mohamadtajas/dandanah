@@ -1,3 +1,4 @@
+import 'package:home_widget/home_widget.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../data/app_services.dart';
@@ -7,6 +8,7 @@ import '../../data/location/location_service.dart';
 import '../../data/models/adhan.dart';
 import '../../data/worship/adhan_scheduler.dart';
 import '../../data/worship/prayer_method.dart';
+import '../../data/widgets/widget_bridge.dart';
 import 'credits_page.dart';
 import '../../data/worship/coordinate_input.dart';
 import '../../data/worship/prayer_settings.dart';
@@ -286,6 +288,25 @@ class _SettingsPageState extends State<SettingsPage> {
           .showSnackBar(SnackBar(content: Text(l10n.adhanScheduleFailed)));
     } finally {
       if (mounted) setState(() => _adhanBusy = false);
+    }
+  }
+
+  Future<void> _pinWidget(String provider) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final supported = await HomeWidget.isRequestPinWidgetSupported() ?? false;
+      if (!supported) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.widgetPinUnsupported)));
+        return;
+      }
+      await _services.widgets.refresh();
+      await HomeWidget.requestPinWidget(androidName: provider);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.widgetPinUnsupported)));
     }
   }
 
@@ -711,6 +732,47 @@ class _SettingsPageState extends State<SettingsPage> {
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const CreditsPage()),
               ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _SectionCard(
+            title: l10n.widgetsSection,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.widgetPinHint,
+                  style: TextStyle(
+                    fontSize: 10,
+                    height: 1.6,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                for (final entry in [
+                  (PrayerWidgets.nextPrayer, l10n.widgetNextPrayer),
+                  (PrayerWidgets.prayerTimes, l10n.widgetPrayerTimes),
+                  (PrayerWidgets.streak, l10n.widgetStreak),
+                ])
+                  ListTile(
+                    key: ValueKey('pin-widget-${entry.$1}'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      Icons.widgets_outlined,
+                      color: scheme.primary,
+                    ),
+                    title: Text(
+                      entry.$2,
+                      style: TextStyle(fontSize: 11, color: scheme.onSurface),
+                    ),
+                    trailing: Icon(
+                      Icons.add_circle_outline_rounded,
+                      size: 20,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    onTap: () => _pinWidget(entry.$1),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 14),

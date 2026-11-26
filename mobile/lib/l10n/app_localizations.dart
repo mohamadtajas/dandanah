@@ -1321,6 +1321,42 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تنزيل السورة'**
   String get audioDownloadSurah;
+
+  /// No description provided for @widgetsSection.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدوات الشاشة الرئيسية'**
+  String get widgetsSection;
+
+  /// No description provided for @widgetPinHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف أداة بلمسة واحدة.'**
+  String get widgetPinHint;
+
+  /// No description provided for @widgetNextPrayer.
+  ///
+  /// In ar, this message translates to:
+  /// **'أداة الصلاة القادمة'**
+  String get widgetNextPrayer;
+
+  /// No description provided for @widgetPrayerTimes.
+  ///
+  /// In ar, this message translates to:
+  /// **'أداة مواقيت الصلاة'**
+  String get widgetPrayerTimes;
+
+  /// No description provided for @widgetStreak.
+  ///
+  /// In ar, this message translates to:
+  /// **'أداة سلسلة الصلاة'**
+  String get widgetStreak;
+
+  /// No description provided for @widgetPinUnsupported.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة الأدوات غير مدعومة على هذا الجهاز.'**
+  String get widgetPinUnsupported;
 }
 
 class _AppLocalizationsDelegate

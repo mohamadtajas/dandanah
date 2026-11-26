@@ -680,4 +680,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get audioDownloadSurah => 'Download surah';
+
+  @override
+  String get widgetsSection => 'Home-screen widgets';
+
+  @override
+  String get widgetPinHint => 'Pin a widget with one tap.';
+
+  @override
+  String get widgetNextPrayer => 'Next-prayer widget';
+
+  @override
+  String get widgetPrayerTimes => 'Prayer-times widget';
+
+  @override
+  String get widgetStreak => 'Streak widget';
+
+  @override
+  String get widgetPinUnsupported =>
+      'Pinning widgets is not supported on this device.';
 }

@@ -3,32 +3,33 @@
 Running list of things only the owner can decide or provide. I keep working on
 independent tasks while these are open.
 
-## Needed before M5 audio can be finished
+## EveryAyah and downloads (decided)
 
-- **Confirm mobile use of EveryAyah:** M5 currently streams eight EveryAyah
-  reciters, reusing the desktop-approved source and attribution. Confirm that
-  mobile distribution is allowed; if not, name the replacement provider.
-- **Download/storage budget:** decide whether mobile downloads are in v1 and
-  set a cap (for example “warn above 2 GB, never auto-download on cellular”).
-- **Anasheed source:** choose the catalogue source and confirm the licence for
-  bundled/streamed tracks.
-- **Adhan audio:** confirm the desktop CC0 adhan file may be bundled on mobile.
-- **Provider keys:** any API key or account needed by a chosen provider.
+- **EveryAyah:** the site has no explicit licence; recordings stay the
+  reciters' copyright. The owner accepts streaming with attribution for this
+  personal, unlisted build. If it is ever published, get written permission or
+  switch providers.
+- **Storage:** downloads are enabled with no cap. "تنزيل كل السور" fetches every
+  ayah for the selected reciter, so the app data folder holds a complete local
+  copy of the Quran (about 1–2 GB at 128 kbps).
+- **Anasheed:** Openverse is the selected source (CC-licensed audio, no key),
+  with Internet Archive as a fallback. The browse UI is not built yet.
 
-## Needed before release (M10)
+## Still needed from the owner
 
-- Android keystore file, alias, and passwords.
-- GitHub Actions secrets for signing (`ANDROID_KEYSTORE_BASE64`,
-  `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`).
-- Play Console app entry and package ownership confirmation.
-- Apple Developer team, bundle id confirmation, and a Mac/Xcode signing path.
-- Decide the public app name and store description.
+- Nothing for publishing: the owner confirmed the app stays personal and will
+  not go to Play or the App Store, so signing/store steps are dropped.
+- Place the three Android widgets on the phone and confirm the 5×1 "صليت"
+  button, prayer-time refresh after a prayer, and survival after a reboot.
 
 ## Physical tests only the owner can run
 
-- Large-system-font pass on the phone after M4/M5.
-- Airplane-mode reading and audio playback.
+- Large-system-font pass: done on BKQ-N49 at 2× for the dashboard, adhkar,
+  Quran catalog/reader, audio, settings and adhan screens.
+- Airplane-mode reading and audio playback (the error banner/retry was verified
+  on the emulator; repeat on the phone).
 - Background audio for 30+ minutes, lock screen and Bluetooth controls (M5).
+- A full-reciter download and a reboot with the downloaded files present.
 - Adhan exact-alarm/Doze behaviour on the real device (M6), including a
   reboot-reschedule check and OEM battery settings.
 - iOS adhan sound: a 29-second CC0 excerpt (`adhan.caf`, Apple's 30-second

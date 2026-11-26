@@ -344,5 +344,11 @@
   },
   "audioCancelDownloadShort": "Stop",
   "audioDownloadStopped": "Download stopped.",
-  "audioDownloadSurah": "Download surah"
+  "audioDownloadSurah": "Download surah",
+  "widgetsSection": "Home-screen widgets",
+  "widgetPinHint": "Pin a widget with one tap.",
+  "widgetNextPrayer": "Next-prayer widget",
+  "widgetPrayerTimes": "Prayer-times widget",
+  "widgetStreak": "Streak widget",
+  "widgetPinUnsupported": "Pinning widgets is not supported on this device."
 }

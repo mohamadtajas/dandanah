@@ -25,6 +25,12 @@ Phase **M6** - adhan and prayer notification scheduling.
 - Quran audio with eight EveryAyah reciters, a surah queue, mini-player,
   full player, seek, speed and repeat; `audio_service` publishes the media
   session for background and lock-screen controls.
+- Offline audio downloads: one surah or an entire reciter (no storage cap),
+  with progress, cancel, stored-size display and per-surah deletion. A
+  completed reciter folder is a complete local copy of the Quran, and playback
+  prefers local files automatically.
+- Android home-screen widgets in three sizes: 5×1 next prayer with a one-tap
+  prayed action, 5×2 prayer times with today's marks, and 3×3 streak.
 - Per-prayer adhan and pre-alert notifications scheduled on-device for two
   weeks (every prayer has its own pre-alert offset), with bundled CC0 adhan
   sounds on Android and iOS, exact-alarm support, and a silent channel for
@@ -34,8 +40,8 @@ Phase **M6** - adhan and prayer notification scheduling.
 
 The full Uthmani Quran (114 surahs, 6236 ayahs) and Hisn al-Muslim (126
 categories, 302 items) are seeded from bundled assets on first launch. Adhkar
-and Quran reading work fully offline; Quran audio streams from EveryAyah.
-Downloads and anasheed remain owner-gated.
+and Quran reading work fully offline; Quran audio streams from EveryAyah and
+falls back to downloaded files. Anasheed browsing is not built yet.
 
 ## Release builds
 
@@ -50,10 +56,12 @@ the permission is missing from the release APK.
 ```
 lib/data/
   cities.dart              59 offline city presets
-  audio/                   EveryAyah catalog, engine, playback controller
+  audio/                   EveryAyah catalog, engine, playback controller,
+                           offline downloads
   db/app_database.dart      Drift schema v4 (content + user state)
   location/                 device fix, timezone channel, onboarding helper
   models/                   Surah, Ayah, Adhkar, Quran bookmark, local date
+  widgets/                  widget-data publisher and native bridge
   repositories/             content, prayer log, adhkar practice, Quran reader
   seed/                     QuranSeeder, AdhkarSeeder
   worship/                  settings, schedule, prayer/practice logs, Hijri, qibla,
@@ -108,11 +116,12 @@ writes both the desktop and mobile Quran bundles from the same XML.
   2x-text layout tests. Location tests cover permission outcomes, an invalid
   timezone, onboarding suppression and the Settings save path. M4 adds reader
   position, bookmark, font-size, catalog, daily-ayah and continuous-reader
-  tests. M5 adds audio URL/queue, playback controller, mini-player and full
-  player tests. M6 adds adhan preference, planner, scheduler and settings
-  tests. A 2× text pass covers the dashboard, adhkar, Quran catalog/reader,
-  audio pages, mini-player, settings and adhan sections, plus the full shell
-  at 320×640.
+  tests. M5 adds audio URL/queue, playback controller, mini-player, full
+  player and download-store tests. M6 adds adhan preference, planner,
+  scheduler and settings tests. M7 adds widget-data publishing and
+  prayed-action tests. A 2× text pass covers the dashboard, adhkar, Quran
+  catalog/reader, audio pages, mini-player, settings and adhan sections, plus
+  the full shell at 320×640.
 
 ## Requirements
 

@@ -344,5 +344,11 @@
   },
   "audioCancelDownloadShort": "إيقاف",
   "audioDownloadStopped": "تم إيقاف التنزيل.",
-  "audioDownloadSurah": "تنزيل السورة"
+  "audioDownloadSurah": "تنزيل السورة",
+  "widgetsSection": "أدوات الشاشة الرئيسية",
+  "widgetPinHint": "أضف أداة بلمسة واحدة.",
+  "widgetNextPrayer": "أداة الصلاة القادمة",
+  "widgetPrayerTimes": "أداة مواقيت الصلاة",
+  "widgetStreak": "أداة سلسلة الصلاة",
+  "widgetPinUnsupported": "إضافة الأدوات غير مدعومة على هذا الجهاز."
 }

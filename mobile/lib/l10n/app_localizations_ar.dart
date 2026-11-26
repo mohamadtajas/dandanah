@@ -679,4 +679,22 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get audioDownloadSurah => 'تنزيل السورة';
+
+  @override
+  String get widgetsSection => 'أدوات الشاشة الرئيسية';
+
+  @override
+  String get widgetPinHint => 'أضف أداة بلمسة واحدة.';
+
+  @override
+  String get widgetNextPrayer => 'أداة الصلاة القادمة';
+
+  @override
+  String get widgetPrayerTimes => 'أداة مواقيت الصلاة';
+
+  @override
+  String get widgetStreak => 'أداة سلسلة الصلاة';
+
+  @override
+  String get widgetPinUnsupported => 'إضافة الأدوات غير مدعومة على هذا الجهاز.';
 }
