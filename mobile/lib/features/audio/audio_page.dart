@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../data/app_services.dart';
+import '../../data/audio/anasheed_catalog.dart';
 import '../../data/audio/audio_downloads.dart';
 import '../../data/audio/playback_controller.dart';
 import '../../data/audio/quran_audio_catalog.dart';
@@ -10,10 +13,13 @@ import '../../data/text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/sakeenah_theme.dart';
 
+enum _AudioMode { quran, anasheed }
+
 class AudioPage extends StatefulWidget {
-  const AudioPage({super.key, this.playback});
+  const AudioPage({super.key, this.playback, this.anasheed});
 
   final PlaybackController? playback;
+  final AnasheedSource? anasheed;
 
   @override
   State<AudioPage> createState() => _AudioPageState();
@@ -24,9 +30,18 @@ class _AudioPageState extends State<AudioPage> {
   late final PlaybackController _playback =
       widget.playback ?? _services.playback;
   late final AudioDownloadManager _downloads = _services.downloads;
+  late final AnasheedSource _anasheed =
+      widget.anasheed ?? const OpenverseAnasheedSource();
   final TextEditingController _search = TextEditingController();
+  final TextEditingController _anasheedSearch = TextEditingController();
   List<Surah> _surahs = const [];
   AudioReciter _reciter = QuranAudioCatalog.reciters.first;
+  _AudioMode _mode = _AudioMode.quran;
+  List<AnasheedTrack> _anasheedResults = const [];
+  bool _anasheedLoading = false;
+  bool _anasheedFailed = false;
+  int _anasheedToken = 0;
+  Timer? _anasheedDebounce;
   bool _loading = true;
   bool _failed = false;
   bool _wasDownloading = false;
@@ -40,8 +55,10 @@ class _AudioPageState extends State<AudioPage> {
 
   @override
   void dispose() {
+    _anasheedDebounce?.cancel();
     _downloads.removeListener(_onDownloads);
     _search.dispose();
+    _anasheedSearch.dispose();
     super.dispose();
   }
 
@@ -114,6 +131,63 @@ class _AudioPageState extends State<AudioPage> {
     );
   }
 
+  void _selectMode(_AudioMode mode) {
+    setState(() => _mode = mode);
+    if (mode == _AudioMode.anasheed &&
+        _anasheedResults.isEmpty &&
+        !_anasheedLoading) {
+      _searchAnasheed(_anasheedSearch.text);
+    }
+  }
+
+  void _onAnasheedQueryChanged(String value) {
+    setState(() {});
+    _anasheedDebounce?.cancel();
+    _anasheedDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => _searchAnasheed(value),
+    );
+  }
+
+  Future<void> _searchAnasheed(String query) async {
+    final token = ++_anasheedToken;
+    setState(() {
+      _anasheedLoading = true;
+      _anasheedFailed = false;
+    });
+    try {
+      final results = await _anasheed.search(query);
+      if (!mounted || token != _anasheedToken) return;
+      setState(() {
+        _anasheedResults = results;
+        _anasheedLoading = false;
+      });
+    } catch (_) {
+      if (!mounted || token != _anasheedToken) return;
+      setState(() {
+        _anasheedLoading = false;
+        _anasheedFailed = true;
+      });
+    }
+  }
+
+  Future<void> _playAnasheed(int index) async {
+    final tracks = [
+      for (var i = 0; i < _anasheedResults.length; i++)
+        _anasheedResults[i].toAudioTrack(i),
+    ];
+    try {
+      await _playback.playQueue(tracks, initialIndex: index);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.audioPlaybackError),
+        ),
+      );
+    }
+  }
+
   String _size(int bytes) {
     if (bytes >= 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
@@ -164,6 +238,37 @@ class _AudioPageState extends State<AudioPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+          child: SegmentedButton<_AudioMode>(
+            segments: [
+              ButtonSegment(
+                value: _AudioMode.quran,
+                label: Text(l10n.audioModeQuran),
+                icon: const Icon(Icons.menu_book_outlined, size: 17),
+              ),
+              ButtonSegment(
+                value: _AudioMode.anasheed,
+                label: Text(l10n.audioModeAnasheed),
+                icon: const Icon(Icons.music_note_rounded, size: 17),
+              ),
+            ],
+            selected: {_mode},
+            onSelectionChanged: (selection) => _selectMode(selection.first),
+          ),
+        ),
+        Expanded(
+          child: _mode == _AudioMode.quran
+              ? _buildQuran(l10n)
+              : _buildAnasheed(l10n),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuran(AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_failed) {
@@ -202,7 +307,7 @@ class _AudioPageState extends State<AudioPage> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           child: DropdownButtonFormField<AudioReciter>(
             initialValue: _reciter,
             isExpanded: true,
@@ -357,6 +462,117 @@ class _AudioPageState extends State<AudioPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAnasheed(AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: TextField(
+            key: const ValueKey('anasheed-search'),
+            controller: _anasheedSearch,
+            textInputAction: TextInputAction.search,
+            onChanged: _onAnasheedQueryChanged,
+            onSubmitted: _searchAnasheed,
+            decoration: InputDecoration(
+              hintText: l10n.anasheedSearchHint,
+              prefixIcon: const Icon(Icons.search_rounded, size: 19),
+              suffixIcon: _anasheedSearch.text.isEmpty
+                  ? null
+                  : IconButton(
+                      onPressed: () {
+                        _anasheedSearch.clear();
+                        _searchAnasheed('');
+                      },
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                    ),
+            ),
+          ),
+        ),
+        Expanded(child: _anasheedBody(l10n, scheme)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Text(
+            l10n.anasheedSourceNote,
+            style: TextStyle(fontSize: 9, color: scheme.onSurfaceVariant),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _anasheedBody(AppLocalizations l10n, ColorScheme scheme) {
+    if (_anasheedLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_anasheedFailed) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(l10n.anasheedError),
+            const SizedBox(height: 8),
+            FilledButton(
+              onPressed: () => _searchAnasheed(_anasheedSearch.text),
+              child: Text(l10n.retry),
+            ),
+          ],
+        ),
+      );
+    }
+    if (_anasheedResults.isEmpty) {
+      return Center(
+        child: Text(
+          l10n.anasheedEmpty,
+          style: TextStyle(color: scheme.onSurfaceVariant),
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+      itemCount: _anasheedResults.length,
+      itemBuilder: (context, index) {
+        final track = _anasheedResults[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 6),
+          child: ListTile(
+            leading: CircleAvatar(
+              radius: 17,
+              backgroundColor: scheme.primary.withValues(alpha: 0.12),
+              child: Icon(
+                Icons.music_note_rounded,
+                size: 18,
+                color: scheme.primary,
+              ),
+            ),
+            title: Text(
+              track.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13, color: scheme.onSurface),
+            ),
+            subtitle: Text(
+              [
+                if (track.creator.isNotEmpty) track.creator,
+                track.licenseLabel,
+                if (track.source.isNotEmpty) track.source,
+              ].join(' · '),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 9, color: scheme.onSurfaceVariant),
+            ),
+            trailing: IconButton(
+              key: ValueKey('anasheed-play-${track.id}'),
+              tooltip: l10n.audioPlaySurah,
+              onPressed: () => _playAnasheed(index),
+              icon: const Icon(Icons.play_circle_outline_rounded),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -699,4 +699,36 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get widgetPinUnsupported =>
       'Pinning widgets is not supported on this device.';
+
+  @override
+  String get audioModeQuran => 'Quran';
+
+  @override
+  String get audioModeAnasheed => 'Anasheed';
+
+  @override
+  String get anasheedSearchHint => 'Search anasheed';
+
+  @override
+  String get anasheedEmpty => 'No results.';
+
+  @override
+  String get anasheedError => 'Could not load anasheed. Check your connection.';
+
+  @override
+  String get anasheedSourceNote =>
+      'Results from Openverse under open licences.';
+
+  @override
+  String get creditsOpenverseName => 'Openverse';
+
+  @override
+  String get creditsOpenverseWhat => 'Openly licensed audio index for anasheed';
+
+  @override
+  String get creditsOpenverseLicense => 'CC — per work';
+
+  @override
+  String get creditsOpenverseNotice =>
+      'Anasheed results come from Openverse with each work licence and source shown.';
 }

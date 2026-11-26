@@ -697,4 +697,35 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get widgetPinUnsupported => 'إضافة الأدوات غير مدعومة على هذا الجهاز.';
+
+  @override
+  String get audioModeQuran => 'القرآن';
+
+  @override
+  String get audioModeAnasheed => 'الأناشيد';
+
+  @override
+  String get anasheedSearchHint => 'ابحث عن نشيد';
+
+  @override
+  String get anasheedEmpty => 'لا توجد نتائج.';
+
+  @override
+  String get anasheedError => 'تعذر تحميل الأناشيد. تحقق من الاتصال.';
+
+  @override
+  String get anasheedSourceNote => 'نتائج من Openverse بتراخيص مفتوحة.';
+
+  @override
+  String get creditsOpenverseName => 'Openverse';
+
+  @override
+  String get creditsOpenverseWhat => 'فهرس صوتي مفتوح الترخيص للأناشيد';
+
+  @override
+  String get creditsOpenverseLicense => 'CC — حسب كل عمل';
+
+  @override
+  String get creditsOpenverseNotice =>
+      'تأتي نتائج الأناشيد من Openverse وتُعرض مع ترخيص كل عمل ومصدره.';
 }

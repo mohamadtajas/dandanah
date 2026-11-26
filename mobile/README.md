@@ -29,6 +29,8 @@ Phase **M6** - adhan and prayer notification scheduling.
   with progress, cancel, stored-size display and per-surah deletion. A
   completed reciter folder is a complete local copy of the Quran, and playback
   prefers local files automatically.
+- Anasheed browsing through Openverse (CC-licensed audio from Wikimedia
+  Commons, Freesound and Jamendo) with per-track licence and source labels.
 - Android home-screen widgets in three sizes: 5×1 next prayer with a one-tap
   prayed action, 5×2 prayer times with today's marks, and 3×3 streak.
 - Per-prayer adhan and pre-alert notifications scheduled on-device for two
@@ -50,6 +52,18 @@ release builds, so `res/raw/keep.xml` explicitly keeps the adhan sound that
 `flutter_local_notifications` looks up by name; the main manifest declares
 `INTERNET` for EveryAyah streaming. The CI job fails if either the sound or
 the permission is missing from the release APK.
+
+## Downloads and widgets
+
+Audio downloads live under the app support directory in
+`audio/<reciter>/<surah>/<ayah>.mp3`. "تنزيل كل السور" fetches every ayah for
+the selected reciter with no size cap, so the folder becomes a complete local
+copy that can be copied off the device. Downloads skip existing files and can
+be stopped and resumed.
+
+Android widgets are declared at 5×1 (next prayer), 5×2 (prayer times) and 3×3
+(streak). Add them from Settings → Home-screen widgets or from the launcher's
+widget picker. Scheduling refreshes them at every prayer and at midnight.
 
 ## Data layer
 

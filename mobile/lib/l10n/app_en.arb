@@ -350,5 +350,15 @@
   "widgetNextPrayer": "Next-prayer widget",
   "widgetPrayerTimes": "Prayer-times widget",
   "widgetStreak": "Streak widget",
-  "widgetPinUnsupported": "Pinning widgets is not supported on this device."
+  "widgetPinUnsupported": "Pinning widgets is not supported on this device.",
+  "audioModeQuran": "Quran",
+  "audioModeAnasheed": "Anasheed",
+  "anasheedSearchHint": "Search anasheed",
+  "anasheedEmpty": "No results.",
+  "anasheedError": "Could not load anasheed. Check your connection.",
+  "anasheedSourceNote": "Results from Openverse under open licences.",
+  "creditsOpenverseName": "Openverse",
+  "creditsOpenverseWhat": "Openly licensed audio index for anasheed",
+  "creditsOpenverseLicense": "CC — per work",
+  "creditsOpenverseNotice": "Anasheed results come from Openverse with each work licence and source shown."
 }

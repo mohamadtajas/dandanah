@@ -43,6 +43,13 @@ class CreditsPage extends StatelessWidget {
         notice: l10n.creditsAudioNotice,
       ),
       _Source(
+        name: l10n.creditsOpenverseName,
+        what: l10n.creditsOpenverseWhat,
+        license: l10n.creditsOpenverseLicense,
+        url: 'https://openverse.org',
+        notice: l10n.creditsOpenverseNotice,
+      ),
+      _Source(
         name: l10n.creditsFontsName,
         what: l10n.creditsFontsWhat,
         license: l10n.creditsFontsLicense,

@@ -1357,6 +1357,66 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'إضافة الأدوات غير مدعومة على هذا الجهاز.'**
   String get widgetPinUnsupported;
+
+  /// No description provided for @audioModeQuran.
+  ///
+  /// In ar, this message translates to:
+  /// **'القرآن'**
+  String get audioModeQuran;
+
+  /// No description provided for @audioModeAnasheed.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأناشيد'**
+  String get audioModeAnasheed;
+
+  /// No description provided for @anasheedSearchHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن نشيد'**
+  String get anasheedSearchHint;
+
+  /// No description provided for @anasheedEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد نتائج.'**
+  String get anasheedEmpty;
+
+  /// No description provided for @anasheedError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تحميل الأناشيد. تحقق من الاتصال.'**
+  String get anasheedError;
+
+  /// No description provided for @anasheedSourceNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'نتائج من Openverse بتراخيص مفتوحة.'**
+  String get anasheedSourceNote;
+
+  /// No description provided for @creditsOpenverseName.
+  ///
+  /// In ar, this message translates to:
+  /// **'Openverse'**
+  String get creditsOpenverseName;
+
+  /// No description provided for @creditsOpenverseWhat.
+  ///
+  /// In ar, this message translates to:
+  /// **'فهرس صوتي مفتوح الترخيص للأناشيد'**
+  String get creditsOpenverseWhat;
+
+  /// No description provided for @creditsOpenverseLicense.
+  ///
+  /// In ar, this message translates to:
+  /// **'CC — حسب كل عمل'**
+  String get creditsOpenverseLicense;
+
+  /// No description provided for @creditsOpenverseNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأتي نتائج الأناشيد من Openverse وتُعرض مع ترخيص كل عمل ومصدره.'**
+  String get creditsOpenverseNotice;
 }
 
 class _AppLocalizationsDelegate

@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart'
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sakeenah_mobile/data/app_services.dart';
+import 'package:sakeenah_mobile/data/audio/anasheed_catalog.dart';
 import 'package:sakeenah_mobile/data/audio/playback_controller.dart';
 import 'package:sakeenah_mobile/data/db/app_database.dart';
 import 'package:sakeenah_mobile/data/models/audio.dart';
@@ -207,6 +208,43 @@ void main() {
     expect(playback.current?.surah, 1);
     expect(playback.queue, hasLength(7));
   });
+
+  testWidgets('anasheed tab lists and plays a licensed result', (tester) async {
+    await pump(
+      tester,
+      AudioPage(playback: playback, anasheed: _FakeAnasheed()),
+    );
+
+    await tester.tap(find.text('الأناشيد'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('نشيد تجريبي'), findsOneWidget);
+    expect(find.textContaining('CC BY 3.0'), findsOneWidget);
+    expect(find.textContaining('Openverse'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('anasheed-play-1')));
+    await tester.pumpAndSettle();
+
+    expect(playback.current?.surahName, 'نشيد تجريبي');
+    expect(playback.current?.url, 'https://example.test/nasheed.mp3');
+  });
+}
+
+class _FakeAnasheed implements AnasheedSource {
+  @override
+  Future<List<AnasheedTrack>> search(String query) async => const [
+    AnasheedTrack(
+      id: '1',
+      title: 'نشيد تجريبي',
+      creator: 'فنان',
+      license: 'by',
+      licenseVersion: '3.0',
+      audioUrl: 'https://example.test/nasheed.mp3',
+      landingUrl: 'https://example.test/source',
+      source: 'wikimedia_audio',
+      duration: Duration(minutes: 1),
+    ),
+  ];
 }
 
 class _FileAssetBundle extends AssetBundle {

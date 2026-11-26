@@ -350,5 +350,15 @@
   "widgetNextPrayer": "أداة الصلاة القادمة",
   "widgetPrayerTimes": "أداة مواقيت الصلاة",
   "widgetStreak": "أداة سلسلة الصلاة",
-  "widgetPinUnsupported": "إضافة الأدوات غير مدعومة على هذا الجهاز."
+  "widgetPinUnsupported": "إضافة الأدوات غير مدعومة على هذا الجهاز.",
+  "audioModeQuran": "القرآن",
+  "audioModeAnasheed": "الأناشيد",
+  "anasheedSearchHint": "ابحث عن نشيد",
+  "anasheedEmpty": "لا توجد نتائج.",
+  "anasheedError": "تعذر تحميل الأناشيد. تحقق من الاتصال.",
+  "anasheedSourceNote": "نتائج من Openverse بتراخيص مفتوحة.",
+  "creditsOpenverseName": "Openverse",
+  "creditsOpenverseWhat": "فهرس صوتي مفتوح الترخيص للأناشيد",
+  "creditsOpenverseLicense": "CC — حسب كل عمل",
+  "creditsOpenverseNotice": "تأتي نتائج الأناشيد من Openverse وتُعرض مع ترخيص كل عمل ومصدره."
 }

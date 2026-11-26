@@ -12,8 +12,9 @@ independent tasks while these are open.
 - **Storage:** downloads are enabled with no cap. "تنزيل كل السور" fetches every
   ayah for the selected reciter, so the app data folder holds a complete local
   copy of the Quran (about 1–2 GB at 128 kbps).
-- **Anasheed:** Openverse is the selected source (CC-licensed audio, no key),
-  with Internet Archive as a fallback. The browse UI is not built yet.
+- **Anasheed:** Openverse is the selected source (CC-licensed audio, no key).
+  The browse tab is built and plays results with per-track licence labels;
+  Internet Archive remains a future fallback.
 
 ## Still needed from the owner
 
