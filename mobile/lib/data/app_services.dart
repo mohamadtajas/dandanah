@@ -16,6 +16,8 @@ import 'seed/quran_seeder.dart';
 import 'settings_store.dart';
 import 'worship/adhan_scheduler.dart';
 import 'worship/prayer_notification_service.dart';
+import 'widgets/prayer_widget_publisher.dart';
+import 'widgets/widget_bridge.dart';
 import 'worship/prayer_settings.dart';
 
 /// Loads the bundled Quran and adhkar assets into the local database.
@@ -92,6 +94,7 @@ class AppServices {
     this.location,
     this.adhanSettings,
     this.notifications,
+    this.widgets,
   );
 
   static const themeKey = 'ui.theme';
@@ -108,6 +111,7 @@ class AppServices {
   final LocationService location;
   final AdhanSettingsRepository adhanSettings;
   final PrayerNotificationService notifications;
+  final PrayerWidgetPublisher widgets;
   PlaybackController? _playback;
 
   AdhanScheduler get adhanScheduler => AdhanScheduler(
@@ -138,6 +142,7 @@ class AppServices {
     LocationService? location,
     PlaybackController? playback,
     PrayerNotificationService? notifications,
+    WidgetBridge? widgetBridge,
   }) async {
     final db = database ?? await AppDatabase.open();
     try {
@@ -145,19 +150,26 @@ class AppServices {
       final settingsRepository = PrayerSettingsRepository(db);
       final settings = await settingsRepository.load();
       final theme = themeModeFrom(await SettingsStore.read(db, themeKey));
+      final prayerLog = DriftPrayerLogRepository(db);
+      final prayerSettings = ValueNotifier(settings);
       final services = AppServices._(
         db,
         DriftQuranRepository(db),
         DriftQuranReaderRepository(db),
         DriftAdhkarRepository(db),
         DriftAdhkarPracticeRepository(db),
-        DriftPrayerLogRepository(db),
+        prayerLog,
         settingsRepository,
-        ValueNotifier(settings),
+        prayerSettings,
         ValueNotifier(theme),
         location ?? LocationService(),
         AdhanSettingsRepository(db),
         notifications ?? LocalPrayerNotificationService(),
+        PrayerWidgetPublisher(
+          settings: prayerSettings,
+          log: prayerLog,
+          bridge: widgetBridge ?? const HomeWidgetBridge(),
+        ),
       );
       _current = services;
       services._playback = playback;

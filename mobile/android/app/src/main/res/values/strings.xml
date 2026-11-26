@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_next_prayer_label">الصلاة القادمة</string>
+    <string name="widget_next_prayer_description">الصلاة القادمة مع زر تسجيل الصلاة</string>
+    <string name="widget_prayer_times_label">مواقيت الصلاة</string>
+    <string name="widget_prayer_times_description">مواقيت اليوم وحالة كل صلاة</string>
+    <string name="widget_streak_label">سلسلة الصلاة</string>
+    <string name="widget_streak_description">سلسلة الصلوات وتقدم اليوم</string>
+</resources>

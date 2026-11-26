@@ -193,7 +193,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.settingsSaved)),
       );
-      // Prayer times moved: refresh the two-week notification plan.
+      // Prayer times moved: refresh the two-week notification plan and widgets.
       try {
         await _adhanScheduler.refresh();
       } catch (_) {
@@ -203,6 +203,11 @@ class _SettingsPageState extends State<SettingsPage> {
             content: Text(AppLocalizations.of(context)!.adhanScheduleFailed),
           ),
         );
+      }
+      try {
+        await _services.widgets.refresh();
+      } catch (_) {
+        // Widgets update again on the next launch.
       }
     } catch (_) {
       if (!mounted) return;

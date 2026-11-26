@@ -99,6 +99,15 @@ class _DashboardPageState extends State<DashboardPage> {
     await _services.prayerLog.setStatus(slot.ownerDate, slot.name, status);
     final today = _schedule?.dateKey;
     if (today != null) await _loadDay(today);
+    await _refreshWidgets();
+  }
+
+  Future<void> _refreshWidgets() async {
+    try {
+      await _services.widgets.refresh();
+    } catch (_) {
+      // Widgets are a convenience; logging must never fail because of them.
+    }
   }
 
   Future<void> _togglePrayer(PrayerSlot slot) async {
@@ -116,6 +125,7 @@ class _DashboardPageState extends State<DashboardPage> {
     if (date == null) return;
     await _services.prayerLog.setExcused(date, !(_day?.excused ?? false));
     await _loadDay(date);
+    await _refreshWidgets();
   }
 
   @override

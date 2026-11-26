@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:home_widget/home_widget.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../data/app_services.dart';
@@ -31,6 +32,7 @@ class _AppShellState extends State<AppShell> {
   int _index = 0;
   bool _locationPrompted = false;
   AppLifecycleListener? _lifecycle;
+  StreamSubscription<Uri?>? _widgetClicks;
 
   @override
   void initState() {
@@ -38,19 +40,55 @@ class _AppShellState extends State<AppShell> {
     // Rolling refresh: a process that stays alive past the 14-day horizon
     // (or a settings change outside Settings) still keeps notifications.
     _lifecycle = AppLifecycleListener(
-      onResume: () => unawaited(
-        AppServices.current.adhanScheduler.refresh().catchError((_) {}),
-      ),
+      onResume: () {
+        unawaited(
+          AppServices.current.adhanScheduler.refresh().catchError((_) {}),
+        );
+        _refreshWidgets();
+      },
+    );
+    _widgetClicks = HomeWidget.widgetClicked.listen(
+      _consumeWidgetUri,
+      onError: (Object _) {},
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _maybeShowLocationOnboarding();
+      _consumeInitialWidgetLaunch();
+      _refreshWidgets();
     });
   }
 
   @override
   void dispose() {
     _lifecycle?.dispose();
+    _widgetClicks?.cancel();
     super.dispose();
+  }
+
+  Future<void> _refreshWidgets() async {
+    try {
+      await AppServices.current.widgets.refresh();
+    } catch (_) {
+      // Widgets are optional; the app works without them.
+    }
+  }
+
+  Future<void> _consumeInitialWidgetLaunch() async {
+    try {
+      final uri = await HomeWidget.initiallyLaunchedFromHomeWidget();
+      if (uri != null) await _consumeWidgetUri(uri);
+    } catch (_) {
+      // Not launched from a widget (or the platform has no widget support).
+    }
+  }
+
+  Future<void> _consumeWidgetUri(Uri? uri) async {
+    if (uri == null) return;
+    try {
+      await AppServices.current.widgets.handlePrayed(uri);
+    } catch (_) {
+      // Ignore malformed widget taps.
+    }
   }
 
   Future<void> _maybeShowLocationOnboarding() async {
@@ -78,6 +116,7 @@ class _AppShellState extends State<AppShell> {
           } catch (_) {
             // Notifications can be enabled later from Settings.
           }
+          await _refreshWidgets();
         },
         onDismiss: () => markLocationOnboardingSeen(services.database),
       ),

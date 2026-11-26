@@ -27,6 +27,7 @@ dependencies:
   audio_service: ^0.18.19
   flutter_local_notifications: 22.0.0
   url_launcher: ^6.3.3
+  home_widget: ^0.10.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
