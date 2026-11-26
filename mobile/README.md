@@ -188,6 +188,10 @@ Captured on an Android 16 (API 36) emulator at 1080x2400 in Arabic RTL.
 |---|---|
 | ![Quran reader](../docs/screenshots/mobile/10-quran-reader.png) | ![Audio player](../docs/screenshots/mobile/11-audio-player.png) |
 
+| Anasheed | Downloads |
+|---|---|
+| ![Anasheed](../docs/screenshots/mobile/14-anasheed.png) | ![Downloads](../docs/screenshots/mobile/15-downloads.png) |
+
 | Adhan settings |
 |---|
 | ![Adhan settings](../docs/screenshots/mobile/12-adhan-settings.png) |
