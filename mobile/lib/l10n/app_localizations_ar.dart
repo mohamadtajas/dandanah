@@ -592,14 +592,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get creditsAdhanName => 'تسجيلات الأذان';
 
   @override
-  String get creditsAdhanWhat => 'ثلاثة تسجيلات أذان مضمَّنة دون تعديل';
+  String get creditsAdhanWhat =>
+      'ثلاثة تسجيلات أذان مضمَّنة (مقتطف ٢٩ ثانية على iOS)';
 
   @override
   String get creditsAdhanLicense => 'CC0 1.0 وملكية عامة';
 
   @override
   String get creditsAdhanNotice =>
-      'Beautiful adhan — Adam-synagda (CC0)، وAdhan — Aishatu98 (CC0) عبر Wikimedia Commons، وأذان صباح فخري (ملكية عامة)، جميعها دون تعديل.';
+      'Beautiful adhan — Adam-synagda (CC0)، وAdhan — Aishatu98 (CC0) عبر Wikimedia Commons، وأذان صباح فخري (ملكية عامة). حُوِّلت الصيغة، ويُستخدم مقتطف ٢٩ ثانية على iOS ضمن حد النظام.';
 
   @override
   String get creditsAudioName => 'EveryAyah';

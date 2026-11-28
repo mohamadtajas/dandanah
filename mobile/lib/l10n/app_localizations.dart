@@ -1163,7 +1163,7 @@ abstract class AppLocalizations {
   /// No description provided for @creditsAdhanWhat.
   ///
   /// In ar, this message translates to:
-  /// **'ثلاثة تسجيلات أذان مضمَّنة دون تعديل'**
+  /// **'ثلاثة تسجيلات أذان مضمَّنة (مقتطف ٢٩ ثانية على iOS)'**
   String get creditsAdhanWhat;
 
   /// No description provided for @creditsAdhanLicense.
@@ -1175,7 +1175,7 @@ abstract class AppLocalizations {
   /// No description provided for @creditsAdhanNotice.
   ///
   /// In ar, this message translates to:
-  /// **'Beautiful adhan — Adam-synagda (CC0)، وAdhan — Aishatu98 (CC0) عبر Wikimedia Commons، وأذان صباح فخري (ملكية عامة)، جميعها دون تعديل.'**
+  /// **'Beautiful adhan — Adam-synagda (CC0)، وAdhan — Aishatu98 (CC0) عبر Wikimedia Commons، وأذان صباح فخري (ملكية عامة). حُوِّلت الصيغة، ويُستخدم مقتطف ٢٩ ثانية على iOS ضمن حد النظام.'**
   String get creditsAdhanNotice;
 
   /// No description provided for @creditsAudioName.

@@ -1,8 +1,10 @@
 # Adhan recordings
 
-Sakeenah bundles three adhan recordings, all unmodified except for format
-conversion to OGG Vorbis (Android notification channel) and mono CAF (iOS
-notification sound). Conversion does not alter the performance.
+Sakeenah bundles three adhan recordings. Android uses OGG Vorbis
+notification-channel audio; iOS uses mono CAF excerpts, trimmed to 29 seconds
+to stay within Apple's 30-second notification-sound limit. Format conversion
+and the iOS excerpt are the only changes; the performances are not otherwise
+altered.
 
 ## 1. Beautiful adhan
 

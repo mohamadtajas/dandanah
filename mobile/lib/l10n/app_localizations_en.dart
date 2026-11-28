@@ -592,14 +592,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get creditsAdhanName => 'Adhan recordings';
 
   @override
-  String get creditsAdhanWhat => 'Three bundled adhan recordings, unmodified';
+  String get creditsAdhanWhat =>
+      'Three bundled adhan recordings (29-second excerpt on iOS)';
 
   @override
   String get creditsAdhanLicense => 'CC0 1.0 and public domain';
 
   @override
   String get creditsAdhanNotice =>
-      'Beautiful adhan by Adam-synagda (CC0) and Adhan by Aishatu98 (CC0) via Wikimedia Commons, plus the Sabah Fakhri adhan (public domain); all unmodified.';
+      'Beautiful adhan by Adam-synagda (CC0) and Adhan by Aishatu98 (CC0) via Wikimedia Commons, plus the Sabah Fakhri adhan (public domain). Audio was format-converted; iOS uses a 29-second excerpt within the system limit.';
 
   @override
   String get creditsAudioName => 'EveryAyah';
