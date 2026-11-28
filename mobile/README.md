@@ -6,11 +6,13 @@ and prayer calculations but not the desktop runtime.
 
 ## Status
 
-Phase **M6** - adhan and prayer notification scheduling.
+Phase **M7** - widgets, polished audio, adhkar reminders and adhan sounds.
 
 - Arabic-first UI with `flutter_localizations` and generated ARB accessors.
 - Bottom navigation: Dashboard, Mushaf, Adhkar, Audio.
-- Dark and light themes built from the same colour tokens as desktop.
+- The owner palette in light (deep green `#0F4B35`, ivory `#F9F8F5`, gold
+  `#C5A059`, ink `#12241F`, sand `#ECE7DB`) with a derived dark theme of ivory
+  on deep green-black and gold accents.
 - Tajawal for UI text and Amiri Quran for Quranic text, both bundled offline.
 - Drift database with tested schema migrations and bundled content seeding.
 - Offline prayer methods, Hijri conversion and qibla bearings.
@@ -23,8 +25,13 @@ Phase **M6** - adhan and prayer notification scheduling.
   continuous Uthmani reader with bookmark toggles, 20–44 pt font sizing and
   a deterministic daily ayah.
 - Quran audio with eight EveryAyah reciters, a surah queue, mini-player,
-  full player, seek, speed and repeat; `audio_service` publishes the media
-  session for background and lock-screen controls.
+  full player, speed and repeat; `audio_service` publishes the media session
+  for background and lock-screen controls. The full player's main slider spans
+  the whole surah with per-ayah ticks and the current ayah text, using a
+  bundled duration index for every reciter (with a safe fallback when a
+  reciter/surah is missing).
+- Islamic radio: a curated, HTTPS-only whitelist of Quran and Islamic stations
+  in the Audio tab, with a live badge and no misleading seek/skip controls.
 - Offline audio downloads: one surah or an entire reciter (no storage cap),
   with progress, cancel, stored-size display and per-surah deletion. A
   completed reciter folder is a complete local copy of the Quran, and playback
@@ -34,24 +41,28 @@ Phase **M6** - adhan and prayer notification scheduling.
 - Android home-screen widgets in three sizes: 5×1 next prayer with a one-tap
   prayed action, 5×2 prayer times with today's marks, and 3×3 streak.
 - Per-prayer adhan and pre-alert notifications scheduled on-device for two
-  weeks (every prayer has its own pre-alert offset), with bundled CC0 adhan
-  sounds on Android and iOS, exact-alarm support, and a silent channel for
-  pre-alerts.
-- A Sources and licences page with the Tanzil attribution, the adhan CC0
-  credit, Hisn al-Muslim and font licences, and live source links.
+  weeks (every prayer has its own pre-alert offset), with three selectable
+  bundled adhan recordings (two CC0, one public domain) on Android and iOS,
+  a silent option, exact-alarm support and a silent channel for pre-alerts.
+- Optional adhkar reminders: morning after Fajr, evening after Asr and a fixed
+  sleep reminder, all off by default, with a separate notification channel.
+- A Sources and licences page with the Tanzil attribution, all adhan recording
+  credits and licences, Hisn al-Muslim and font licences, and live source links.
 
 The full Uthmani Quran (114 surahs, 6236 ayahs) and Hisn al-Muslim (126
 categories, 302 items) are seeded from bundled assets on first launch. Adhkar
 and Quran reading work fully offline; Quran audio streams from EveryAyah and
-falls back to downloaded files. Anasheed browsing is not built yet.
+falls back to downloaded files. Anasheed and radio need a network connection;
+both degrade to a clear error without crashing.
 
 ## Release builds
 
 `flutter build apk --release` is smoke-tested in CI. AGP 9 shrinks resources in
-release builds, so `res/raw/keep.xml` explicitly keeps the adhan sound that
-`flutter_local_notifications` looks up by name; the main manifest declares
-`INTERNET` for EveryAyah streaming. The CI job fails if either the sound or
-the permission is missing from the release APK.
+release builds, so `res/raw/keep.xml` explicitly keeps all three adhan sounds
+that `flutter_local_notifications` looks up by name; the main manifest declares
+`INTERNET` for EveryAyah streaming and radio. The CI job fails if a sound or
+the permission is missing from the release APK. iOS notification sounds are
+29-second mono CAF files, within the system's 30-second limit.
 
 ## Downloads and widgets
 
@@ -192,9 +203,9 @@ Captured on an Android 16 (API 36) emulator at 1080x2400 in Arabic RTL.
 |---|---|
 | ![Anasheed](../docs/screenshots/mobile/14-anasheed.png) | ![Downloads](../docs/screenshots/mobile/15-downloads.png) |
 
-| Adhan settings |
-|---|
-| ![Adhan settings](../docs/screenshots/mobile/12-adhan-settings.png) |
+| Islamic radio | Adhan settings |
+|---|---|
+| ![Islamic radio](../docs/screenshots/mobile/16-radio.png) | ![Adhan settings](../docs/screenshots/mobile/12-adhan-settings.png) |
 
 | Offline audio error |
 |---|

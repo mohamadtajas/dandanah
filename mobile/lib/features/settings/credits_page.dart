@@ -34,6 +34,7 @@ class CreditsPage extends StatelessWidget {
         license: l10n.creditsAdhanLicense,
         url: 'https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg',
         notice: l10n.creditsAdhanNotice,
+        licenseAsset: 'assets/data/ADHAN_LICENSE.md',
       ),
       _Source(
         name: l10n.creditsAudioName,

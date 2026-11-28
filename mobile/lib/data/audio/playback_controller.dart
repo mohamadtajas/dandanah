@@ -71,6 +71,11 @@ class PlaybackController extends ChangeNotifier {
     return setRepeat(next);
   }
 
+  int get index => _state.index;
+
+  Future<void> playAt(int index, {Duration position = Duration.zero}) =>
+      _engine.playAt(index, position: position);
+
   Future<void> stop() => _engine.stop();
 
   Future<void> stopAndClear() => _engine.stopAndClear();

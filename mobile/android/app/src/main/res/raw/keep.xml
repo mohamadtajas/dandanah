@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- AGP 9 shrinks resources in release builds; flutter_local_notifications
-     resolves the adhan sound by name with getIdentifier(), which the shrinker
-     cannot see. Keep it explicitly. -->
+     resolves adhan sounds by name with getIdentifier(), which the shrinker
+     cannot see. Keep all bundled recordings explicitly. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@raw/adhan" />
+    tools:keep="@raw/adhan,@raw/adhan_2,@raw/adhan_3" />

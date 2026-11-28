@@ -235,10 +235,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adhkarToday => 'أذكار اليوم';
 
   @override
-  String get adhkarMorning => 'الصباح';
+  String get adhkarMorning => 'أذكار الصباح';
 
   @override
-  String get adhkarEvening => 'المساء';
+  String get adhkarEvening => 'أذكار المساء';
 
   @override
   String get adhkarFeatured => 'أذكار مختارة';
@@ -589,17 +589,17 @@ class AppLocalizationsAr extends AppLocalizations {
       'نصوص الأذكار مأخوذة من مجموعة حصن المسلم مفتوحة المصدر بترخيص MIT.';
 
   @override
-  String get creditsAdhanName => 'تسجيل الأذان';
+  String get creditsAdhanName => 'تسجيلات الأذان';
 
   @override
-  String get creditsAdhanWhat => 'أذان مضمَّن دون تعديل';
+  String get creditsAdhanWhat => 'ثلاثة تسجيلات أذان مضمَّنة دون تعديل';
 
   @override
-  String get creditsAdhanLicense => 'CC0 1.0 — Adam-synagda';
+  String get creditsAdhanLicense => 'CC0 1.0 وملكية عامة';
 
   @override
   String get creditsAdhanNotice =>
-      'Beautiful adhan by Adam-synagda عبر Wikimedia Commons، ملكية عامة CC0 1.0، دون تعديل.';
+      'Beautiful adhan — Adam-synagda (CC0)، وAdhan — Aishatu98 (CC0) عبر Wikimedia Commons، وأذان صباح فخري (ملكية عامة)، جميعها دون تعديل.';
 
   @override
   String get creditsAudioName => 'EveryAyah';
@@ -728,4 +728,111 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get creditsOpenverseNotice =>
       'تأتي نتائج الأناشيد من Openverse وتُعرض مع ترخيص كل عمل ومصدره.';
+
+  @override
+  String get adhanHealthTitle => 'حالة التنبيهات';
+
+  @override
+  String get adhanHealthHint =>
+      'لضمان وصول الأذان في وقته، اسمح بالإشعارات والأذان الدقيق وأوقف تحسين البطارية.';
+
+  @override
+  String get adhanNotificationsOn => 'الإشعارات مسموحة';
+
+  @override
+  String get adhanNotificationsOff => 'الإشعارات ممنوعة';
+
+  @override
+  String get adhanExactOn => 'الأذان الدقيق مسموح';
+
+  @override
+  String get adhanExactOff => 'الأذان الدقيق ممنوع';
+
+  @override
+  String get adhanBatteryOk => 'البطارية غير مقيّدة';
+
+  @override
+  String get adhanBatteryNeedsSetup => 'قيّد النظام البطارية';
+
+  @override
+  String adhanPendingCount(int count) {
+    return 'تنبيهات مجدولة: $count';
+  }
+
+  @override
+  String get adhanAllowExact => 'السماح بالأذان الدقيق';
+
+  @override
+  String get adhanOpenBattery => 'إعدادات البطارية';
+
+  @override
+  String get adhanTestNow => 'اختبار الآن';
+
+  @override
+  String get adhanTestInTwo => 'اختبار بعد دقيقتين';
+
+  @override
+  String get adhanTestScheduled => 'سيصل تنبيه الاختبار بعد دقيقتين.';
+
+  @override
+  String get adhkarRemindersTitle => 'تذكير الأذكار';
+
+  @override
+  String get adhkarRemindersHint => 'تذكير هادئ بأذكار الصباح والمساء والنوم.';
+
+  @override
+  String get adhkarSleep => 'أذكار النوم';
+
+  @override
+  String adhkarAfterFajr(int minutes) {
+    return 'بعد الفجر بـ $minutes دقيقة';
+  }
+
+  @override
+  String adhkarAfterAsr(int minutes) {
+    return 'بعد العصر بـ $minutes دقيقة';
+  }
+
+  @override
+  String adhkarSleepAt(String time) {
+    return 'الساعة $time';
+  }
+
+  @override
+  String get defaultReciterTitle => 'القارئ الافتراضي';
+
+  @override
+  String get defaultReciterHint => 'يُستخدم عند فتح الصوت وبدء التلاوة.';
+
+  @override
+  String audioAyahOf(int index, int total) {
+    return 'الآية $index من $total';
+  }
+
+  @override
+  String get audioModeRadio => 'الإذاعات';
+
+  @override
+  String get audioRadioHint => 'إذاعات إسلامية فقط، بث مباشر.';
+
+  @override
+  String get adhanSoundBeautiful => 'أذان هادئ (CC0)';
+
+  @override
+  String get adhanSoundAdhan => 'أذان مرتّل (CC0)';
+
+  @override
+  String get adhanSoundSabah => 'أذان صباح فخري (ملك عام)';
+
+  @override
+  String get adhanSoundSilent => 'صامت';
+
+  @override
+  String get adhanSoundHint => 'اختر نغمة الأذان؛ تُستخدم في وقت الصلاة فقط.';
+
+  @override
+  String get audioLiveBadge => 'مباشر';
+
+  @override
+  String get audioLiveHint => 'بث مباشر — لا يمكن التقديم أو الإرجاع.';
 }

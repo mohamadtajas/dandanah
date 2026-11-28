@@ -7,7 +7,7 @@ import 'prayer_settings.dart';
 import 'timezone_bootstrap.dart';
 
 class PrayerNotificationPlanner {
-  const PrayerNotificationPlanner({this.daysAhead = 14});
+  const PrayerNotificationPlanner({this.daysAhead = 30});
 
   final int daysAhead;
 

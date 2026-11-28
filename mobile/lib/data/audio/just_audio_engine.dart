@@ -177,6 +177,18 @@ class JustAudioEngine extends BaseAudioHandler
   }
 
   @override
+  Future<void> playAt(int index, {Duration position = Duration.zero}) async {
+    _error = null;
+    await _player.seek(position, index: index);
+    unawaited(
+      _player.play().catchError((Object error) {
+        _error = error.toString();
+        _emit();
+      }),
+    );
+  }
+
+  @override
   Future<void> skipToNext() => next();
 
   @override

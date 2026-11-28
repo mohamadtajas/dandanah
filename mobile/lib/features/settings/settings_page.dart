@@ -2,12 +2,15 @@ import 'package:home_widget/home_widget.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../data/app_services.dart';
+import '../../data/audio/quran_audio_catalog.dart';
 import '../../data/cities.dart';
 import '../../data/location/device_location.dart';
 import '../../data/location/location_service.dart';
 import '../../data/models/adhan.dart';
+import '../../data/models/adhkar_reminders.dart';
 import '../../data/worship/adhan_scheduler.dart';
 import '../../data/worship/prayer_method.dart';
+import '../../data/worship/prayer_notification_service.dart';
 import '../../data/widgets/widget_bridge.dart';
 import 'credits_page.dart';
 import '../../data/worship/coordinate_input.dart';
@@ -55,6 +58,9 @@ class _SettingsPageState extends State<SettingsPage> {
   late final AdhanScheduler _adhanScheduler =
       widget.adhanScheduler ?? _services.adhanScheduler;
   AdhanPreferences _adhan = AdhanPreferences.defaults();
+  AdhkarReminderPreferences _adhkar = AdhkarReminderPreferences.defaults();
+  AdhanDiagnostics? _health;
+  late String? _defaultReciterId = _services.defaultReciterId;
   bool _adhanBusy = false;
 
   late final List<String> _timezones = _buildTimezones();
@@ -68,10 +74,25 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _loadAdhan() async {
     try {
       final prefs = await _adhanScheduler.preferences.load();
-      if (mounted) setState(() => _adhan = prefs);
+      final adhkar = await _adhanScheduler.loadAdhkarPreferences();
+      final health = await _adhanScheduler.diagnostics();
+      if (mounted) {
+        setState(() {
+          _adhan = prefs;
+          _adhkar = adhkar;
+          _health = health;
+        });
+      }
     } catch (_) {
       // Keep the defaults already shown; saving still works.
     }
+  }
+
+  Future<void> _refreshHealth() async {
+    try {
+      final health = await _adhanScheduler.diagnostics();
+      if (mounted) setState(() => _health = health);
+    } catch (_) {}
   }
 
   @override
@@ -290,6 +311,92 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) setState(() => _adhanBusy = false);
     }
   }
+
+  Future<void> _saveAdhkar(AdhkarReminderPreferences next) async {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      _adhkar = next;
+      _adhanBusy = true;
+    });
+    try {
+      await _adhanScheduler.saveAdhkarPreferences(next);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.adhanScheduleFailed)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _adhanBusy = false);
+        await _refreshHealth();
+      }
+    }
+  }
+
+  Future<void> _requestExact() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final granted = await _adhanScheduler.requestExactAlarms();
+      await _refreshHealth();
+      if (!mounted) return;
+      if (!granted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.adhanPermissionDenied)));
+        return;
+      }
+      await _adhanScheduler.refresh();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.adhanScheduleFailed)));
+    }
+  }
+
+  Future<void> _openBattery() async {
+    await AlarmSupport.openBatterySettings();
+    await _refreshHealth();
+  }
+
+  Future<void> _testScheduled() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      await _adhanScheduler.sendScheduledTest(const Duration(minutes: 2));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.adhanTestScheduled)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.adhanScheduleFailed)));
+    }
+  }
+
+  Future<void> _pickSleepTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: _adhkar.sleepHour,
+        minute: _adhkar.sleepMinute,
+      ),
+    );
+    if (picked == null) return;
+    await _saveAdhkar(
+      _adhkar.copyWith(sleepHour: picked.hour, sleepMinute: picked.minute),
+    );
+  }
+
+  Future<void> _setDefaultReciter(String id) async {
+    setState(() => _defaultReciterId = id);
+    await _services.setDefaultReciter(id);
+  }
+
+  String _sleepTime(AppLocalizations l10n) {
+    final hour = _adhkar.sleepHour.toString().padLeft(2, '0');
+    final minute = _adhkar.sleepMinute.toString().padLeft(2, '0');
+    return l10n.adhkarSleepAt('$hour:$minute');
+  }
+
+  String get _firstReciterId => QuranAudioCatalog.reciters.first.id;
 
   Future<void> _pinWidget(String provider) async {
     final l10n = AppLocalizations.of(context)!;
@@ -624,18 +731,55 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                 ],
-                SwitchListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    l10n.adhanSound,
-                    style: TextStyle(fontSize: 12, color: scheme.onSurface),
+                Text(
+                  l10n.adhanSound,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
                   ),
-                  value: _adhan.soundEnabled,
+                ),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<String>(
+                  key: ValueKey('adhan-sound-${_adhan.soundId}'),
+                  initialValue: _adhan.soundId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(isDense: true),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'beautiful',
+                      child: Text(l10n.adhanSoundBeautiful),
+                    ),
+                    DropdownMenuItem(
+                      value: 'adhan',
+                      child: Text(l10n.adhanSoundAdhan),
+                    ),
+                    DropdownMenuItem(
+                      value: 'sabah',
+                      child: Text(l10n.adhanSoundSabah),
+                    ),
+                    DropdownMenuItem(
+                      value: 'silent',
+                      child: Text(l10n.adhanSoundSilent),
+                    ),
+                  ],
                   onChanged: _adhanBusy
                       ? null
-                      : (value) =>
-                            _saveAdhan(_adhan.copyWith(soundEnabled: value)),
+                      : (value) {
+                          if (value == null) return;
+                          _saveAdhan(_adhan.copyWith(soundId: value));
+                        },
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    l10n.adhanSoundHint,
+                    style: TextStyle(
+                      fontSize: 10,
+                      height: 1.6,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
                 TextButton.icon(
                   onPressed: _testAdhan,
@@ -686,6 +830,252 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ],
                   ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _SectionCard(
+            title: l10n.adhanHealthTitle,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.adhanHealthHint,
+                  style: TextStyle(
+                    fontSize: 10,
+                    height: 1.6,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _HealthPill(
+                      label: (_health?.notificationsEnabled ?? true)
+                          ? l10n.adhanNotificationsOn
+                          : l10n.adhanNotificationsOff,
+                      ok: _health?.notificationsEnabled ?? true,
+                    ),
+                    _HealthPill(
+                      label: (_health?.exactAlarms ?? true)
+                          ? l10n.adhanExactOn
+                          : l10n.adhanExactOff,
+                      ok: _health?.exactAlarms ?? true,
+                    ),
+                    _HealthPill(
+                      label: (_health?.batteryOptimized ?? false)
+                          ? l10n.adhanBatteryNeedsSetup
+                          : l10n.adhanBatteryOk,
+                      ok: !(_health?.batteryOptimized ?? false),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.adhanPendingCount(_health?.pendingCount ?? 0),
+                  style: TextStyle(fontSize: 9, color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 2,
+                  children: [
+                    if (!(_health?.exactAlarms ?? true))
+                      OutlinedButton(
+                        onPressed: _requestExact,
+                        child: Text(l10n.adhanAllowExact),
+                      ),
+                    if (_health?.batteryOptimized ?? false)
+                      OutlinedButton(
+                        onPressed: _openBattery,
+                        child: Text(l10n.adhanOpenBattery),
+                      ),
+                    TextButton(
+                      onPressed: _testAdhan,
+                      child: Text(l10n.adhanTestNow),
+                    ),
+                    TextButton(
+                      onPressed: _testScheduled,
+                      child: Text(l10n.adhanTestInTwo),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _SectionCard(
+            title: l10n.adhkarRemindersTitle,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.adhkarRemindersHint,
+                  style: TextStyle(
+                    fontSize: 10,
+                    height: 1.6,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                SwitchListTile(
+                  key: const ValueKey('adhkar-morning'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    l10n.adhkarMorning,
+                    style: TextStyle(fontSize: 12, color: scheme.onSurface),
+                  ),
+                  value: _adhkar.morning,
+                  onChanged: _adhanBusy
+                      ? null
+                      : (value) =>
+                            _saveAdhkar(_adhkar.copyWith(morning: value)),
+                ),
+                if (_adhkar.morning)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: 4,
+                      bottom: 4,
+                    ),
+                    child: DropdownButtonFormField<int>(
+                      key: ValueKey(
+                        'adhkar-morning-offset-${_adhkar.morningOffsetMinutes}',
+                      ),
+                      initialValue: _adhkar.morningOffsetMinutes,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: l10n.adhkarMorning,
+                        isDense: true,
+                      ),
+                      items: [
+                        for (final minutes in AdhkarReminderPreferences.offsets)
+                          DropdownMenuItem(
+                            value: minutes,
+                            child: Text(l10n.adhkarAfterFajr(minutes)),
+                          ),
+                      ],
+                      onChanged: _adhanBusy
+                          ? null
+                          : (value) {
+                              if (value == null) return;
+                              _saveAdhkar(
+                                _adhkar.copyWith(morningOffsetMinutes: value),
+                              );
+                            },
+                    ),
+                  ),
+                SwitchListTile(
+                  key: const ValueKey('adhkar-evening'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    l10n.adhkarEvening,
+                    style: TextStyle(fontSize: 12, color: scheme.onSurface),
+                  ),
+                  value: _adhkar.evening,
+                  onChanged: _adhanBusy
+                      ? null
+                      : (value) =>
+                            _saveAdhkar(_adhkar.copyWith(evening: value)),
+                ),
+                if (_adhkar.evening)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: 4,
+                      bottom: 4,
+                    ),
+                    child: DropdownButtonFormField<int>(
+                      key: ValueKey(
+                        'adhkar-evening-offset-${_adhkar.eveningOffsetMinutes}',
+                      ),
+                      initialValue: _adhkar.eveningOffsetMinutes,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: l10n.adhkarEvening,
+                        isDense: true,
+                      ),
+                      items: [
+                        for (final minutes in AdhkarReminderPreferences.offsets)
+                          DropdownMenuItem(
+                            value: minutes,
+                            child: Text(l10n.adhkarAfterAsr(minutes)),
+                          ),
+                      ],
+                      onChanged: _adhanBusy
+                          ? null
+                          : (value) {
+                              if (value == null) return;
+                              _saveAdhkar(
+                                _adhkar.copyWith(eveningOffsetMinutes: value),
+                              );
+                            },
+                    ),
+                  ),
+                SwitchListTile(
+                  key: const ValueKey('adhkar-sleep'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    l10n.adhkarSleep,
+                    style: TextStyle(fontSize: 12, color: scheme.onSurface),
+                  ),
+                  value: _adhkar.sleep,
+                  onChanged: _adhanBusy
+                      ? null
+                      : (value) => _saveAdhkar(_adhkar.copyWith(sleep: value)),
+                ),
+                if (_adhkar.sleep)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: 4,
+                      bottom: 4,
+                    ),
+                    child: OutlinedButton.icon(
+                      onPressed: _adhanBusy ? null : _pickSleepTime,
+                      icon: const Icon(Icons.schedule_rounded, size: 17),
+                      label: Text(_sleepTime(l10n)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _SectionCard(
+            title: l10n.defaultReciterTitle,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.defaultReciterHint,
+                  style: TextStyle(
+                    fontSize: 10,
+                    height: 1.6,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  key: ValueKey(
+                    'default-reciter-${_defaultReciterId ?? 'none'}',
+                  ),
+                  initialValue: _defaultReciterId ?? _firstReciterId,
+                  isExpanded: true,
+                  items: [
+                    for (final reciter in QuranAudioCatalog.reciters)
+                      DropdownMenuItem(
+                        value: reciter.id,
+                        child: Text(
+                          '${reciter.name} · ${reciter.style}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) _setDefaultReciter(value);
+                  },
                 ),
               ],
             ),
@@ -815,6 +1205,39 @@ class _SectionCard extends StatelessWidget {
             child,
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _HealthPill extends StatelessWidget {
+  const _HealthPill({required this.label, required this.ok});
+
+  final String label;
+  final bool ok;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = ok ? scheme.primary : scheme.error;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            ok ? Icons.check_circle_rounded : Icons.error_rounded,
+            size: 13,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(fontSize: 9, color: color)),
+        ],
       ),
     );
   }

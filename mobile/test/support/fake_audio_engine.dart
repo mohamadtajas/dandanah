@@ -56,6 +56,13 @@ class FakeAudioEngine implements AudioEngine {
   }
 
   @override
+  Future<void> playAt(int index, {Duration position = Duration.zero}) async {
+    if (index < 0 || index >= _state.queue.length) return;
+    playCalls++;
+    emit(_state.copyWith(index: index, position: position, playing: true));
+  }
+
+  @override
   Future<void> setSpeed(double speed) async =>
       emit(_state.copyWith(speed: speed));
 

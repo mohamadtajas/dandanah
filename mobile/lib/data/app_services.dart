@@ -11,6 +11,7 @@ import 'location/location_service.dart';
 import 'repositories/adhkar_practice_repository.dart';
 import 'repositories/adhkar_repository.dart';
 import 'repositories/adhan_settings_repository.dart';
+import 'repositories/adhkar_reminder_repository.dart';
 import 'repositories/prayer_log_repository.dart';
 import 'repositories/quran_reader_repository.dart';
 import 'repositories/quran_repository.dart';
@@ -96,12 +97,15 @@ class AppServices {
     this.themeMode,
     this.location,
     this.adhanSettings,
+    this.adhkarReminders,
     this.notifications,
     this.widgets,
     this.downloads,
+    this.defaultReciterId,
   );
 
   static const themeKey = 'ui.theme';
+  static const defaultReciterKey = 'audio.defaultReciter';
 
   final AppDatabase database;
   final QuranRepository quran;
@@ -114,15 +118,18 @@ class AppServices {
   final ValueNotifier<ThemeMode> themeMode;
   final LocationService location;
   final AdhanSettingsRepository adhanSettings;
+  final AdhkarReminderRepository adhkarReminders;
   final PrayerNotificationService notifications;
   final PrayerWidgetPublisher widgets;
   final AudioDownloadManager downloads;
+  String? defaultReciterId;
   PlaybackController? _playback;
 
   AdhanScheduler get adhanScheduler => AdhanScheduler(
     preferences: adhanSettings,
     settings: prayerSettings,
     service: notifications,
+    adhkarPreferences: adhkarReminders,
   );
 
   PlaybackController get playback =>
@@ -170,6 +177,7 @@ class AppServices {
         ValueNotifier(theme),
         location ?? LocationService(),
         AdhanSettingsRepository(db),
+        AdhkarReminderRepository(db),
         notifications ?? LocalPrayerNotificationService(),
         PrayerWidgetPublisher(
           settings: prayerSettings,
@@ -177,6 +185,7 @@ class AppServices {
           bridge: widgetBridge ?? const HomeWidgetBridge(),
         ),
         downloads ?? await _defaultDownloads(),
+        await SettingsStore.read(db, defaultReciterKey),
       );
       _current = services;
       services._playback = playback;
@@ -204,6 +213,11 @@ class AppServices {
   Future<void> updatePrayerSettings(PrayerSettings settings) async {
     await prayerSettingsRepository.save(settings);
     prayerSettings.value = settings.sanitized();
+  }
+
+  Future<void> setDefaultReciter(String reciterId) async {
+    defaultReciterId = reciterId;
+    await SettingsStore.write(database, defaultReciterKey, reciterId);
   }
 
   Future<void> updateThemeMode(ThemeMode mode) async {

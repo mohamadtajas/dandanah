@@ -59,7 +59,7 @@ jobs:
       - name: Release APK keeps adhan audio and INTERNET
         run: |
           APK=build/app/outputs/flutter-apk/app-release.apk
-          test "$(unzip -l "$APK" | grep -c '\.ogg')" -ge 1
+          test "$(unzip -l "$APK" | grep -c '\.ogg')" -ge 3
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | tail -1)
           "$BT/aapt2" dump permissions "$APK" | grep -q 'android.permission.INTERNET'
 

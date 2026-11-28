@@ -200,8 +200,8 @@ void main() {
     expect(find.text('المصادر والتراخيص'), findsWidgets);
     expect(find.text('مشروع تنزيل (Tanzil)'), findsOneWidget);
     expect(find.text('CC BY 3.0 — © Tanzil Project'), findsOneWidget);
-    expect(find.text('تسجيل الأذان'), findsOneWidget);
-    expect(find.text('CC0 1.0 — Adam-synagda'), findsOneWidget);
+    expect(find.text('تسجيلات الأذان'), findsOneWidget);
+    expect(find.text('CC0 1.0 وملكية عامة'), findsOneWidget);
   });
 
   testWidgets('adhan toggles save and test notification fires', (tester) async {
@@ -259,9 +259,17 @@ void main() {
     expect(alerts.preAlertFor(PrayerName.fajr), 10);
     expect(alerts.preAlertFor(PrayerName.asr), 10);
 
+    // The adhan recording is a saved preference and reaches the test sound.
+    await tester.tap(find.byKey(const ValueKey('adhan-sound-beautiful')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('أذان صباح فخري (ملك عام)').last);
+    await tester.pumpAndSettle();
+    expect((await repo.load()).soundId, 'sabah');
+
     await tester.tap(find.text('إرسال إشعار تجريبي'));
     await tester.pump(const Duration(milliseconds: 200));
     expect(notifications.testShown, 1);
+    expect(notifications.lastTestSoundId, 'sabah');
   });
 
   testWidgets('denied notification permission is reported', (tester) async {

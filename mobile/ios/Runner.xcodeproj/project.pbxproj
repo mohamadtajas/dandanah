@@ -17,6 +17,8 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		A1B2C3D40000000000000002 /* adhan.caf in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000001 /* adhan.caf */; };
+		A1B2C3D40000000000000004 /* adhan2.caf in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000003 /* adhan2.caf */; };
+		A1B2C3D40000000000000006 /* adhan3.caf in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000005 /* adhan3.caf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,6 +63,8 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1B2C3D40000000000000001 /* adhan.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan.caf; sourceTree = "<group>"; };
+		A1B2C3D40000000000000003 /* adhan2.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan2.caf; sourceTree = "<group>"; };
+		A1B2C3D40000000000000005 /* adhan3.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = adhan3.caf; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -127,6 +131,8 @@
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				A1B2C3D40000000000000001 /* adhan.caf */,
+				A1B2C3D40000000000000003 /* adhan2.caf */,
+				A1B2C3D40000000000000005 /* adhan3.caf */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -233,6 +239,8 @@
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 				A1B2C3D40000000000000002 /* adhan.caf in Resources */,
+				A1B2C3D40000000000000004 /* adhan2.caf in Resources */,
+				A1B2C3D40000000000000006 /* adhan3.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

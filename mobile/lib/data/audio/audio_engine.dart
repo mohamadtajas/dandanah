@@ -70,6 +70,9 @@ abstract interface class AudioEngine {
 
   Future<void> previous();
 
+  /// Seeks to a queue index and resumes playback.
+  Future<void> playAt(int index, {Duration position = Duration.zero});
+
   Future<void> setSpeed(double speed);
 
   Future<void> setRepeat(AudioRepeatMode repeat);

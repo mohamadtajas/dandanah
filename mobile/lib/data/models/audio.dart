@@ -23,6 +23,7 @@ class AudioTrack {
     required this.ayah,
     required this.surahName,
     required this.url,
+    this.subtitleOverride,
   });
 
   final String id;
@@ -32,9 +33,10 @@ class AudioTrack {
   final int ayah;
   final String surahName;
   final String url;
+  final String? subtitleOverride;
 
   String get title => surahName;
-  String get subtitle => 'آية $ayah';
+  String get subtitle => subtitleOverride ?? 'آية $ayah';
 
   /// Returns a copy pointing at a local file when the surah is downloaded.
   AudioTrack withUrl(String url) => AudioTrack(
@@ -45,6 +47,7 @@ class AudioTrack {
     ayah: ayah,
     surahName: surahName,
     url: url,
+    subtitleOverride: subtitleOverride,
   );
 }
 

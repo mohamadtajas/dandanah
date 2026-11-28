@@ -91,8 +91,8 @@
   "prayerTimesUnavailable": "تعذّر حساب مواقيت الصلاة لهذا الموقع والتاريخ. جرّب موقعًا آخر أو خط عرض أقل.",
   "settingsSaveFailed": "تعذّر حفظ الإعدادات. حاول مرة أخرى.",
   "adhkarToday": "أذكار اليوم",
-  "adhkarMorning": "الصباح",
-  "adhkarEvening": "المساء",
+  "adhkarMorning": "أذكار الصباح",
+  "adhkarEvening": "أذكار المساء",
   "adhkarFeatured": "أذكار مختارة",
   "adhkarAll": "كل الأذكار",
   "adhkarSearch": "ابحث في الأذكار",
@@ -300,10 +300,10 @@
   "creditsAdhkarWhat": "نصوص الأذكار وتكرارها ومصادرها",
   "creditsAdhkarLicense": "MIT — © Abdellah SELLAM",
   "creditsAdhkarNotice": "نصوص الأذكار مأخوذة من مجموعة حصن المسلم مفتوحة المصدر بترخيص MIT.",
-  "creditsAdhanName": "تسجيل الأذان",
-  "creditsAdhanWhat": "أذان مضمَّن دون تعديل",
-  "creditsAdhanLicense": "CC0 1.0 — Adam-synagda",
-  "creditsAdhanNotice": "Beautiful adhan by Adam-synagda عبر Wikimedia Commons، ملكية عامة CC0 1.0، دون تعديل.",
+  "creditsAdhanName": "تسجيلات الأذان",
+  "creditsAdhanWhat": "ثلاثة تسجيلات أذان مضمَّنة دون تعديل",
+  "creditsAdhanLicense": "CC0 1.0 وملكية عامة",
+  "creditsAdhanNotice": "Beautiful adhan — Adam-synagda (CC0)، وAdhan — Aishatu98 (CC0) عبر Wikimedia Commons، وأذان صباح فخري (ملكية عامة)، جميعها دون تعديل.",
   "creditsAudioName": "EveryAyah",
   "creditsAudioWhat": "تلاوة القرآن آية بآية",
   "creditsAudioLicense": "متاح مجانًا",
@@ -360,5 +360,75 @@
   "creditsOpenverseName": "Openverse",
   "creditsOpenverseWhat": "فهرس صوتي مفتوح الترخيص للأناشيد",
   "creditsOpenverseLicense": "CC — حسب كل عمل",
-  "creditsOpenverseNotice": "تأتي نتائج الأناشيد من Openverse وتُعرض مع ترخيص كل عمل ومصدره."
+  "creditsOpenverseNotice": "تأتي نتائج الأناشيد من Openverse وتُعرض مع ترخيص كل عمل ومصدره.",
+  "adhanHealthTitle": "حالة التنبيهات",
+  "adhanHealthHint": "لضمان وصول الأذان في وقته، اسمح بالإشعارات والأذان الدقيق وأوقف تحسين البطارية.",
+  "adhanNotificationsOn": "الإشعارات مسموحة",
+  "adhanNotificationsOff": "الإشعارات ممنوعة",
+  "adhanExactOn": "الأذان الدقيق مسموح",
+  "adhanExactOff": "الأذان الدقيق ممنوع",
+  "adhanBatteryOk": "البطارية غير مقيّدة",
+  "adhanBatteryNeedsSetup": "قيّد النظام البطارية",
+  "adhanPendingCount": "تنبيهات مجدولة: {count}",
+  "adhanAllowExact": "السماح بالأذان الدقيق",
+  "adhanOpenBattery": "إعدادات البطارية",
+  "adhanTestNow": "اختبار الآن",
+  "adhanTestInTwo": "اختبار بعد دقيقتين",
+  "adhanTestScheduled": "سيصل تنبيه الاختبار بعد دقيقتين.",
+  "adhkarRemindersTitle": "تذكير الأذكار",
+  "adhkarRemindersHint": "تذكير هادئ بأذكار الصباح والمساء والنوم.",
+  "adhkarSleep": "أذكار النوم",
+  "adhkarAfterFajr": "بعد الفجر بـ {minutes} دقيقة",
+  "adhkarAfterAsr": "بعد العصر بـ {minutes} دقيقة",
+  "adhkarSleepAt": "الساعة {time}",
+  "defaultReciterTitle": "القارئ الافتراضي",
+  "defaultReciterHint": "يُستخدم عند فتح الصوت وبدء التلاوة.",
+  "@adhanPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@adhkarAfterFajr": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "@adhkarAfterAsr": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "@adhkarSleepAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "audioAyahOf": "الآية {index} من {total}",
+  "@audioAyahOf": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "audioModeRadio": "الإذاعات",
+  "audioRadioHint": "إذاعات إسلامية فقط، بث مباشر.",
+  "adhanSoundBeautiful": "أذان هادئ (CC0)",
+  "adhanSoundAdhan": "أذان مرتّل (CC0)",
+  "adhanSoundSabah": "أذان صباح فخري (ملك عام)",
+  "adhanSoundSilent": "صامت",
+  "adhanSoundHint": "اختر نغمة الأذان؛ تُستخدم في وقت الصلاة فقط.",
+  "audioLiveBadge": "مباشر",
+  "audioLiveHint": "بث مباشر — لا يمكن التقديم أو الإرجاع."
 }

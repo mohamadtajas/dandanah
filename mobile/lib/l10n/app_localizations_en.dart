@@ -235,10 +235,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adhkarToday => 'Today\'s adhkar';
 
   @override
-  String get adhkarMorning => 'Morning';
+  String get adhkarMorning => 'Morning adhkar';
 
   @override
-  String get adhkarEvening => 'Evening';
+  String get adhkarEvening => 'Evening adhkar';
 
   @override
   String get adhkarFeatured => 'Featured adhkar';
@@ -589,17 +589,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Adhkar texts come from the open-source Hisn al-Muslim collection under the MIT licence.';
 
   @override
-  String get creditsAdhanName => 'Adhan recording';
+  String get creditsAdhanName => 'Adhan recordings';
 
   @override
-  String get creditsAdhanWhat => 'Bundled adhan, unmodified';
+  String get creditsAdhanWhat => 'Three bundled adhan recordings, unmodified';
 
   @override
-  String get creditsAdhanLicense => 'CC0 1.0 — Adam-synagda';
+  String get creditsAdhanLicense => 'CC0 1.0 and public domain';
 
   @override
   String get creditsAdhanNotice =>
-      'Beautiful adhan by Adam-synagda via Wikimedia Commons, CC0 1.0 public domain, no changes made.';
+      'Beautiful adhan by Adam-synagda (CC0) and Adhan by Aishatu98 (CC0) via Wikimedia Commons, plus the Sabah Fakhri adhan (public domain); all unmodified.';
 
   @override
   String get creditsAudioName => 'EveryAyah';
@@ -731,4 +731,116 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get creditsOpenverseNotice =>
       'Anasheed results come from Openverse with each work licence and source shown.';
+
+  @override
+  String get adhanHealthTitle => 'Notification health';
+
+  @override
+  String get adhanHealthHint =>
+      'For on-time adhan, allow notifications and exact alarms, and turn off battery optimisation.';
+
+  @override
+  String get adhanNotificationsOn => 'Notifications allowed';
+
+  @override
+  String get adhanNotificationsOff => 'Notifications blocked';
+
+  @override
+  String get adhanExactOn => 'Exact alarms allowed';
+
+  @override
+  String get adhanExactOff => 'Exact alarms blocked';
+
+  @override
+  String get adhanBatteryOk => 'Battery unrestricted';
+
+  @override
+  String get adhanBatteryNeedsSetup => 'Battery restricted by system';
+
+  @override
+  String adhanPendingCount(int count) {
+    return 'Scheduled notifications: $count';
+  }
+
+  @override
+  String get adhanAllowExact => 'Allow exact alarms';
+
+  @override
+  String get adhanOpenBattery => 'Battery settings';
+
+  @override
+  String get adhanTestNow => 'Test now';
+
+  @override
+  String get adhanTestInTwo => 'Test in 2 minutes';
+
+  @override
+  String get adhanTestScheduled =>
+      'The test notification will arrive in two minutes.';
+
+  @override
+  String get adhkarRemindersTitle => 'Adhkar reminders';
+
+  @override
+  String get adhkarRemindersHint =>
+      'A gentle reminder for morning, evening and sleep adhkar.';
+
+  @override
+  String get adhkarSleep => 'Sleep adhkar';
+
+  @override
+  String adhkarAfterFajr(int minutes) {
+    return '$minutes minutes after Fajr';
+  }
+
+  @override
+  String adhkarAfterAsr(int minutes) {
+    return '$minutes minutes after Asr';
+  }
+
+  @override
+  String adhkarSleepAt(String time) {
+    return 'At $time';
+  }
+
+  @override
+  String get defaultReciterTitle => 'Default reciter';
+
+  @override
+  String get defaultReciterHint =>
+      'Used when the audio tab opens and recitation starts.';
+
+  @override
+  String audioAyahOf(int index, int total) {
+    return 'Ayah $index of $total';
+  }
+
+  @override
+  String get audioModeRadio => 'Radio';
+
+  @override
+  String get audioRadioHint => 'Islamic stations only, live.';
+
+  @override
+  String get adhanSoundBeautiful => 'Calm adhan (CC0)';
+
+  @override
+  String get adhanSoundAdhan => 'Melodic adhan (CC0)';
+
+  @override
+  String get adhanSoundSabah => 'Sabah Fakhri adhan (public domain)';
+
+  @override
+  String get adhanSoundSilent => 'Silent';
+
+  @override
+  String get adhanSoundHint =>
+      'Choose the adhan tone; it plays at prayer time only.';
+
+  @override
+  String get audioLiveBadge => 'Live';
+
+  @override
+  String get audioLiveHint =>
+      'Live stream — seeking and skipping are disabled.';
 }

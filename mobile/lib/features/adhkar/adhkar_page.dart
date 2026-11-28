@@ -380,11 +380,15 @@ class _TodayChip extends StatelessWidget {
             color: done ? scheme.primary : scheme.onSurfaceVariant,
           ),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: done ? scheme.primary : scheme.onSurfaceVariant,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
+                color: done ? scheme.primary : scheme.onSurfaceVariant,
+              ),
             ),
           ),
           const SizedBox(width: 3),

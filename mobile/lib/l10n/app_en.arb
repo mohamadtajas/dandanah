@@ -91,8 +91,8 @@
   "prayerTimesUnavailable": "Prayer times are not available for this location and date. Try another location or a lower latitude.",
   "settingsSaveFailed": "Could not save settings. Try again.",
   "adhkarToday": "Today's adhkar",
-  "adhkarMorning": "Morning",
-  "adhkarEvening": "Evening",
+  "adhkarMorning": "Morning adhkar",
+  "adhkarEvening": "Evening adhkar",
   "adhkarFeatured": "Featured adhkar",
   "adhkarAll": "All adhkar",
   "adhkarSearch": "Search adhkar",
@@ -300,10 +300,10 @@
   "creditsAdhkarWhat": "Adhkar texts, repeat counts and references",
   "creditsAdhkarLicense": "MIT — © Abdellah SELLAM",
   "creditsAdhkarNotice": "Adhkar texts come from the open-source Hisn al-Muslim collection under the MIT licence.",
-  "creditsAdhanName": "Adhan recording",
-  "creditsAdhanWhat": "Bundled adhan, unmodified",
-  "creditsAdhanLicense": "CC0 1.0 — Adam-synagda",
-  "creditsAdhanNotice": "Beautiful adhan by Adam-synagda via Wikimedia Commons, CC0 1.0 public domain, no changes made.",
+  "creditsAdhanName": "Adhan recordings",
+  "creditsAdhanWhat": "Three bundled adhan recordings, unmodified",
+  "creditsAdhanLicense": "CC0 1.0 and public domain",
+  "creditsAdhanNotice": "Beautiful adhan by Adam-synagda (CC0) and Adhan by Aishatu98 (CC0) via Wikimedia Commons, plus the Sabah Fakhri adhan (public domain); all unmodified.",
   "creditsAudioName": "EveryAyah",
   "creditsAudioWhat": "Ayah-by-ayah Quran recitation",
   "creditsAudioLicense": "Freely available",
@@ -360,5 +360,75 @@
   "creditsOpenverseName": "Openverse",
   "creditsOpenverseWhat": "Openly licensed audio index for anasheed",
   "creditsOpenverseLicense": "CC — per work",
-  "creditsOpenverseNotice": "Anasheed results come from Openverse with each work licence and source shown."
+  "creditsOpenverseNotice": "Anasheed results come from Openverse with each work licence and source shown.",
+  "adhanHealthTitle": "Notification health",
+  "adhanHealthHint": "For on-time adhan, allow notifications and exact alarms, and turn off battery optimisation.",
+  "adhanNotificationsOn": "Notifications allowed",
+  "adhanNotificationsOff": "Notifications blocked",
+  "adhanExactOn": "Exact alarms allowed",
+  "adhanExactOff": "Exact alarms blocked",
+  "adhanBatteryOk": "Battery unrestricted",
+  "adhanBatteryNeedsSetup": "Battery restricted by system",
+  "adhanPendingCount": "Scheduled notifications: {count}",
+  "adhanAllowExact": "Allow exact alarms",
+  "adhanOpenBattery": "Battery settings",
+  "adhanTestNow": "Test now",
+  "adhanTestInTwo": "Test in 2 minutes",
+  "adhanTestScheduled": "The test notification will arrive in two minutes.",
+  "adhkarRemindersTitle": "Adhkar reminders",
+  "adhkarRemindersHint": "A gentle reminder for morning, evening and sleep adhkar.",
+  "adhkarSleep": "Sleep adhkar",
+  "adhkarAfterFajr": "{minutes} minutes after Fajr",
+  "adhkarAfterAsr": "{minutes} minutes after Asr",
+  "adhkarSleepAt": "At {time}",
+  "defaultReciterTitle": "Default reciter",
+  "defaultReciterHint": "Used when the audio tab opens and recitation starts.",
+  "@adhanPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@adhkarAfterFajr": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "@adhkarAfterAsr": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "@adhkarSleepAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "audioAyahOf": "Ayah {index} of {total}",
+  "@audioAyahOf": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "audioModeRadio": "Radio",
+  "audioRadioHint": "Islamic stations only, live.",
+  "adhanSoundBeautiful": "Calm adhan (CC0)",
+  "adhanSoundAdhan": "Melodic adhan (CC0)",
+  "adhanSoundSabah": "Sabah Fakhri adhan (public domain)",
+  "adhanSoundSilent": "Silent",
+  "adhanSoundHint": "Choose the adhan tone; it plays at prayer time only.",
+  "audioLiveBadge": "Live",
+  "audioLiveHint": "Live stream — seeking and skipping are disabled."
 }

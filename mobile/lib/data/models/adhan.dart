@@ -12,6 +12,9 @@ class AdhanPreferences {
   /// Selectable pre-alert offsets in minutes; `0` disables the pre-alert.
   static const preAlertOptions = [0, 5, 10, 15, 20];
 
+  /// Bundled adhan recordings plus a silent option.
+  static const soundIds = ['beautiful', 'adhan', 'sabah', 'silent'];
+
   static const _defaultPreAlerts = {
     PrayerName.fajr: 10,
     PrayerName.dhuhr: 10,
@@ -29,14 +32,18 @@ class AdhanPreferences {
       PrayerName.isha: true,
     },
     this.preAlerts = _defaultPreAlerts,
-    this.soundEnabled = true,
+    this.soundId = 'beautiful',
   });
 
   final Map<PrayerName, bool> enabled;
 
   /// Minutes before each prayer for its pre-alert; `0` disables it.
   final Map<PrayerName, int> preAlerts;
-  final bool soundEnabled;
+
+  /// One of [soundIds]; `silent` mutes the adhan itself.
+  final String soundId;
+
+  bool get soundEnabled => soundId != 'silent';
 
   factory AdhanPreferences.defaults() => const AdhanPreferences();
 
@@ -58,17 +65,27 @@ class AdhanPreferences {
   AdhanPreferences copyWith({
     Map<PrayerName, bool>? enabled,
     Map<PrayerName, int>? preAlerts,
+    String? soundId,
     bool? soundEnabled,
-  }) => AdhanPreferences(
-    enabled: enabled ?? this.enabled,
-    preAlerts: preAlerts == null
-        ? this.preAlerts
-        : {
-            for (final prayer in obligatoryPrayerNames)
-              prayer: normalizePreAlert(preAlerts[prayer] ?? 10),
-          },
-    soundEnabled: soundEnabled ?? this.soundEnabled,
-  );
+  }) {
+    final nextSound = soundId != null
+        ? (soundIds.contains(soundId) ? soundId : 'beautiful')
+        : (soundEnabled == null
+              ? this.soundId
+              : (soundEnabled
+                    ? (this.soundId == 'silent' ? 'beautiful' : this.soundId)
+                    : 'silent'));
+    return AdhanPreferences(
+      enabled: enabled ?? this.enabled,
+      preAlerts: preAlerts == null
+          ? this.preAlerts
+          : {
+              for (final prayer in obligatoryPrayerNames)
+                prayer: normalizePreAlert(preAlerts[prayer] ?? 10),
+            },
+      soundId: nextSound,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'enabled': {
@@ -79,6 +96,7 @@ class AdhanPreferences {
       for (final prayer in obligatoryPrayerNames)
         prayer.name: preAlertFor(prayer),
     },
+    'soundId': soundId,
     'soundEnabled': soundEnabled,
   };
 
@@ -110,12 +128,14 @@ class AdhanPreferences {
       );
     }
 
-    final sound = json['soundEnabled'];
-    return AdhanPreferences(
-      enabled: map,
-      preAlerts: alerts,
-      soundEnabled: sound is bool ? sound : true,
-    );
+    final storedId = json['soundId'];
+    final legacySound = json['soundEnabled'];
+    final soundId = soundIds.contains(storedId)
+        ? storedId as String
+        : (legacySound is bool
+              ? (legacySound ? 'beautiful' : 'silent')
+              : 'beautiful');
+    return AdhanPreferences(enabled: map, preAlerts: alerts, soundId: soundId);
   }
 }
 

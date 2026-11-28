@@ -521,13 +521,13 @@ abstract class AppLocalizations {
   /// No description provided for @adhkarMorning.
   ///
   /// In ar, this message translates to:
-  /// **'الصباح'**
+  /// **'أذكار الصباح'**
   String get adhkarMorning;
 
   /// No description provided for @adhkarEvening.
   ///
   /// In ar, this message translates to:
-  /// **'المساء'**
+  /// **'أذكار المساء'**
   String get adhkarEvening;
 
   /// No description provided for @adhkarFeatured.
@@ -1157,25 +1157,25 @@ abstract class AppLocalizations {
   /// No description provided for @creditsAdhanName.
   ///
   /// In ar, this message translates to:
-  /// **'تسجيل الأذان'**
+  /// **'تسجيلات الأذان'**
   String get creditsAdhanName;
 
   /// No description provided for @creditsAdhanWhat.
   ///
   /// In ar, this message translates to:
-  /// **'أذان مضمَّن دون تعديل'**
+  /// **'ثلاثة تسجيلات أذان مضمَّنة دون تعديل'**
   String get creditsAdhanWhat;
 
   /// No description provided for @creditsAdhanLicense.
   ///
   /// In ar, this message translates to:
-  /// **'CC0 1.0 — Adam-synagda'**
+  /// **'CC0 1.0 وملكية عامة'**
   String get creditsAdhanLicense;
 
   /// No description provided for @creditsAdhanNotice.
   ///
   /// In ar, this message translates to:
-  /// **'Beautiful adhan by Adam-synagda عبر Wikimedia Commons، ملكية عامة CC0 1.0، دون تعديل.'**
+  /// **'Beautiful adhan — Adam-synagda (CC0)، وAdhan — Aishatu98 (CC0) عبر Wikimedia Commons، وأذان صباح فخري (ملكية عامة)، جميعها دون تعديل.'**
   String get creditsAdhanNotice;
 
   /// No description provided for @creditsAudioName.
@@ -1417,6 +1417,198 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تأتي نتائج الأناشيد من Openverse وتُعرض مع ترخيص كل عمل ومصدره.'**
   String get creditsOpenverseNotice;
+
+  /// No description provided for @adhanHealthTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حالة التنبيهات'**
+  String get adhanHealthTitle;
+
+  /// No description provided for @adhanHealthHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'لضمان وصول الأذان في وقته، اسمح بالإشعارات والأذان الدقيق وأوقف تحسين البطارية.'**
+  String get adhanHealthHint;
+
+  /// No description provided for @adhanNotificationsOn.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإشعارات مسموحة'**
+  String get adhanNotificationsOn;
+
+  /// No description provided for @adhanNotificationsOff.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإشعارات ممنوعة'**
+  String get adhanNotificationsOff;
+
+  /// No description provided for @adhanExactOn.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأذان الدقيق مسموح'**
+  String get adhanExactOn;
+
+  /// No description provided for @adhanExactOff.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأذان الدقيق ممنوع'**
+  String get adhanExactOff;
+
+  /// No description provided for @adhanBatteryOk.
+  ///
+  /// In ar, this message translates to:
+  /// **'البطارية غير مقيّدة'**
+  String get adhanBatteryOk;
+
+  /// No description provided for @adhanBatteryNeedsSetup.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيّد النظام البطارية'**
+  String get adhanBatteryNeedsSetup;
+
+  /// No description provided for @adhanPendingCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيهات مجدولة: {count}'**
+  String adhanPendingCount(int count);
+
+  /// No description provided for @adhanAllowExact.
+  ///
+  /// In ar, this message translates to:
+  /// **'السماح بالأذان الدقيق'**
+  String get adhanAllowExact;
+
+  /// No description provided for @adhanOpenBattery.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعدادات البطارية'**
+  String get adhanOpenBattery;
+
+  /// No description provided for @adhanTestNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختبار الآن'**
+  String get adhanTestNow;
+
+  /// No description provided for @adhanTestInTwo.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختبار بعد دقيقتين'**
+  String get adhanTestInTwo;
+
+  /// No description provided for @adhanTestScheduled.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيصل تنبيه الاختبار بعد دقيقتين.'**
+  String get adhanTestScheduled;
+
+  /// No description provided for @adhkarRemindersTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تذكير الأذكار'**
+  String get adhkarRemindersTitle;
+
+  /// No description provided for @adhkarRemindersHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'تذكير هادئ بأذكار الصباح والمساء والنوم.'**
+  String get adhkarRemindersHint;
+
+  /// No description provided for @adhkarSleep.
+  ///
+  /// In ar, this message translates to:
+  /// **'أذكار النوم'**
+  String get adhkarSleep;
+
+  /// No description provided for @adhkarAfterFajr.
+  ///
+  /// In ar, this message translates to:
+  /// **'بعد الفجر بـ {minutes} دقيقة'**
+  String adhkarAfterFajr(int minutes);
+
+  /// No description provided for @adhkarAfterAsr.
+  ///
+  /// In ar, this message translates to:
+  /// **'بعد العصر بـ {minutes} دقيقة'**
+  String adhkarAfterAsr(int minutes);
+
+  /// No description provided for @adhkarSleepAt.
+  ///
+  /// In ar, this message translates to:
+  /// **'الساعة {time}'**
+  String adhkarSleepAt(String time);
+
+  /// No description provided for @defaultReciterTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'القارئ الافتراضي'**
+  String get defaultReciterTitle;
+
+  /// No description provided for @defaultReciterHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'يُستخدم عند فتح الصوت وبدء التلاوة.'**
+  String get defaultReciterHint;
+
+  /// No description provided for @audioAyahOf.
+  ///
+  /// In ar, this message translates to:
+  /// **'الآية {index} من {total}'**
+  String audioAyahOf(int index, int total);
+
+  /// No description provided for @audioModeRadio.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإذاعات'**
+  String get audioModeRadio;
+
+  /// No description provided for @audioRadioHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'إذاعات إسلامية فقط، بث مباشر.'**
+  String get audioRadioHint;
+
+  /// No description provided for @adhanSoundBeautiful.
+  ///
+  /// In ar, this message translates to:
+  /// **'أذان هادئ (CC0)'**
+  String get adhanSoundBeautiful;
+
+  /// No description provided for @adhanSoundAdhan.
+  ///
+  /// In ar, this message translates to:
+  /// **'أذان مرتّل (CC0)'**
+  String get adhanSoundAdhan;
+
+  /// No description provided for @adhanSoundSabah.
+  ///
+  /// In ar, this message translates to:
+  /// **'أذان صباح فخري (ملك عام)'**
+  String get adhanSoundSabah;
+
+  /// No description provided for @adhanSoundSilent.
+  ///
+  /// In ar, this message translates to:
+  /// **'صامت'**
+  String get adhanSoundSilent;
+
+  /// No description provided for @adhanSoundHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر نغمة الأذان؛ تُستخدم في وقت الصلاة فقط.'**
+  String get adhanSoundHint;
+
+  /// No description provided for @audioLiveBadge.
+  ///
+  /// In ar, this message translates to:
+  /// **'مباشر'**
+  String get audioLiveBadge;
+
+  /// No description provided for @audioLiveHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'بث مباشر — لا يمكن التقديم أو الإرجاع.'**
+  String get audioLiveHint;
 }
 
 class _AppLocalizationsDelegate

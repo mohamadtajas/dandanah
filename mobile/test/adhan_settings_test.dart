@@ -76,6 +76,25 @@ void main() {
     );
   });
 
+  test('the selected adhan recording round-trips and falls back safely', () {
+    final chosen = AdhanPreferences.defaults().copyWith(soundId: 'sabah');
+    expect(chosen.soundId, 'sabah');
+    expect(AdhanPreferences.fromJson(chosen.toJson()).soundId, 'sabah');
+
+    expect(
+      AdhanPreferences.fromJson(const {'soundId': 'unknown'}).soundId,
+      'beautiful',
+    );
+    expect(
+      AdhanPreferences.defaults().copyWith(soundId: 'unknown').soundId,
+      'beautiful',
+    );
+    expect(
+      AdhanPreferences.defaults().copyWith(soundId: 'silent').soundEnabled,
+      isFalse,
+    );
+  });
+
   test('repository persists preferences', () async {
     final db = AppDatabase.memory();
     addTearDown(db.close);

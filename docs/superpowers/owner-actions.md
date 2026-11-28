@@ -20,8 +20,13 @@ independent tasks while these are open.
 
 - Nothing for publishing: the owner confirmed the app stays personal and will
   not go to Play or the App Store, so signing/store steps are dropped.
-- Place the three Android widgets on the phone and confirm the 5×1 "صليت"
-  button, prayer-time refresh after a prayer, and survival after a reboot.
+- Widgets are dormant by owner choice; no launcher work is needed for now.
+- Listen to the three bundled adhan recordings on the phone and pick the
+  preferred default, then run the in-app test notification.
+- Toggle the adhkar reminders on the phone once and confirm the morning,
+  evening and sleep notifications arrive at the expected times.
+- Confirm the Islamic radio stations stream on the phone network (the emulator
+  played the Kuwait Quran station successfully).
 
 ## Physical tests only the owner can run
 
@@ -33,8 +38,9 @@ independent tasks while these are open.
 - A full-reciter download and a reboot with the downloaded files present.
 - Adhan exact-alarm/Doze behaviour on the real device (M6), including a
   reboot-reschedule check and OEM battery settings.
-- iOS adhan sound: a 29-second CC0 excerpt (`adhan.caf`, Apple's 30-second
-  notification limit) is now bundled; verify it on a real iPhone.
+- iOS adhan sounds: three 29-second CAF excerpts (`adhan.caf`, `adhan2.caf`,
+  `adhan3.caf`, within Apple's 30-second notification limit) are bundled;
+  verify at least the default on a real iPhone.
 - Widgets after reboot (M7).
 - Battery/background matrix (M9).
 

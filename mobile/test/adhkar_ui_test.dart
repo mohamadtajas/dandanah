@@ -183,9 +183,8 @@ void main() {
     expect(find.text('أذكار اليوم'), findsOneWidget);
     expect(find.text('أذكار مختارة'), findsOneWidget);
     expect(find.text('كل الأذكار'), findsOneWidget);
-    expect(find.text('أذكار الصباح'), findsOneWidget);
-    expect(find.text('الصباح'), findsOneWidget);
-    expect(find.text('المساء'), findsOneWidget);
+    expect(find.text('أذكار الصباح'), findsWidgets);
+    expect(find.text('أذكار المساء'), findsWidgets);
   });
 
   testWidgets('counter advances to the next item and persists progress', (

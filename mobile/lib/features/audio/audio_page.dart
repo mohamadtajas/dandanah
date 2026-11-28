@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../data/app_services.dart';
 import '../../data/audio/anasheed_catalog.dart';
 import '../../data/audio/audio_downloads.dart';
+import '../../data/audio/islamic_radios.dart';
 import '../../data/audio/playback_controller.dart';
 import '../../data/audio/quran_audio_catalog.dart';
 import '../../data/models/audio.dart';
@@ -13,7 +14,7 @@ import '../../data/text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/sakeenah_theme.dart';
 
-enum _AudioMode { quran, anasheed }
+enum _AudioMode { quran, anasheed, radio }
 
 class AudioPage extends StatefulWidget {
   const AudioPage({super.key, this.playback, this.anasheed});
@@ -35,7 +36,7 @@ class _AudioPageState extends State<AudioPage> {
   final TextEditingController _search = TextEditingController();
   final TextEditingController _anasheedSearch = TextEditingController();
   List<Surah> _surahs = const [];
-  AudioReciter _reciter = QuranAudioCatalog.reciters.first;
+  late AudioReciter _reciter;
   _AudioMode _mode = _AudioMode.quran;
   List<AnasheedTrack> _anasheedResults = const [];
   bool _anasheedLoading = false;
@@ -49,6 +50,9 @@ class _AudioPageState extends State<AudioPage> {
   @override
   void initState() {
     super.initState();
+    _reciter =
+        QuranAudioCatalog.reciter(_services.defaultReciterId ?? '') ??
+        QuranAudioCatalog.reciters.first;
     _downloads.addListener(_onDownloads);
     _load();
   }
@@ -242,27 +246,37 @@ class _AudioPageState extends State<AudioPage> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
-          child: SegmentedButton<_AudioMode>(
-            segments: [
-              ButtonSegment(
-                value: _AudioMode.quran,
-                label: Text(l10n.audioModeQuran),
-                icon: const Icon(Icons.menu_book_outlined, size: 17),
-              ),
-              ButtonSegment(
-                value: _AudioMode.anasheed,
-                label: Text(l10n.audioModeAnasheed),
-                icon: const Icon(Icons.music_note_rounded, size: 17),
-              ),
-            ],
-            selected: {_mode},
-            onSelectionChanged: (selection) => _selectMode(selection.first),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SegmentedButton<_AudioMode>(
+              segments: [
+                ButtonSegment(
+                  value: _AudioMode.quran,
+                  label: Text(l10n.audioModeQuran),
+                  icon: const Icon(Icons.menu_book_outlined, size: 17),
+                ),
+                ButtonSegment(
+                  value: _AudioMode.anasheed,
+                  label: Text(l10n.audioModeAnasheed),
+                  icon: const Icon(Icons.music_note_rounded, size: 17),
+                ),
+                ButtonSegment(
+                  value: _AudioMode.radio,
+                  label: Text(l10n.audioModeRadio),
+                  icon: const Icon(Icons.radio_rounded, size: 17),
+                ),
+              ],
+              selected: {_mode},
+              onSelectionChanged: (selection) => _selectMode(selection.first),
+            ),
           ),
         ),
         Expanded(
-          child: _mode == _AudioMode.quran
-              ? _buildQuran(l10n)
-              : _buildAnasheed(l10n),
+          child: switch (_mode) {
+            _AudioMode.quran => _buildQuran(l10n),
+            _AudioMode.anasheed => _buildAnasheed(l10n),
+            _AudioMode.radio => _buildRadio(l10n),
+          },
         ),
       ],
     );
@@ -325,6 +339,7 @@ class _AudioPageState extends State<AudioPage> {
             onChanged: (value) {
               if (value == null) return;
               setState(() => _reciter = value);
+              _services.setDefaultReciter(value.id);
               _downloads.refresh(value, _surahs, replace: true);
             },
           ),
@@ -502,6 +517,76 @@ class _AudioPageState extends State<AudioPage> {
         ),
       ],
     );
+  }
+
+  Widget _buildRadio(AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
+    final currentId = _playback.current?.id;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          child: Text(
+            l10n.audioRadioHint,
+            style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant),
+          ),
+        ),
+        for (final radio in islamicRadios)
+          Card(
+            margin: const EdgeInsets.only(bottom: 6),
+            child: ListTile(
+              leading: CircleAvatar(
+                radius: 17,
+                backgroundColor: scheme.primary.withValues(alpha: 0.12),
+                child: Icon(
+                  Icons.radio_rounded,
+                  size: 18,
+                  color: currentId == 'radio:${radio.id}'
+                      ? SakeenahColors.gold
+                      : scheme.primary,
+                ),
+              ),
+              title: Text(
+                radio.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, color: scheme.onSurface),
+              ),
+              subtitle: Text(
+                radio.country,
+                style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant),
+              ),
+              trailing: IconButton(
+                key: ValueKey('radio-play-${radio.id}'),
+                tooltip: l10n.audioPlay,
+                onPressed: () => _playRadio(radio),
+                icon: Icon(
+                  currentId == 'radio:${radio.id}'
+                      ? Icons.graphic_eq_rounded
+                      : Icons.play_circle_outline_rounded,
+                  color: currentId == 'radio:${radio.id}'
+                      ? SakeenahColors.gold
+                      : scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _playRadio(IslamicRadio radio) async {
+    try {
+      await _playback.playQueue([radio.toAudioTrack()]);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.audioPlaybackError),
+        ),
+      );
+    }
   }
 
   Widget _anasheedBody(AppLocalizations l10n, ColorScheme scheme) {

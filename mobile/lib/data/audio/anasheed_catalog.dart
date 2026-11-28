@@ -46,6 +46,7 @@ class AnasheedTrack {
     ayah: index + 1,
     surahName: title,
     url: audioUrl,
+    subtitleOverride: licenseLabel,
   );
 
   factory AnasheedTrack.fromJson(Map<String, dynamic> json) {

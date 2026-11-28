@@ -2,7 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sakeenah_mobile/data/db/app_database.dart';
 import 'package:sakeenah_mobile/data/models/adhan.dart';
+import 'package:sakeenah_mobile/data/models/adhkar_reminders.dart';
 import 'package:sakeenah_mobile/data/repositories/adhan_settings_repository.dart';
+import 'package:sakeenah_mobile/data/repositories/adhkar_reminder_repository.dart';
 import 'package:sakeenah_mobile/data/worship/adhan_scheduler.dart';
 import 'package:sakeenah_mobile/data/worship/prayer_notification_service.dart';
 import 'package:sakeenah_mobile/data/worship/prayer_settings.dart';
@@ -33,13 +35,35 @@ void main() {
     await db.close();
   });
 
-  test('refresh cancels and schedules the next two weeks', () async {
+  test('refresh cancels and schedules the next 30 days', () async {
     await scheduler.refresh(now: DateTime.utc(2026, 11, 26));
 
     expect(service.initialized, 1);
     expect(service.cancelled, 1);
-    expect(service.events, hasLength(140));
+    expect(service.events, hasLength(300));
     expect(service.events.first.prayer.arabicName, isNotEmpty);
+  });
+
+  test('adhkar reminders are attached to the same refresh', () async {
+    final repo = AdhkarReminderRepository(db);
+    await repo.save(
+      AdhkarReminderPreferences.defaults().copyWith(morning: true),
+    );
+    final withReminders = AdhanScheduler(
+      preferences: preferences,
+      settings: settings,
+      service: service,
+      adhkarPreferences: repo,
+    );
+
+    await withReminders.refresh(now: DateTime.utc(2026, 11, 26));
+
+    expect(service.reminders, isNotEmpty);
+    expect(service.reminders.first.group, AdhkarReminderGroup.morning);
+    expect(
+      service.reminders.first.instant.isAfter(DateTime.utc(2026, 11, 26)),
+      isTrue,
+    );
   });
 
   test('saving preferences reschedules with the new pre-alert', () async {
@@ -59,7 +83,7 @@ void main() {
     expect(service.permissionsAsked, 1);
     await scheduler.sendTest();
     expect(service.testShown, 1);
-    expect(service.lastTestWithSound, isTrue);
+    expect(service.lastTestSoundId, 'beautiful');
   });
 
   test('an unconfigured location schedules nothing', () async {
@@ -86,8 +110,10 @@ class _FakeNotifications implements PrayerNotificationService {
   int cancelled = 0;
   int permissionsAsked = 0;
   int testShown = 0;
-  bool? lastTestWithSound;
+  int scheduledTests = 0;
+  String? lastTestSoundId;
   List<PrayerNotification> events = [];
+  List<AdhkarReminder> reminders = [];
 
   @override
   Future<void> initialize() async => initialized++;
@@ -111,8 +137,33 @@ class _FakeNotifications implements PrayerNotificationService {
   }
 
   @override
-  Future<void> showTest({bool withSound = true}) async {
-    testShown++;
-    lastTestWithSound = withSound;
+  Future<void> scheduleAdhkar(
+    List<AdhkarReminder> reminders, {
+    required PrayerSettings settings,
+  }) async {
+    this.reminders = reminders;
   }
+
+  @override
+  Future<void> showTest({String soundId = 'beautiful'}) async {
+    testShown++;
+    lastTestSoundId = soundId;
+  }
+
+  @override
+  Future<void> scheduleTestIn(
+    Duration delay, {
+    String soundId = 'beautiful',
+  }) async => scheduledTests++;
+
+  @override
+  Future<bool> requestExactAlarms() async => true;
+
+  @override
+  Future<AdhanDiagnostics> diagnostics() async => const AdhanDiagnostics(
+    notificationsEnabled: true,
+    exactAlarms: true,
+    batteryOptimized: false,
+    pendingCount: 0,
+  );
 }

@@ -143,6 +143,48 @@ void main() {
     expect(find.text('0:10'), findsOneWidget);
   });
 
+  testWidgets('live radio player hides seeking and skipping', (tester) async {
+    await playback.playQueue([
+      const AudioTrack(
+        id: 'radio:quran_kuwait',
+        reciterId: 'radio',
+        reciterName: 'الكويت',
+        surah: 0,
+        ayah: 1,
+        surahName: 'إذاعة القرآن الكريم — الكويت',
+        url: 'https://example.test/radio.mp3',
+        subtitleOverride: 'بث مباشر',
+      ),
+    ]);
+    await pump(tester, PlayerPage(playback: playback));
+
+    expect(find.text('مباشر'), findsOneWidget);
+    expect(find.byKey(const ValueKey('audio-seek')), findsNothing);
+    expect(find.byIcon(Icons.skip_next_rounded), findsNothing);
+    expect(find.byIcon(Icons.skip_previous_rounded), findsNothing);
+    expect(find.byKey(const ValueKey('audio-toggle')), findsOneWidget);
+    expect(find.byIcon(Icons.radio_rounded), findsWidgets);
+  });
+
+  testWidgets('radio tab lists curated stations and plays one', (tester) async {
+    await pump(tester, AudioPage(playback: playback));
+
+    await tester.ensureVisible(find.text('الإذاعات'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('الإذاعات'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('إذاعة القرآن الكريم — الكويت'), findsOneWidget);
+    expect(find.text('إذاعة القرآن الكريم — الشارقة'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('radio-play-quran_kuwait')));
+    await tester.pumpAndSettle();
+
+    expect(playback.current?.reciterId, 'radio');
+    expect(playback.queue, hasLength(1));
+    expect(playback.playing, isTrue);
+  });
+
   testWidgets('mini player stays hidden until something plays', (tester) async {
     await pump(tester, MiniPlayer(playback: playback));
     expect(find.text('الفاتحة'), findsNothing);
