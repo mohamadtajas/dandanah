@@ -241,7 +241,7 @@ void main() {
       for (var i = 0; i < 8; i++) {
         await tester.pump(const Duration(milliseconds: 80));
       }
-      expect(tester.takeException(), isNull);
+      expect(tester.takeException(), isNull, reason: 'tab $label');
     }
   });
 }

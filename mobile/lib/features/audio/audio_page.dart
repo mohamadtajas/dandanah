@@ -242,34 +242,81 @@ class _AudioPageState extends State<AudioPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    String labelFor(_AudioMode mode) => switch (mode) {
+      _AudioMode.quran => l10n.audioModeQuran,
+      _AudioMode.anasheed => l10n.audioModeAnasheed,
+      _AudioMode.radio => l10n.audioModeRadio,
+    };
+    IconData iconFor(_AudioMode mode) => switch (mode) {
+      _AudioMode.quran => Icons.menu_book_outlined,
+      _AudioMode.anasheed => Icons.music_note_rounded,
+      _AudioMode.radio => Icons.radio_rounded,
+    };
+    Widget modeChip(_AudioMode mode) {
+      final selected = _mode == mode;
+      return ChoiceChip(
+        key: ValueKey('audio-mode-${mode.name}'),
+        selected: selected,
+        showCheckmark: false,
+        selectedColor: SakeenahColors.gold,
+        backgroundColor: scheme.surfaceContainerLow,
+        side: BorderSide(color: scheme.outline),
+        avatar: Icon(
+          iconFor(mode),
+          size: 17,
+          color: selected ? SakeenahColors.ink : scheme.onSurfaceVariant,
+        ),
+        label: Text(
+          labelFor(mode),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: selected ? SakeenahColors.ink : scheme.onSurface,
+          ),
+        ),
+        onSelected: (_) => _selectMode(mode),
+      );
+    }
+
+    // At very large text, three chips wrap and squeeze the list. A single
+    // dropdown keeps every mode reachable without hiding one off-screen.
+    final largeText = MediaQuery.textScalerOf(context).scale(12) > 18;
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SegmentedButton<_AudioMode>(
-              segments: [
-                ButtonSegment(
-                  value: _AudioMode.quran,
-                  label: Text(l10n.audioModeQuran),
-                  icon: const Icon(Icons.menu_book_outlined, size: 17),
+          child: largeText
+              ? DropdownButtonFormField<_AudioMode>(
+                  key: ValueKey('audio-mode-menu-${_mode.name}'),
+                  initialValue: _mode,
+                  isExpanded: true,
+                  decoration: const InputDecoration(isDense: true),
+                  items: [
+                    for (final mode in _AudioMode.values)
+                      DropdownMenuItem(
+                        value: mode,
+                        child: Row(
+                          children: [
+                            Icon(iconFor(mode), size: 18),
+                            const SizedBox(width: 8),
+                            Text(labelFor(mode)),
+                          ],
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) _selectMode(value);
+                  },
+                )
+              : Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    for (final mode in _AudioMode.values) modeChip(mode),
+                  ],
                 ),
-                ButtonSegment(
-                  value: _AudioMode.anasheed,
-                  label: Text(l10n.audioModeAnasheed),
-                  icon: const Icon(Icons.music_note_rounded, size: 17),
-                ),
-                ButtonSegment(
-                  value: _AudioMode.radio,
-                  label: Text(l10n.audioModeRadio),
-                  icon: const Icon(Icons.radio_rounded, size: 17),
-                ),
-              ],
-              selected: {_mode},
-              onSelectionChanged: (selection) => _selectMode(selection.first),
-            ),
-          ),
         ),
         Expanded(
           child: switch (_mode) {
