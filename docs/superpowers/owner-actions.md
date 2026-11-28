@@ -25,8 +25,29 @@ independent tasks while these are open.
   preferred default, then run the in-app test notification.
 - Toggle the adhkar reminders on the phone once and confirm the morning,
   evening and sleep notifications arrive at the expected times.
-- Confirm the Islamic radio stations stream on the phone network (the emulator
-  played the Kuwait Quran station successfully).
+- Confirm the other radio stations on the phone network (the Kuwait Quran
+  station streamed successfully on BKQ-N49).
+
+## Physical test results (2026-11-28, BKQ-N49)
+
+- Adhan test notification delivered through `adhan_3_v2` with Android
+  `USAGE_ALARM`; it stayed audible even though the notification stream was
+  muted. The immediate test notification and snackbar both appeared.
+- Exact scheduled test ("اختبار بعد دقيقتين") fired at 10:45:18 with the screen
+  off, within a few seconds of the requested time, and used the alarm stream.
+- Health card reported notifications and exact alarms allowed, battery
+  unrestricted, 298 prayer notifications scheduled.
+- Quran playback continued in the background and reached ayah 6 after 30 s;
+  the whole-surah player showed 0:49 total and seeked correctly to ayah 7.
+- Kuwait Quran radio streamed on the phone network, continued with the screen
+  off and in the background, and showed lock-screen media controls.
+- The morning adhkar reminder increased the scheduled count by 29 (one per
+  remaining day), then was turned back off.
+- 2x text pass: audio mode dropdown, list and settings rendered without
+  overflow; font scale restored to 1.0.
+- A pre-existing system alarm rang at 10:30 and paused radio once; after
+  dismissing it, the radio background test passed. The alarm was snoozed and
+  then dismissed; no app alarm was involved.
 
 ## Physical tests only the owner can run
 
@@ -36,8 +57,9 @@ independent tasks while these are open.
   on the emulator; repeat on the phone).
 - Background audio for 30+ minutes, lock screen and Bluetooth controls (M5).
 - A full-reciter download and a reboot with the downloaded files present.
-- Adhan exact-alarm/Doze behaviour on the real device (M6), including a
-  reboot-reschedule check and OEM battery settings.
+- Adhan exact-alarm/Doze behaviour: exact scheduled test passed with the screen
+  off on BKQ-N49; still run the reboot-reschedule check and review OEM battery
+  settings.
 - iOS adhan sounds: three 29-second CAF excerpts (`adhan.caf`, `adhan2.caf`,
   `adhan3.caf`, within Apple's 30-second notification limit) are bundled;
   verify at least the default on a real iPhone.

@@ -86,9 +86,12 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
   }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
        _maxPending = maxPending ?? (Platform.isIOS ? 60 : null);
 
-  static const _adhanChannel = 'adhan';
-  static const _adhan2Channel = 'adhan_2';
-  static const _adhan3Channel = 'adhan_3';
+  // Android locks a channel's sound and audio attributes after creation, so
+  // these v2 IDs carry the alarm-stream routing. The adhan must stay audible
+  // when notification or media volume is low or muted.
+  static const _adhanChannel = 'adhan_v2';
+  static const _adhan2Channel = 'adhan_2_v2';
+  static const _adhan3Channel = 'adhan_3_v2';
   static const _silentChannel = 'prayer_silent';
   static const _adhkarChannel = 'adhkar_reminders';
   static const _testId = 999999;
@@ -126,6 +129,7 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
         importance: Importance.max,
         playSound: true,
         sound: RawResourceAndroidNotificationSound('adhan'),
+        audioAttributesUsage: AudioAttributesUsage.alarm,
       ),
     );
     await androidPlugin?.createNotificationChannel(
@@ -136,6 +140,7 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
         importance: Importance.max,
         playSound: true,
         sound: RawResourceAndroidNotificationSound('adhan_2'),
+        audioAttributesUsage: AudioAttributesUsage.alarm,
       ),
     );
     await androidPlugin?.createNotificationChannel(
@@ -146,6 +151,7 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
         importance: Importance.max,
         playSound: true,
         sound: RawResourceAndroidNotificationSound('adhan_3'),
+        audioAttributesUsage: AudioAttributesUsage.alarm,
       ),
     );
     // Android channels own their sound, so a separate silent channel is
@@ -394,6 +400,9 @@ class LocalPrayerNotificationService implements PrayerNotificationService {
         sound: audible
             ? RawResourceAndroidNotificationSound(sound.rawName)
             : null,
+        audioAttributesUsage: audible
+            ? AudioAttributesUsage.alarm
+            : AudioAttributesUsage.notification,
         category: AndroidNotificationCategory.alarm,
       ),
       iOS: DarwinNotificationDetails(

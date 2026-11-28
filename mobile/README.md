@@ -44,6 +44,8 @@ Phase **M7** - widgets, polished audio, adhkar reminders and adhan sounds.
   weeks (every prayer has its own pre-alert offset), with three selectable
   bundled adhan recordings (two CC0, one public domain) on Android and iOS,
   a silent option, exact-alarm support and a silent channel for pre-alerts.
+  Adhan channels use the Android alarm audio stream, so the call stays audible
+  even when notification or media volume is low or muted.
 - Optional adhkar reminders: morning after Fajr, evening after Asr and a fixed
   sleep reminder, all off by default, with a separate notification channel.
 - A Sources and licences page with the Tanzil attribution, all adhan recording
